@@ -2,10 +2,13 @@ import firedrake
 from firedrake import PETSc
 import ufl
 import numpy as np
-import mesh_mover
+from movement.mover import Mover
 
 
-class MongeAmpereMover(mesh_mover.MeshMover):
+__all__ = ["MongeAmpereMover", "monge_ampere"]
+
+
+class MongeAmpereMover(Mover):
     # TODO: doc
     def __init__(self, mesh, monitor_function, **kwargs):
         if monitor_function is None:
@@ -57,7 +60,6 @@ class MongeAmpereMover(mesh_mover.MeshMover):
             return self._pseudotimestepper
         phi = firedrake.TrialFunction(self.P1)
         psi = firedrake.TestFunction(self.P1)
-        I = ufl.Identity(self.dim)
         a = ufl.inner(ufl.grad(psi), ufl.grad(phi))*self.dx
         L = ufl.inner(ufl.grad(psi), ufl.grad(self.phi_old))*self.dx \
             + self.pseudo_dt*psi*self.residual*self.dx
@@ -132,7 +134,8 @@ class MongeAmpereMover(mesh_mover.MeshMover):
         except Exception:
             firedrake.par_loop(
                 ('{[i, j] : 0 <= i < cg.dofs and 0 <= j < 2}', 'dg[i, j] = cg[i, j]'),
-                dx, {'cg': (self._grad_phi, READ), 'dg': (self.grad_phi, WRITE)},
+                self.dx,
+                {'cg': (self._grad_phi, firedrake.READ), 'dg': (self.grad_phi, firedrake.WRITE)},
                 is_loopy_kernel=True)
         self._x.assign(self.xi + self.grad_phi)  # x = ξ + grad(φ)
         return self._x
