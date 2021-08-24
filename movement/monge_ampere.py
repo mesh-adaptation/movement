@@ -170,11 +170,7 @@ class MongeAmpereMover(Mover):
         try:
             self.grad_phi.assign(self._grad_phi)
         except Exception:
-            firedrake.par_loop(
-                ('{[i, j] : 0 <= i < cg.dofs and 0 <= j < 2}', 'dg[i, j] = cg[i, j]'),
-                self.dx,
-                {'cg': (self._grad_phi, firedrake.READ), 'dg': (self.grad_phi, firedrake.WRITE)},
-                is_loopy_kernel=True)
+            self.grad_phi.interpolate(self._grad_phi)
         self._x.assign(self.xi + self.grad_phi)  # x = ξ + grad(φ)
         return self._x
 
@@ -213,11 +209,11 @@ class MongeAmpereMover(Mover):
             # Update monitor function
             self.monitor.interpolate(self.monitor_function(self.mesh))
             firedrake.assemble(self.L_P0, tensor=self.volume)
-            self.volume /= self.original_volume
+            self.volume.assign(self.volume*self.original_volume**(-1))
             self.mesh.coordinates.assign(self.xi)
 
             # Evaluate normalisation coefficient
-            self.theta.assign(firedrake.assemble(self.theta_form)/self.total_volume)
+            self.theta.assign(firedrake.assemble(self.theta_form)*self.total_volume**(-1))
 
             # Check convergence criteria
             minmax, residual, equi = self.diagnostics
@@ -232,6 +228,8 @@ class MongeAmpereMover(Mover):
                 break
             if residual > self.dtol*initial_norm:
                 raise firedrake.ConvergenceError(f"Diverged after {i+1} iterations.")
+            if i == self.maxiter-1:
+                raise firedrake.ConvergenceError(f"Failed to converge in {i+1} iterations.")
 
             # Apply pseudotimestepper and equidistributor
             self.pseudotimestepper.solve()
