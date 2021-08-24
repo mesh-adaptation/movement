@@ -9,16 +9,40 @@ __all__ = ["MongeAmpereMover", "monge_ampere"]
 
 
 class MongeAmpereMover(Mover):
-    # TODO: doc
+    r"""
+    Movement of a `mesh` is determined by a `monitor_function`
+    :math:`m` and the Monge-Ampère type equation
+
+..  math::
+        m(x)\det(I + H(\phi)) = \theta,
+
+    for a scalar potential :math:`\phi`, where :math:`I` is the
+    identity matrix, :math:`\theta` is a normalisation coefficient
+    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
+    respect to the coordinates :math:`\xi` of the computational mesh.
+
+    The physical mesh coordinates :math:`x` are updated according to
+
+..  math::
+        x = \xi + \nabla\phi.
+    """
     def __init__(self, mesh, monitor_function, **kwargs):
+        """
+        :arg mesh: the physical mesh
+        :arg monitor_function: a Python function which takes a mesh as input
+        :kwarg pseudo_timestep: pseudo-timestep to use for the relaxation
+        :kwarg maxiter: maximum number of iterations for the relaxation
+        :kwarg rtol: relative tolerance for the residual
+        :kwarg dtol: divergence tolerance for the residual
+        """
         if monitor_function is None:
             raise ValueError("Please supply a monitor function")
 
         # Collect parameters before calling super
         self.pseudo_dt = firedrake.Constant(kwargs.pop('pseudo_timestep', 0.1))
-        self.bc = kwargs.pop('boundary_conditions', None)
         self.maxiter = kwargs.pop('maxiter', 1000)
         self.rtol = kwargs.pop('rtol', 1.0e-08)
+        self.dtol = kwargs.pop('dtol', 2.0)
         super().__init__(mesh, monitor_function=monitor_function)
 
         # Create function spaces
@@ -28,9 +52,9 @@ class MongeAmpereMover(Mover):
         self.P1_ten = firedrake.TensorFunctionSpace(mesh, "CG", 1)
 
         # Create functions to hold solution data
-        self.phi = firedrake.Function(self.P1)
-        self.phi_old = firedrake.Function(self.P1)
+        self.phi = firedrake.Function(self.P1)        # NOTE: initialised to zero
         self.sigma = firedrake.Function(self.P1_ten)  # NOTE: initialised to zero
+        self.phi_old = firedrake.Function(self.P1)
         self.sigma_old = firedrake.Function(self.P1_ten)
 
         # Create objects used during the mesh movement
@@ -55,7 +79,9 @@ class MongeAmpereMover(Mover):
 
     @property
     def pseudotimestepper(self):
-        # TODO: doc
+        """
+        Setup the pseudo-timestepper for the relaxation method.
+        """
         if hasattr(self, '_pseudotimestepper'):
             return self._pseudotimestepper
         phi = firedrake.TrialFunction(self.P1)
@@ -77,9 +103,13 @@ class MongeAmpereMover(Mover):
 
     @property
     def equidistributor(self):
-        # TODO: doc
+        """
+        Setup the equidistributor for the relaxation method.
+        """
         if hasattr(self, '_equidistributor'):
             return self._equidistributor
+        if self.dim != 2:
+            raise NotImplementedError  # TODO
         n = ufl.FacetNormal(self.mesh)
         sigma = firedrake.TrialFunction(self.P1_ten)
         tau = firedrake.TestFunction(self.P1_ten)
@@ -93,7 +123,12 @@ class MongeAmpereMover(Mover):
 
     @property
     def l2_projector(self):
-        # TODO: doc
+        """
+        Create a linear solver for obtaining the gradient
+        of the potential using an L2 projection.
+
+        Boundary conditions are imposed as a post-processing step.
+        """
         if hasattr(self, '_l2_projector'):
             return self._l2_projector
         u_cts = firedrake.TrialFunction(self.P1_vec)
@@ -103,7 +138,7 @@ class MongeAmpereMover(Mover):
         a = ufl.inner(v_cts, u_cts)*self.dx
         L = ufl.inner(v_cts, ufl.grad(self.phi_old))*self.dx
 
-        # Enforce no movement normal to boundary  TODO: generalise
+        # Enforce no movement normal to boundary
         n = ufl.FacetNormal(self.mesh)
         bcs = []
         for i in self.mesh.exterior_facets.unique_markers:
@@ -118,7 +153,7 @@ class MongeAmpereMover(Mover):
                 elif np.isclose(_n[1], 0.0):
                     bcs.append(firedrake.DirichletBC(self.P1_vec.sub(0), 0, i))
                 else:
-                    raise NotImplementedError("Non-axis-aligned geometries not considered yet.")
+                    raise NotImplementedError("Non-axis-aligned geometries not considered yet.")  # TODO
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
@@ -128,7 +163,10 @@ class MongeAmpereMover(Mover):
 
     @property
     def x(self):
-        # TODO: doc
+        """
+        Update the coordinate :class:`Function` using
+        the recovered gradient.
+        """
         try:
             self.grad_phi.assign(self._grad_phi)
         except Exception:
@@ -142,7 +180,12 @@ class MongeAmpereMover(Mover):
 
     @property
     def diagnostics(self):
-        # TODO: doc
+        """
+        Compute diagnostics:
+          1) the ratio of the smallest and largest element volumes;
+          2) equidistribution of elemental volumes;
+          3) relative L2 norm residual.
+        """
         v = self.volume.vector().gather()
         minmax = v.min()/v.max()
         mean = v.sum()/v.max()
@@ -156,9 +199,10 @@ class MongeAmpereMover(Mover):
         return minmax, residual_l2_rel, equi
 
     def adapt(self):
-        maxiter = self.maxiter
-        rtol = self.rtol
-        for i in range(maxiter):
+        """
+        Run the relaxation method to convergence and update the mesh.
+        """
+        for i in range(self.maxiter):
 
             # L2 project
             self.l2_projector.solve()
@@ -183,10 +227,10 @@ class MongeAmpereMover(Mover):
                             f"   Min/Max {minmax:10.4e}"
                             f"   Residual {residual:10.4e}"
                             f"   Equidistribution {equi:10.4e}")
-            if residual < rtol:
+            if residual < self.rtol:
                 PETSc.Sys.Print(f"Converged in {i+1} iterations.")
                 break
-            if residual > 2.0*initial_norm:
+            if residual > self.dtol*initial_norm:
                 raise firedrake.ConvergenceError(f"Diverged after {i+1} iterations.")
 
             # Apply pseudotimestepper and equidistributor
@@ -197,7 +241,30 @@ class MongeAmpereMover(Mover):
         self.mesh.coordinates.assign(self.x)
 
 
-def monge_ampere(mesh, monitor_function):
-    # TODO: doc
-    mover = MongeAmpereMover(mesh, monitor_function)
+def monge_ampere(mesh, monitor_function, **kwargs):
+    r"""
+    Movement of a `mesh` is determined by a `monitor_function`
+    :math:`m` and the Monge-Ampère type equation
+
+..  math::
+        m(x)\det(I + H(\phi)) = \theta,
+
+    for a scalar potential :math:`\phi`, where :math:`I` is the
+    identity matrix, :math:`\theta` is a normalisation coefficient
+    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
+    respect to the coordinates :math:`\xi` of the computational mesh.
+
+    The physical mesh coordinates :math:`x` are updated according to
+
+..  math::
+        x = \xi + \nabla\phi.
+
+    :arg mesh: the physical mesh
+    :arg monitor_function: a Python function which takes a mesh as input
+    :kwarg pseudo_timestep: pseudo-timestep to use for the relaxation
+    :kwarg maxiter: maximum number of iterations for the relaxation
+    :kwarg rtol: relative tolerance for the residual
+    :kwarg dtol: divergence tolerance for the residual
+    """
+    mover = MongeAmpereMover(mesh, monitor_function, **kwargs)
     mover.adapt()
