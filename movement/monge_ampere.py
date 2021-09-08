@@ -10,9 +10,13 @@ __all__ = ["MongeAmpereMover_Relaxation", "MongeAmpereMover_QuasiNewton", "monge
 
 
 class MongeAmpereMover_Base(Mover):
-    # TODO: docs
+    """
+    Base class for mesh movers based on the solution
+    of Monge-Ampere type equations.
+    """
     residual_l2_form = 0
     norm_l2_form = 0
+    phi_old = None
 
     def __init__(self, mesh, monitor_function, **kwargs):
         """
@@ -152,12 +156,28 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
     respect to the coordinates :math:`\xi` of the computational mesh.
 
+    This elliptic equation is solved in a parabolised form using a
+    pseudo-time relaxation,
+
+..  math::
+        -\frac\partial{\partial\tau}\Delta\phi = m(x)\det(I + H(\phi)) - \theta,
+
+    where :math:`\tau` is the pseudo-time variable. Forward Euler is
+    used for the pseudo-time integration (see McRae et al. 2018 for
+    details).
+
     The physical mesh coordinates :math:`x` are updated according to
 
 ..  math::
         x = \xi + \nabla\phi.
+
+    References
+    ==========
+    A. T. T. McRae, C. J. Cotter, C. J. Budd, Optimal-transport-based
+    mesh adaptivity on the plane and sphere using finite elements, SIAM
+    Journal on Scientific Computing 40 (2) (2018) 1121–1148.
+    doi:10.1137/16M1109515.
     """
-    # TODO: docs specific to relaxation
     def __init__(self, mesh, monitor_function, **kwargs):
         """
         :arg mesh: the physical mesh
@@ -274,7 +294,33 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
 
 
 class MongeAmpereMover_QuasiNewton(Mover):
-    # TODO: docs specific to qn
+    r"""
+    Movement of a `mesh` is determined by a `monitor_function`
+    :math:`m` and the Monge-Ampère type equation
+
+..  math::
+        m(x)\det(I + H(\phi)) = \theta,
+
+    for a scalar potential :math:`\phi`, where :math:`I` is the
+    identity matrix, :math:`\theta` is a normalisation coefficient
+    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
+    respect to the coordinates :math:`\xi` of the computational mesh.
+
+    This elliptic equation is solved using a quasi-Newton method
+    (see McRae et al. 2018 for details).
+
+    The physical mesh coordinates :math:`x` are updated according to
+
+..  math::
+        x = \xi + \nabla\phi.
+
+    References
+    ==========
+    A. T. T. McRae, C. J. Cotter, C. J. Budd, Optimal-transport-based
+    mesh adaptivity on the plane and sphere using finite elements, SIAM
+    Journal on Scientific Computing 40 (2) (2018) 1121–1148.
+    doi:10.1137/16M1109515.
+    """
     def __init__(self, mesh, monitor_function, **kwargs):
         """
         :arg mesh: the physical mesh
