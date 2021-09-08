@@ -2,10 +2,11 @@ import firedrake
 from firedrake import PETSc
 import ufl
 import numpy as np
+import movement.solver_parameters as solver_parameters
 from movement.mover import Mover
 
 
-__all__ = ["MongeAmpereMover", "monge_ampere"]
+__all__ = ["MongeAmpereMover_Relaxation", "MongeAmpereMover_QuasiNewton", "monge_ampere"]
 
 
 class MongeAmpereMover_Base(Mover):
@@ -298,6 +299,88 @@ class MongeAmpereMover_QuasiNewton(Mover):
         psi = firedrake.TestFunction(self.P1)
         self.residual_l2_form = psi*self.residual*self.dx
         self.norm_l2_form = psi*self.theta*self.dx
+
+    @property
+    def equidistributor(self):
+        """
+        Setup the equidistributor for the quasi-newton method.
+        """
+        if hasattr(self, '_equidistributor'):
+            return self._equidistributor
+        if self.dim != 2:
+            raise NotImplementedError  # TODO
+        n = ufl.FacetNormal(self.mesh)
+        I = ufl.Identity(self.dim)
+        phi, sigma = firedrake.TrialFunctions(self.V)
+        psi, tau = firedrake.TestFunctions(self.V)
+        F = ufl.inner(tau, self.sigma)*self.dx \
+            + ufl.dot(ufl.div(tau), ufl.grad(self.phi))*self.dx \
+            - (tau[0, 1]*n[1]*self.phi.dx(0) + tau[1, 0]*n[0]*self.phi.dx(1))*self.ds \
+            - psi*(self.monitor*ufl.det(I + self.sigma) - self.theta)*self.dx
+
+        def update_monitor(cursol):
+            """
+            Callback for updating the monitor function.
+            """
+            with self.phisigma.dat.vec as v:
+                cursol.copy(v)
+            self.l2_projector.solve()
+            self.mesh.coordinates.assign(self.x)
+            self.monitor.interpolate(self.monitor_function(self.mesh))
+            self.mesh.coordinates.assign(self.xi)
+            self.theta.assign(firedrake.assemble(self.theta_form)/self.total_volume)
+
+        # Custom preconditioner
+        Jp = ufl.inner(tau, sigma)*self.dx \
+            + phi*psi*self.dx \
+            + ufl.inner(ufl.grad(phi), ufl.grad(psi))*self.dx
+
+        # Setup the variational problem
+        problem = firedrake.NonlinearVariationalProblem(F, self.phisigma, Jp=Jp)
+        nullspace = firedrake.MixedVectorSpaceBasis(self.V, [firedrake.VectorSpaceBasis(constant=True), self.V.sub(1)])
+        sp = solver_parameters.serial_qn if firedrake.COMM_WORLD.size == 1 else solver_parameters.parallel_qn
+        self._equidistributor = firedrake.NonlinearVariationalSolver(problem,
+                                                                     nullspace=nullspace,
+                                                                     transpose_nullspace=nullspace,
+                                                                     pre_function_callback=self.update_monitor,
+                                                                     pre_jacobian_callback=self.update_monitor,
+                                                                     solver_parameters=sp)
+
+        def monitor(snes, i, rnorm):
+            """
+            Print progress of the optimisation to screen.
+
+            Note that convergence is not actually checked.
+            """
+            cursol = snes.getSolution()
+            update_monitor(cursol)
+            self.mesh.coordinates.assign(self.x)
+            firedrake.assemble(self.L_p0, tensor=self.volume)
+            self.volume.assign(self.volume/self.original_volume)
+            self.mesh.coordinates.assign(self.xi)
+            minmax, residual, equi = self.diagnostics
+            PETSc.Sys.Print(f"{i:4d}"
+                            f"   Min/Max {minmax:10.4e}"
+                            f"   Residual {residual:10.4e}"
+                            f"   Equidistribution {equi:10.4e}")
+
+        self.snes = self._equidistributor.snes
+        self.snes.setTolerances(rtol=self.rtol, max_it=self.maxiter)
+        self.snes.setMonitor(monitor)
+        return self._equidistributor
+
+    def adapt(self):
+        """
+        Run the quasi-Newton method to convergence and update the mesh.
+        """
+        try:
+            self.equidistributor.solve()
+            i = self.snes.getIterationNumber()
+            PETSc.Sys.Print(f"Converged in {i+1} iterations.")
+        except firedrake.ConvergenceError:
+            i = self.snes.getIterationNumber()
+            raise firedrake.ConvergenceError(f"Failed to converge in {i+1} iterations.")
+        self.mesh.coordinates.assign(self.x)
 
 
 def monge_ampere(mesh, monitor_function, method='relaxation', **kwargs):
