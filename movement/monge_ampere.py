@@ -1,5 +1,6 @@
 import firedrake
 from firedrake import PETSc
+from pyadjoint import no_annotations
 import ufl
 import numpy as np
 import movement.solver_parameters as solver_parameters
@@ -376,7 +377,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             self.mesh.coordinates.assign(self.x)
             self.monitor.interpolate(self.monitor_function(self.mesh))
             self.mesh.coordinates.assign(self.xi)
-            self.theta.assign(firedrake.assemble(self.theta_form)/self.total_volume)
+            self.theta.assign(firedrake.assemble(self.theta_form)*self.total_volume**(-1))
 
         # Custom preconditioner
         Jp = ufl.inner(tau, sigma)*self.dx \
@@ -388,6 +389,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         nullspace = firedrake.MixedVectorSpaceBasis(self.V, [firedrake.VectorSpaceBasis(constant=True), self.V.sub(1)])
         sp = solver_parameters.serial_qn if firedrake.COMM_WORLD.size == 1 else solver_parameters.parallel_qn
         sp['snes_atol'] = self.rtol
+        sp['snes_max_it'] = self.maxiter
         self._equidistributor = firedrake.NonlinearVariationalSolver(problem,
                                                                      nullspace=nullspace,
                                                                      transpose_nullspace=nullspace,
@@ -395,6 +397,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
                                                                      pre_jacobian_callback=update_monitor,
                                                                      solver_parameters=sp)
 
+        @no_annotations
         def monitor(snes, i, rnorm):
             """
             Print progress of the optimisation to screen.
@@ -414,7 +417,6 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
                             f"   Equidistribution {equi:10.4e}")
 
         self.snes = self._equidistributor.snes
-        self.snes.setTolerances(rtol=self.rtol, max_it=self.maxiter)
         self.snes.setMonitor(monitor)
         return self._equidistributor
 
