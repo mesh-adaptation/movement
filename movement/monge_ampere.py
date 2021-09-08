@@ -291,9 +291,10 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.phi_old.assign(self.phi)
             self.sigma_old.assign(self.sigma)
         self.mesh.coordinates.assign(self.x)
+        return i+1
 
 
-class MongeAmpereMover_QuasiNewton(Mover):
+class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     r"""
     Movement of a `mesh` is determined by a `monitor_function`
     :math:`m` and the Monge-Ampère type equation
@@ -357,12 +358,13 @@ class MongeAmpereMover_QuasiNewton(Mover):
             raise NotImplementedError  # TODO
         n = ufl.FacetNormal(self.mesh)
         I = ufl.Identity(self.dim)
-        phi, sigma = firedrake.TrialFunctions(self.V)
+        phi, sigma = firedrake.split(self.phisigma)
         psi, tau = firedrake.TestFunctions(self.V)
-        F = ufl.inner(tau, self.sigma)*self.dx \
-            + ufl.dot(ufl.div(tau), ufl.grad(self.phi))*self.dx \
-            - (tau[0, 1]*n[1]*self.phi.dx(0) + tau[1, 0]*n[0]*self.phi.dx(1))*self.ds \
-            - psi*(self.monitor*ufl.det(I + self.sigma) - self.theta)*self.dx
+        F = ufl.inner(tau, sigma)*self.dx \
+            + ufl.dot(ufl.div(tau), ufl.grad(phi))*self.dx \
+            - (tau[0, 1]*n[1]*phi.dx(0) + tau[1, 0]*n[0]*phi.dx(1))*self.ds \
+            - psi*(self.monitor*ufl.det(I + sigma) - self.theta)*self.dx
+        phi, sigma = firedrake.TrialFunctions(self.V)
 
         def update_monitor(cursol):
             """
@@ -385,11 +387,12 @@ class MongeAmpereMover_QuasiNewton(Mover):
         problem = firedrake.NonlinearVariationalProblem(F, self.phisigma, Jp=Jp)
         nullspace = firedrake.MixedVectorSpaceBasis(self.V, [firedrake.VectorSpaceBasis(constant=True), self.V.sub(1)])
         sp = solver_parameters.serial_qn if firedrake.COMM_WORLD.size == 1 else solver_parameters.parallel_qn
+        sp['snes_atol'] = self.rtol
         self._equidistributor = firedrake.NonlinearVariationalSolver(problem,
                                                                      nullspace=nullspace,
                                                                      transpose_nullspace=nullspace,
-                                                                     pre_function_callback=self.update_monitor,
-                                                                     pre_jacobian_callback=self.update_monitor,
+                                                                     pre_function_callback=update_monitor,
+                                                                     pre_jacobian_callback=update_monitor,
                                                                      solver_parameters=sp)
 
         def monitor(snes, i, rnorm):
@@ -401,7 +404,7 @@ class MongeAmpereMover_QuasiNewton(Mover):
             cursol = snes.getSolution()
             update_monitor(cursol)
             self.mesh.coordinates.assign(self.x)
-            firedrake.assemble(self.L_p0, tensor=self.volume)
+            firedrake.assemble(self.L_P0, tensor=self.volume)
             self.volume.assign(self.volume/self.original_volume)
             self.mesh.coordinates.assign(self.xi)
             minmax, residual, equi = self.diagnostics
@@ -421,12 +424,13 @@ class MongeAmpereMover_QuasiNewton(Mover):
         """
         try:
             self.equidistributor.solve()
-            i = self.snes.getIterationNumber()
-            PETSc.Sys.Print(f"Converged in {i+1} iterations.")
+            i = self.snes.getIterationNumber() + 1
+            PETSc.Sys.Print(f"Converged in {i} iterations.")
         except firedrake.ConvergenceError:
-            i = self.snes.getIterationNumber()
-            raise firedrake.ConvergenceError(f"Failed to converge in {i+1} iterations.")
+            i = self.snes.getIterationNumber() + 1
+            raise firedrake.ConvergenceError(f"Failed to converge in {i} iterations.")
         self.mesh.coordinates.assign(self.x)
+        return i
 
 
 def monge_ampere(mesh, monitor_function, method='relaxation', **kwargs):
@@ -457,4 +461,4 @@ def monge_ampere(mesh, monitor_function, method='relaxation', **kwargs):
         mover = MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
     else:
         raise ValueError(f"Monge-Ampere solver {method} not recognised.")
-    mover.adapt()
+    return mover.adapt()
