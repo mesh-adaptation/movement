@@ -2,12 +2,46 @@ import firedrake
 from firedrake import PETSc
 from pyadjoint import no_annotations
 import ufl
+from pyop2.profiling import timed_stage
 import numpy as np
 import movement.solver_parameters as solver_parameters
 from movement.mover import Mover
 
 
-__all__ = ["MongeAmpereMover_Relaxation", "MongeAmpereMover_QuasiNewton", "monge_ampere"]
+__all__ = ["MongeAmpereMover_Relaxation", "MongeAmpereMover_QuasiNewton", "MongeAmpereMover", "monge_ampere"]
+
+
+def MongeAmpereMover(mesh, monitor_function, method='relaxation', **kwargs):
+    r"""
+    Movement of a `mesh` is determined by a `monitor_function`
+    :math:`m` and the Monge-Ampère type equation
+
+..  math::
+        m(x)\det(I + H(\phi)) = \theta,
+
+    for a scalar potential :math:`\phi`, where :math:`I` is the
+    identity matrix, :math:`\theta` is a normalisation coefficient
+    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
+    respect to the coordinates :math:`\xi` of the computational mesh.
+
+    The physical mesh coordinates :math:`x` are updated according to
+
+..  math::
+        x = \xi + \nabla\phi.
+
+    :arg mesh: the physical mesh
+    :arg monitor_function: a Python function which takes a mesh as input
+    :kwarg method: choose from 'relaxation' and 'quasi_newton'
+    :kwarg phi_init: initial guess for the scalar potential
+    :kwarg sigma_init: initial guess for the Hessian
+    :return: converged scalar potential and Hessian
+    """
+    if method == 'relaxation':
+        return MongeAmpereMover_Relaxation(mesh, monitor_function, **kwargs)
+    elif method == 'quasi_newton':
+        return MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
+    else:
+        raise ValueError(f"Method {method} not recognised.")
 
 
 class MongeAmpereMover_Base(Mover):
@@ -23,6 +57,8 @@ class MongeAmpereMover_Base(Mover):
         """
         :arg mesh: the physical mesh
         :arg monitor_function: a Python function which takes a mesh as input
+        :kwarg phi_init: initial guess for the scalar potential
+        :kwarg sigma_init: initial guess for the Hessian
         :kwarg maxiter: maximum number of iterations for the relaxation
         :kwarg rtol: relative tolerance for the residual
         :kwarg dtol: divergence tolerance for the residual
@@ -54,6 +90,26 @@ class MongeAmpereMover_Base(Mover):
         self.L_P0 = firedrake.TestFunction(self.P0)*self.monitor*self.dx
         self._grad_phi = firedrake.Function(self.P1_vec)
         self.grad_phi = firedrake.Function(self.mesh.coordinates)
+
+    def apply_initial_guess(self, phi_init=None, sigma_init=None, **kwargs):
+        """
+        Initialise the approximations to the scalar potential
+        and its hessian with an initial guess.
+
+        By default, both are initialised to zero, which corresponds
+        to the case where the computational and physical meshes
+        coincide.
+
+        :kwarg phi_init: initial guess for the scalar potential
+        :kwarg sigma_init: initial guess for the Hessian
+        """
+        if phi_init is not None and sigma_init is not None:
+            self.phi.assign(phi_init)
+            self.sigma.assign(sigma_init)
+            self.phi_old.assign(phi_init)
+            self.sigma_old.assign(sigma_init)
+        elif phi_init is not None or sigma_init is not None:
+            raise ValueError("Need to initialise both phi *and* sigma")
 
     @property
     def diagnostics(self):
@@ -146,19 +202,8 @@ class MongeAmpereMover_Base(Mover):
 
 class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     r"""
-    Movement of a `mesh` is determined by a `monitor_function`
-    :math:`m` and the Monge-Ampère type equation
-
-..  math::
-        m(x)\det(I + H(\phi)) = \theta,
-
-    for a scalar potential :math:`\phi`, where :math:`I` is the
-    identity matrix, :math:`\theta` is a normalisation coefficient
-    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
-    respect to the coordinates :math:`\xi` of the computational mesh.
-
-    This elliptic equation is solved in a parabolised form using a
-    pseudo-time relaxation,
+    The elliptic Monge-Ampere equation is solved in a parabolised
+    form using a pseudo-time relaxation,
 
 ..  math::
         -\frac\partial{\partial\tau}\Delta\phi = m(x)\det(I + H(\phi)) - \theta,
@@ -166,11 +211,6 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     where :math:`\tau` is the pseudo-time variable. Forward Euler is
     used for the pseudo-time integration (see McRae et al. 2018 for
     details).
-
-    The physical mesh coordinates :math:`x` are updated according to
-
-..  math::
-        x = \xi + \nabla\phi.
 
     References
     ==========
@@ -183,6 +223,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         """
         :arg mesh: the physical mesh
         :arg monitor_function: a Python function which takes a mesh as input
+        :kwarg phi_init: initial guess for the scalar potential
+        :kwarg sigma_init: initial guess for the Hessian
         :kwarg pseudo_timestep: pseudo-timestep to use for the relaxation
         :kwarg maxiter: maximum number of iterations for the relaxation
         :kwarg rtol: relative tolerance for the residual
@@ -192,10 +234,13 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
 
         # Create functions to hold solution data
-        self.phi = firedrake.Function(self.P1)        # NOTE: initialised to zero
-        self.sigma = firedrake.Function(self.P1_ten)  # NOTE: initialised to zero
+        self.phi = firedrake.Function(self.P1)
+        self.sigma = firedrake.Function(self.P1_ten)
         self.phi_old = firedrake.Function(self.P1)
         self.sigma_old = firedrake.Function(self.P1_ten)
+
+        # Initialise phi and sigma
+        self.apply_initial_guess(**kwargs)
 
         # Setup residuals
         I = ufl.Identity(self.dim)
@@ -297,24 +342,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
 
 class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     r"""
-    Movement of a `mesh` is determined by a `monitor_function`
-    :math:`m` and the Monge-Ampère type equation
-
-..  math::
-        m(x)\det(I + H(\phi)) = \theta,
-
-    for a scalar potential :math:`\phi`, where :math:`I` is the
-    identity matrix, :math:`\theta` is a normalisation coefficient
-    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
-    respect to the coordinates :math:`\xi` of the computational mesh.
-
-    This elliptic equation is solved using a quasi-Newton method
-    (see McRae et al. 2018 for details).
-
-    The physical mesh coordinates :math:`x` are updated according to
-
-..  math::
-        x = \xi + \nabla\phi.
+    The elliptic Monge-Ampere equation is solved using a quasi-Newton
+    method (see McRae et al. 2018 for details).
 
     References
     ==========
@@ -335,10 +364,13 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
 
         # Create functions to hold solution data
         self.V = self.P1*self.P1_ten
-        self.phisigma = firedrake.Function(self.V)  # NOTE: initialised to zero
+        self.phisigma = firedrake.Function(self.V)
         self.phi, self.sigma = self.phisigma.split()
         self.phisigma_old = firedrake.Function(self.V)
         self.phi_old, self.sigma_old = self.phisigma_old.split()
+
+        # Initialise phi and sigma
+        self.apply_initial_guess(**kwargs)
 
         # Setup residuals
         I = ufl.Identity(self.dim)
@@ -456,6 +488,9 @@ def monge_ampere(mesh, monitor_function, method='relaxation', **kwargs):
     :arg mesh: the physical mesh
     :arg monitor_function: a Python function which takes a mesh as input
     :kwarg method: choose from 'relaxation' and 'quasi_newton'
+    :kwarg phi_init: initial guess for the scalar potential
+    :kwarg sigma_init: initial guess for the Hessian
+    :return: converged scalar potential and Hessian
     """
     if method == 'relaxation':
         mover = MongeAmpereMover_Relaxation(mesh, monitor_function, **kwargs)
@@ -463,4 +498,6 @@ def monge_ampere(mesh, monitor_function, method='relaxation', **kwargs):
         mover = MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
     else:
         raise ValueError(f"Monge-Ampere solver {method} not recognised.")
-    return mover.adapt()
+    with timed_stage(f"Monge-Ampere {method}"):
+        mover.adapt()
+    return mover.phi, mover.sigma
