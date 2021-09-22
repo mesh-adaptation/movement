@@ -45,3 +45,10 @@ parallel_qn = {
     "snes_linesearch_damping": 0.8,
     "snes_lag_preconditioner": -2,
 }
+
+mass_inv = {
+    "mat_type": "matfree",
+    "ksp_type": "preonly",
+    "pc_type": "python",
+    "pc_python_type": "firedrake.MassInvPC",
+}
