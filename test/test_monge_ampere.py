@@ -68,16 +68,19 @@ def test_change_monitor(method, exports=False):
     """
     n = 20
     mesh = UnitSquareMesh(n, n)
-    rtol = 1.0e-03
+    coords = mesh.coordinates.dat.data.copy()
+    tol = 1.0e-03
 
     # Adapt to a ring monitor
-    mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=rtol)
+    mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=tol)
     mover.adapt()
     if exports:
         File("outputs/ring.pvd").write(mover.phi, mover.sigma)
+    assert not np.allclose(coords, mesh.coordinates.dat.data, atol=tol)
 
     # Adapt to a constant monitor
     mover.monitor_function = const_monitor
     mover.adapt()
     if exports:
         File("outputs/const.pvd").write(mover.phi, mover.sigma)
+    assert np.allclose(coords, mesh.coordinates.dat.data, atol=tol)
