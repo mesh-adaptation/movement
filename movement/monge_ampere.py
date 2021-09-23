@@ -5,7 +5,7 @@ import ufl
 from pyop2.profiling import timed_stage
 import numpy as np
 import movement.solver_parameters as solver_parameters
-from movement.mover import Mover
+from movement.mover import PrimeMover
 
 
 __all__ = ["MongeAmpereMover_Relaxation", "MongeAmpereMover_QuasiNewton", "MongeAmpereMover", "monge_ampere"]
@@ -44,7 +44,7 @@ def MongeAmpereMover(mesh, monitor_function, method='relaxation', **kwargs):
         raise ValueError(f"Method {method} not recognised.")
 
 
-class MongeAmpereMover_Base(Mover):
+class MongeAmpereMover_Base(PrimeMover):
     """
     Base class for mesh movers based on the solution
     of Monge-Ampere type equations.
