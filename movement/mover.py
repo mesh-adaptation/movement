@@ -1,10 +1,10 @@
 import firedrake
 
 
-__all__ = ["Mover"]
+__all__ = ["PrimeMover"]
 
 
-class Mover(object):
+class PrimeMover(object):
     """
     Base class for all mesh movers.
     """
