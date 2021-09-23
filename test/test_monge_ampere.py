@@ -56,8 +56,33 @@ def test_continue(method, exports=False):
 
     assert num_it_continue < num_it_naive
     assert num_it_init + num_it_continue < num_it_naive
+    # FIXME: Looks like the mesh is tangled or close to tangling
+
+
+def test_change_monitor(method, exports=False):
+    """
+    Test that the mover can handle changes to
+    the monitor function, such as would happen
+    during timestepping.
+    """
+    n = 20
+    mesh = UnitSquareMesh(n, n)
+    rtol = 1.0e-03
+
+    # Adapt to a ring monitor
+    mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=rtol)
+    mover.adapt()
+    if exports:
+        File("outputs/ring.pvd").write(mover.phi, mover.sigma)
+
+    # Adapt to a constant monitor
+    mover.monitor_function = const_monitor
+    mover.adapt()
+    if exports:
+        File("outputs/const.pvd").write(mover.phi, mover.sigma)
 
 
 if __name__ == "__main__":
-    test_continue('relaxation', exports=True)
+    # test_change_monitor('relaxation', exports=True)
+    test_change_monitor('quasi_newton', exports=True)
     # test_continue('quasi_newton', exports=True)
