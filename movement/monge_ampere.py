@@ -337,7 +337,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.phi_old.assign(self.phi)
             self.sigma_old.assign(self.sigma)
         self.mesh.coordinates.assign(self.x)
-        return i+1
+        return i
 
 
 class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
@@ -403,7 +403,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             """
             Callback for updating the monitor function.
             """
-            with self.phisigma.dat.vec as v:
+            with self.phisigma_old.dat.vec as v:
                 cursol.copy(v)
             self.l2_projector.solve()
             self.mesh.coordinates.assign(self.x)
@@ -458,10 +458,10 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         """
         try:
             self.equidistributor.solve()
-            i = self.snes.getIterationNumber() + 1
+            i = self.snes.getIterationNumber()
             PETSc.Sys.Print(f"Converged in {i} iterations.")
         except firedrake.ConvergenceError:
-            i = self.snes.getIterationNumber() + 1
+            i = self.snes.getIterationNumber()
             raise firedrake.ConvergenceError(f"Failed to converge in {i} iterations.")
         self.mesh.coordinates.assign(self.x)
         return i
