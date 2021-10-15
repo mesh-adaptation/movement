@@ -91,6 +91,7 @@ class MongeAmpereMover_Base(PrimeMover):
         self._grad_phi = firedrake.Function(self.P1_vec)
         self.grad_phi = firedrake.Function(self.mesh.coordinates)
 
+    @PETSc.Log.EventDecorator("MongeAmpereBase.apply_initial_guess")
     def apply_initial_guess(self, phi_init=None, sigma_init=None, **kwargs):
         """
         Initialise the approximations to the scalar potential
@@ -112,6 +113,7 @@ class MongeAmpereMover_Base(PrimeMover):
             raise ValueError("Need to initialise both phi *and* sigma")
 
     @property
+    @PETSc.Log.EventDecorator("MongeAmpereBase.diagnostics")
     def diagnostics(self):
         """
         Compute diagnostics:
@@ -132,6 +134,7 @@ class MongeAmpereMover_Base(PrimeMover):
         return minmax, residual_l2_rel, equi
 
     @property
+    @PETSc.Log.EventDecorator("MongeAmpereBase.update_coordinates")
     def x(self):
         """
         Update the coordinate :class:`Function` using
@@ -145,6 +148,7 @@ class MongeAmpereMover_Base(PrimeMover):
         return self._x
 
     @property
+    @PETSc.Log.EventDecorator("MongeAmpereBase.create_l2_projector")
     def l2_projector(self):
         """
         Create a linear solver for obtaining the gradient
@@ -219,6 +223,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     Journal on Scientific Computing 40 (2) (2018) 1121–1148.
     doi:10.1137/16M1109515.
     """
+    @PETSc.Log.EventDecorator("MongeAmpereMover.__init__")
     def __init__(self, mesh, monitor_function, **kwargs):
         """
         :arg mesh: the physical mesh
@@ -251,6 +256,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         self.norm_l2_form = psi*self.theta*self.dx
 
     @property
+    @PETSc.Log.EventDecorator("MongeAmpereMover.create_pseudotimestepper")
     def pseudotimestepper(self):
         """
         Setup the pseudo-timestepper for the relaxation method.
@@ -275,6 +281,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         return self._pseudotimestepper
 
     @property
+    @PETSc.Log.EventDecorator("MongeAmpereMover.create_equidistributor")
     def equidistributor(self):
         """
         Setup the equidistributor for the relaxation method.
@@ -294,6 +301,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         self._equidistributor = firedrake.LinearVariationalSolver(problem, solver_parameters=sp)
         return self._equidistributor
 
+    @PETSc.Log.EventDecorator("MongeAmpereMover.adapt")
     def adapt(self):
         """
         Run the relaxation method to convergence and update the mesh.
@@ -352,6 +360,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     Journal on Scientific Computing 40 (2) (2018) 1121–1148.
     doi:10.1137/16M1109515.
     """
+    @PETSc.Log.EventDecorator("MongeAmpereMover.__init__")
     def __init__(self, mesh, monitor_function, **kwargs):
         """
         :arg mesh: the physical mesh
@@ -381,6 +390,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self.norm_l2_form = psi*self.theta*self.dx
 
     @property
+    @PETSc.Log.EventDecorator("MongeAmpereMover.create_equidistributor")
     def equidistributor(self):
         """
         Setup the equidistributor for the quasi-newton method.
@@ -399,6 +409,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             - psi*(self.monitor*ufl.det(I + sigma) - self.theta)*self.dx
         phi, sigma = firedrake.TrialFunctions(self.V)
 
+        @PETSc.Log.EventDecorator("MongeAmpereMover.update_monitor")
         def update_monitor(cursol):
             """
             Callback for updating the monitor function.
@@ -430,6 +441,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
                                                                      solver_parameters=sp)
 
         @no_annotations
+        @PETSc.Log.EventDecorator("MongeAmpereMover.monitor")
         def monitor(snes, i, rnorm):
             """
             Print progress of the optimisation to screen.
@@ -452,6 +464,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self.snes.setMonitor(monitor)
         return self._equidistributor
 
+    @PETSc.Log.EventDecorator("MongeAmpereMover.adapt")
     def adapt(self):
         """
         Run the quasi-Newton method to convergence and update the mesh.
