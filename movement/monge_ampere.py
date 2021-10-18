@@ -300,8 +300,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         self._equidistributor = firedrake.LinearVariationalSolver(problem, solver_parameters=sp)
         return self._equidistributor
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.adapt")
-    def adapt(self):
+    @PETSc.Log.EventDecorator("MongeAmpereMover.move")
+    def move(self):
         """
         Run the relaxation method to convergence and update the mesh.
         """
@@ -463,8 +463,8 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self.snes.setMonitor(monitor)
         return self._equidistributor
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.adapt")
-    def adapt(self):
+    @PETSc.Log.EventDecorator("MongeAmpereMover.move")
+    def move(self):
         """
         Run the quasi-Newton method to convergence and update the mesh.
         """
