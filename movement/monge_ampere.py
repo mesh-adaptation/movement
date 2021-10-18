@@ -2,7 +2,6 @@ import firedrake
 from firedrake import PETSc
 from pyadjoint import no_annotations
 import ufl
-from pyop2.profiling import timed_stage
 import numpy as np
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
@@ -301,8 +300,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         self._equidistributor = firedrake.LinearVariationalSolver(problem, solver_parameters=sp)
         return self._equidistributor
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.adapt")
-    def adapt(self):
+    @PETSc.Log.EventDecorator("MongeAmpereMover.move")
+    def move(self):
         """
         Run the relaxation method to convergence and update the mesh.
         """
@@ -464,8 +463,8 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self.snes.setMonitor(monitor)
         return self._equidistributor
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.adapt")
-    def adapt(self):
+    @PETSc.Log.EventDecorator("MongeAmpereMover.move")
+    def move(self):
         """
         Run the quasi-Newton method to convergence and update the mesh.
         """
@@ -511,6 +510,5 @@ def monge_ampere(mesh, monitor_function, method='relaxation', **kwargs):
         mover = MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
     else:
         raise ValueError(f"Monge-Ampere solver {method} not recognised.")
-    with timed_stage(f"Monge-Ampere {method}"):
-        mover.adapt()
+    mover.adapt()
     return mover.phi, mover.sigma

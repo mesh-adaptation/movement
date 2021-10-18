@@ -52,3 +52,10 @@ mass_inv = {
     "pc_type": "python",
     "pc_python_type": "firedrake.MassInvPC",
 }
+
+jacobi = {
+    "mat_type": "matfree",
+    "snes_type": "ksponly",
+    "ksp_type": "preonly",
+    "pc_type": "jacobi",
+}
