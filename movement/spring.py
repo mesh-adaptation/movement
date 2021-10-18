@@ -1,11 +1,31 @@
 import firedrake
 from firedrake import PETSc
-from pyadjoint import no_annotations
 import ufl
-from pyop2.profiling import timed_stage
 import numpy as np
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
+
+
+__all__ = ["SpringMover_Lineal", "SpringMover_Torsional", "SpringMover"]
+
+
+def SpringMover(mesh, method='lineal', **kwargs):
+    """
+    Movement of a ``mesh`` is determined by reinterpreting
+    it as a structure of stiff beams and solving an
+    associated discrete linear elasticity problem.
+
+    See Farhat, Degand, Koobus and Lesoinne, "Torsional
+    springs for two-dimensional dynamic unstructured fluid
+    meshes" (1998), Computer methods in applied mechanics
+    and engineering, 163:231-245.
+    """
+    if method == 'lineal':
+        return SpringMover_Lineal(mesh, **kwargs)
+    elif method == 'torsional':
+        return SpringMover_Torsional(mesh, **kwargs)
+    else:
+        raise ValueError(f"Method {method} not recognised.")
 
 
 class SpringMover_Base(PrimeMover):
@@ -20,6 +40,8 @@ class SpringMover_Base(PrimeMover):
         super().__init__(mesh)
         self.HDivTrace = firedrake.FunctionSpace(mesh, "HDiv Trace", 0)
         self.HDivTrace_vec = firedrake.VectorFunctionSpace(mesh, "HDiv Trace", 0)
+        self.f = firedrake.Function(self.mesh.coordinates.function_space())
+        self.displacement = np.zeros(mesh.num_vertices())
 
     @property
     @PETSc.Log.EventDecorator("SpringMover_Base.facet_areas")
@@ -91,3 +113,125 @@ class SpringMover_Base(PrimeMover):
         self._angles_solver.solve()
         self._angles.dat.data[:] = np.arccos(self._angles.dat.data)
         return self._angles
+
+    @property
+    @PETSc.Log.EventDecorator("SpringMover_Base.stiffness_matrix")
+    def stiffness_matrix(self):
+        angles = self.angles
+        edge_lengths = self.facet_areas
+        bnd = self.mesh.exterior_facets
+        N = self.mesh.num_vertices()
+
+        K = np.zeros((2*N, 2*N))
+        for e in range(*self.edge_indices):
+            off = self.edge_vector_offset(e)
+            i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
+            if bnd.point2facetnumber[e] != -1:
+                K[2*i][2*i] += 1.0
+                K[2*i+1][2*i+1] += 1.0
+                K[2*j][2*j] += 1.0
+                K[2*j+1][2*j+1] += 1.0
+            else:
+                l = edge_lengths.dat.data_with_halos[off]
+                angle = angles.dat.data_with_halos[off]
+                c = np.cos(angle)
+                s = np.sin(angle)
+                K[2*i][2*i] += c*c/l
+                K[2*i][2*i+1] += s*c/l
+                K[2*i][2*j] += -c*c/l
+                K[2*i][2*j+1] += -s*c/l
+                K[2*i+1][2*i] += s*c/l
+                K[2*i+1][2*i+1] += s*s/l
+                K[2*i+1][2*j] += -s*c/l
+                K[2*i+1][2*j+1] += -s*s/l
+                K[2*j][2*i] += -c*c/l
+                K[2*j][2*i+1] += -s*c/l
+                K[2*j][2*j] += c*c/l
+                K[2*j][2*j+1] += s*c/l
+                K[2*j+1][2*i] += -s*c/l
+                K[2*j+1][2*i+1] += -s*s/l
+                K[2*j+1][2*j] += s*c/l
+                K[2*j+1][2*j+1] += s*s/l
+        return K
+
+    @PETSc.Log.EventDecorator("SpringMover_Lineal.apply_dirichlet_conditions")
+    def apply_dirichlet_conditions(self, tags):
+        """
+        Enforce that nodes on certain tagged boundaries
+        do not move.
+
+        :arg tags: a list of boundary tags
+        """
+        bnd = self.mesh.exterior_facets
+        if not set(tags).issubset(set(bnd.unique_markers)):
+            raise ValueError(f"{tags} contains invalid boundary tags")
+        subsets = sum([list(bnd.subset(physID).indices) for physID in tags], start=[])
+        for e in range(*self.edge_indices):
+            i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
+            if bnd.point2facetnumber[e] in subsets:
+                self.displacement[2*i] = 0.0
+                self.displacement[2*i+1] = 0.0
+                self.displacement[2*j] = 0.0
+                self.displacement[2*j+1] = 0.0
+
+
+class SpringMover_Lineal(SpringMover_Base):
+    """
+    Movement of a ``mesh`` is determined by reinterpreting
+    it as a structure of stiff beams and solving an
+    associated discrete linear elasticity problem.
+
+    We consider the 'lineal' case, as described in
+    Farhat, Degand, Koobus and Lesoinne, "Torsional
+    springs for two-dimensional dynamic unstructured fluid
+    meshes" (1998), Computer methods in applied mechanics
+    and engineering, 163:231-245.
+    """
+    @PETSc.Log.EventDecorator("SpringMover_Lineal.move")
+    def move(self, time, update_forcings=None, fixed_boundaries=[]):
+        """
+        Assemble and solve the lineal spring system and
+        update the coordinates.
+
+        :arg time: the current time
+        :kwarg update_forcings: function that updates
+            the forcing :attr:`f` at the current time
+        :kwarg fixed_boundaries: list of boundaries
+            where Dirichlet conditions are to be
+            enforced
+        """
+        if update_forcings is not None:
+            update_forcings(time)
+
+        # Assemble
+        K = self.stiffness_matrix
+        rhs = self.f.dat.data.flatten()
+
+        # Solve
+        self.displacement = np.linalg.solve(K, rhs)
+
+        # Enforce Dirichlet conditions as a post-process
+        if len(fixed_boundaries) > 0:
+            self.apply_dirichlet_conditions(fixed_boundaries)
+
+        # Update mesh coordinates
+        shape = self.mesh.coordinates.dat.data_with_halos.shape
+        self.mesh.coordinates.dat.data_with_halos[:] += self.displacement.reshape(shape)
+        # TODO: Update DMPlex coordinates, too
+
+
+class SpringMover_Torsional(SpringMover_Lineal):
+    """
+    Movement of a ``mesh`` is determined by reinterpreting
+    it as a structure of stiff beams and solving an
+    associated discrete linear elasticity problem.
+
+    We consider the 'torsional' case, as described in
+    Farhat, Degand, Koobus and Lesoinne, "Torsional
+    springs for two-dimensional dynamic unstructured fluid
+    meshes" (1998), Computer methods in applied mechanics
+    and engineering, 163:231-245.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        raise NotImplementedError("Torsional springs not yet implemented")  # TODO
