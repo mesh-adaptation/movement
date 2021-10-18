@@ -72,5 +72,13 @@ class PrimeMover(object):
         """
         return self.mesh.coordinates.dat.data_with_halos[self.get_offset(index)]
 
+    def move(self):
+        raise NotImplementedError("Implement `move` in the derived class.")
+
     def adapt(self):
-        raise NotImplementedError("Implement `adapt` in the derived class.")
+        """
+        Alias of `move`.
+        """
+        from warnings import warn
+        warn("`adapt` is deprecated (use `move` instead)", DeprecationWarning, stacklevel=2)
+        return self.move()
