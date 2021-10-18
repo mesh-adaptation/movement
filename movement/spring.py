@@ -65,3 +65,29 @@ class SpringMover_Base(PrimeMover):
             )
         self._tangents_solver.solve()
         return self._tangents
+
+    @property
+    @PETSc.Log.EventDecorator("SpringMover_Base.angles")
+    def angles(self):
+        r"""
+        Compute the argument of each edge in the
+        mesh, i.e. its angle from the :math:`x`-axis
+        in the :math:`x-y` plane.
+        """
+        t = self.tangents
+        if not hasattr(self, '_angles_solver'):
+            test = firedrake.TestFunction(self.HDivTrace)
+            trial = firedrake.TrialFunction(self.HDivTrace)
+            self._angles = firedrake.Function(self.HDivTrace)
+            e0 = np.zeros(self.dim)
+            e0[0] = 1.0
+            X = ufl.as_vector(e0)
+            a = trial('+')*test('+')*self.dS + trial*test*self.ds
+            L = test('+')*ufl.dot(t('+'), X('+'))*self.dS + test*ufl.dot(t, X)*self.ds
+            prob = firedrake.LinearVariationalProblem(a, L, self._angles)
+            self._angles_solver = firedrake.LinearVariationalSolver(
+                prob, solver_parameters=solver_parameters.jacobi,
+            )
+        self._angles_solver.solve()
+        self._angles.dat.data[:] = np.arccos(self._angles.dat.data)
+        return self._angles
