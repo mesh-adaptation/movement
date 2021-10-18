@@ -43,3 +43,25 @@ class SpringMover_Base(PrimeMover):
             )
         self._facet_area_solver.solve()
         return self._facet_area
+
+    @property
+    @PETSc.Log.EventDecorator("SpringMover_Base.tangents")
+    def tangents(self):
+        """
+        Compute tangent vectors for all edges in
+        the mesh.
+        """
+        if not hasattr(self, '_tangents_solver'):
+            test = firedrake.TestFunction(self.HDivTrace_vec)
+            trial = firedrake.TrialFunction(self.HDivTrace_vec)
+            self._tangents = firedrake.Function(self.HDivTrace_vec)
+            n = ufl.FacetNormal(self.mesh)
+            s = ufl.perp(n)
+            a = ufl.inner(trial('+'), test('+'))*self.dS + ufl.inner(trial, test)*self.ds
+            L = ufl.inner(test('+'), s('+'))*self.dS + ufl.inner(test, s)*self.ds
+            prob = firedrake.LinearVariationalProblem(a, L, self._tangents)
+            self._tangents_solver = firedrake.LinearVariationalSolver(
+                prob, solver_parameters=solver_parameters.jacobi,
+            )
+        self._tangents_solver.solve()
+        return self._tangents
