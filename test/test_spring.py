@@ -51,6 +51,18 @@ def test_angles():
     assert np.allclose(angles, expected)
 
 
+def test_areas():
+    """
+    Test that the area of a right-angled
+    triangle is computed correctly.
+    """
+    mesh = firedrake.UnitTriangleMesh()
+    mover = SpringMover(mesh, method='torsional')
+    areas = mover.areas.dat.data
+    expected = [0.5]
+    assert np.allclose(areas, expected)
+
+
 def test_forced(method, time, plot=False, test=True):
     """
     Test that a uniform mesh is moved as expected
