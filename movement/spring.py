@@ -112,7 +112,7 @@ class SpringMover_Base(PrimeMover):
                 prob, solver_parameters=solver_parameters.jacobi,
             )
         self._angles_solver.solve()
-        self._angles.dat.data[:] = np.arccos(self._angles.dat.data)
+        self._angles.dat.data_with_halos[:] = np.arccos(self._angles.dat.data_with_halos)
         return self._angles
 
     @property
@@ -206,7 +206,7 @@ class SpringMover_Lineal(SpringMover_Base):
 
         # Assemble
         K = self.stiffness_matrix
-        rhs = self.f.dat.data.flatten()
+        rhs = self.f.dat.data_with_halos.flatten()
 
         # Solve
         self.displacement = np.linalg.solve(K, rhs)
@@ -248,3 +248,69 @@ class SpringMover_Torsional(SpringMover_Lineal):
             self._areas = firedrake.Function(self.P0)
         self._areas.interpolate(ufl.CellVolume(self.mesh))
         return self._areas
+
+    @property
+    def K_lineal(self):
+        return super(SpringMover_Torsional, self).stiffness_matrix
+
+    @property
+    @PETSc.Log.EventDecorator("SpringMover_Torsional.K_torsional")
+    def K_torsional(self):
+        tangents = self.tangents
+        N = self.mesh.num_vertices()
+        K = np.zeros((6*N, 6*N))
+
+        # Get denominator
+        denominator = self.areas.copy(deepcopy=True)
+        denominator *= 4.0*denominator
+
+        # Loop over all cells to construct the torsion matrix
+        edge_lengths = self.facet_areas
+        for c in range(*self.cell_indices):
+            off = self.cell_offset(c)
+            edges = self.plex.getCone(c)
+            eij = edges.pop(0)
+            i, j = self.plex.getCone(eij)
+            k = [v for v in self.plex.getCone(edges[0]) if v not in (i, j)]
+            assert len(k == 0)
+            k = k[0]
+            if i in self.plex.getCone(edges[0]):
+                eki = edges.pop(0)
+                ejk = edges.pop(1)
+            else:
+                eki = edges.pop(1)
+                eik = edges.pop(1)
+            assert len(edges) == 0, f"Cell {c} does not have three edges."
+
+            # Get squared edge lengths
+            lij = edge_lengths[self.edge_vector_offset(eij)]**2
+            ljk = edge_lengths[self.edge_vector_offset(ejk)]**2
+            lki = edge_lengths[self.edge_vector_offset(eki)]**2
+
+            # Compute C
+            C = np.diag(lki*lij, lij*ljk, ljk*lki)/denominator(off)
+
+            # Compute R  # TODO: Check signs okay
+            xij, yij = tangents.dat.data_with_halos[eij]
+            xjk, yjk = tangents.dat.data_with_halos[ejk]
+            xki, yki = tangents.dat.data_with_halos[eki]
+            aij = xij/lij; aji = -aij; bij = yij/lij; bji = -bij
+            ajk = xjk/ljk; akj = -ajk; bjk = yjk/ljk; bkj = -bjk
+            aki = xki/lki; aik = -aki; bki = yki/lki; bik = -bki
+            R = np.array(
+                [[bik - bij, aij - aik, bij, -aij, -bik, aik],
+                 [-bji, aji, bji - bjk, ajk - aji, bjk, -ajk],
+                 [bki, -aki, -bkj, akj, bkj - bki, aki - akj]]
+            )
+
+            # Combine
+            Kc = np.dot(np.dot(R.transpose(), C), R)
+
+            # TODO: put in matrix
+
+        return self._K_torsional
+
+    @property
+    @PETSc.Log.EventDecorator("SpringMover_Torsional.stiffness_matrix")
+    def stiffness_matrix(self):
+        raise NotImplementedError  # TODO: How to add contributions of different dim?
