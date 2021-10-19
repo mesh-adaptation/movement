@@ -37,10 +37,15 @@ class PrimeMover(object):
         self._coordinate_section = create_section(self.mesh, entity_dofs)
         dm_coords = self.plex.getCoordinateDM()
         dm_coords.setDefaultSection(self._coordinate_section)
-        coords_local = dm_coords.createLocalVec()
-        coords_local.array[:] = np.reshape(self.mesh.coordinates.dat.data_with_halos,
-                                           coords_local.array.shape)
-        self.plex.setCoordinatesLocal(coords_local)
+        self._coords_local_vec = dm_coords.createLocalVec()
+        self._update_plex_coordinates()
+
+    def _update_plex_coordinates(self):
+        self._coords_local_vec.array[:] = np.reshape(
+            self.mesh.coordinates.dat.data_with_halos,
+            self._coords_local_vec.array.shape,
+        )
+        self.plex.setCoordinatesLocal(self._coords_local_vec)
 
     def _get_edge_vector_section(self):
         entity_dofs = np.zeros(self.dim+1, dtype=np.int32)
@@ -73,6 +78,9 @@ class PrimeMover(object):
         return self.mesh.coordinates.dat.data_with_halos[self.get_offset(index)]
 
     def move(self):
+        """
+        Move the mesh according to the method of choice.
+        """
         raise NotImplementedError("Implement `move` in the derived class.")
 
     def adapt(self):
