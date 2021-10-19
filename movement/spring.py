@@ -217,7 +217,7 @@ class SpringMover_Lineal(SpringMover_Base):
         # Update mesh coordinates
         shape = self.mesh.coordinates.dat.data_with_halos.shape
         self.mesh.coordinates.dat.data_with_halos[:] += self.displacement.reshape(shape)
-        # self._update_plex_coordinates()
+        self._update_plex_coordinates()
 
 
 class SpringMover_Torsional(SpringMover_Lineal):

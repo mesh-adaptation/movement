@@ -99,9 +99,21 @@ def test_forced(method, time, plot=False, test=True):
     if test:
         expected = coords if np.isclose(time, 0.0) else np.load(f"data/forced_mesh_lineal_{it}.npy")
         assert np.allclose(new_coords, expected)
-    return mover.mesh
+    return mover
+
+
+def test_plex_consistency(method, time):
+    """
+    Test that the Firedrake mesh coordinates and the
+    underlying DMPlex's coordinates are consistent
+    after mesh movement.
+    """
+    mover = test_forced(method, time, test=False)
+    plex_coords = mover.plex.getCoordinatesLocal().array
+    mesh_coords = mover.mesh.coordinates.dat.data_with_halos
+    assert np.allclose(plex_coords.reshape(*mesh_coords.shape), mesh_coords)
 
 
 if __name__ == "__main__":
-    mesh = test_forced('lineal', 0.25, plot=True, test=False)
+    mesh = test_forced('lineal', 0.25, plot=True, test=False).mesh
     np.save(f"data/forced_mesh_lineal_4", mesh.coordinates.dat.data)
