@@ -20,6 +20,7 @@ class PrimeMover(object):
         self.plex = self.mesh.topology_dm
         self.vertex_indices = self.plex.getDepthStratum(0)
         self.edge_indices = self.plex.getDepthStratum(1)
+        self.cell_indices = self.plex.getHeightStratum(0)
 
         # Measures
         degree = kwargs.get('quadrature_degree')
@@ -56,6 +57,11 @@ class PrimeMover(object):
         entity_dofs[1] = 1
         self._edge_vector_section = create_section(self.mesh, entity_dofs)
 
+    def _get_cell_section(self):
+        entity_dofs = np.zeros(self.dim+1, dtype=np.int32)
+        entity_dofs[-1] = 1
+        self._cell_section = create_section(self.mesh, entity_dofs)
+
     def coordinate_offset(self, index):
         """
         Get the DMPlex coordinate section offset
@@ -73,6 +79,15 @@ class PrimeMover(object):
         if not hasattr(self, '_edge_vector_section'):
             self._get_edge_vector_section()
         return self._edge_vector_section.getOffset(index)
+
+    def cell_offset(self, index):
+        """
+        Get the DMPlex cell section offset
+        for a given `index`.
+        """
+        if not hasattr(self, '_cell_section'):
+            self._get_cell_section()
+        return self._cell_section.getOffset(index)
 
     def coordinate(self, index):
         """
