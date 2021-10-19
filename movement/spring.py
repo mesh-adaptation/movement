@@ -33,6 +33,7 @@ class SpringMover_Base(PrimeMover):
     Base class for mesh movers based on spring
     analogies.
     """
+    @PETSc.Log.EventDecorator("SpringMover_Base.__init__")
     def __init__(self, mesh, **kwargs):
         """
         :arg mesh: the physical mesh
@@ -232,6 +233,18 @@ class SpringMover_Torsional(SpringMover_Lineal):
     meshes" (1998), Computer methods in applied mechanics
     and engineering, 163:231-245.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        raise NotImplementedError("Torsional springs not yet implemented")  # TODO
+    @PETSc.Log.EventDecorator("SpringMover_Torsional.__init__")
+    def __init__(self, mesh, **kwargs):
+        """
+        :arg mesh: the physical mesh
+        """
+        super().__init__(mesh, **kwargs)
+        self.P0 = firedrake.FunctionSpace(mesh, "DG", 0)
+
+    @property
+    @PETSc.Log.EventDecorator("SpringMover_Torsional.areas")
+    def areas(self):
+        if not hasattr(self, '_areas'):
+            self._areas = firedrake.Function(self.P0)
+        self._areas.interpolate(ufl.CellVolume(self.mesh))
+        return self._areas
