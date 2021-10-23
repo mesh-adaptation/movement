@@ -1,6 +1,7 @@
 plots/
 __pycache__/
 movement.egg-info/
+plots/
 
 *.pvd
 *.vtu
