@@ -7,7 +7,9 @@ __all__ = ["MeshTanglingChecker"]
 
 class MeshTanglingChecker(object):
     """
-    A class for tracking whether
+    A class for tracking whether a mesh has
+    tangled, i.e. whether any of its elements
+    have become inverted.
     """
     def __init__(self, mesh, mode='warn'):
         """
@@ -15,6 +17,9 @@ class MeshTanglingChecker(object):
         :kwarg mode: should a warning or an error
             be raised when tangling is encountered?
         """
+        dim = mesh.topological_dimension()
+        if dim != 2:
+            raise ValueError(f"Cannot check for tangling of {dim}D meshes (only 2D)")
         self.mesh = mesh
         if mode not in ['warn', 'error']:
             raise ValueError(f"Choose mode from 'warn' and 'error'")
