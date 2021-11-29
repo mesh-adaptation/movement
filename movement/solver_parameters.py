@@ -59,3 +59,9 @@ jacobi = {
     "ksp_type": "preonly",
     "pc_type": "jacobi",
 }
+
+cg = {
+    "ksp_type": "cg",
+    "pc_type": "bjacobi",
+    "pc_sub_type": "ilu",
+}

@@ -1,7 +1,6 @@
 import firedrake
 from firedrake import PETSc
 import ufl
-import numpy as np
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
 
@@ -10,7 +9,11 @@ __all__ = ["LaplacianSmoother"]
 
 
 class LaplacianSmoother(PrimeMover):
-    # TODO: doc
+    """
+    Movement of a ``mesh`` is driven by a mesh
+    velocity, which is determined by solving a
+    Poisson problem.
+    """
     @PETSc.Log.EventDecorator("LaplacianSmoother.__init__")
     def __init__(self, mesh, forcing=None, timestep=1.0, **kwargs):
         super().__init__(mesh, **kwargs)
@@ -27,12 +30,9 @@ class LaplacianSmoother(PrimeMover):
             L = ufl.inner(self.f, test)*self.dx
             bcs = firedrake.DirichletBC(self.coord_space, 0, fixed_boundaries)
             problem = firedrake.LinearVariationalProblem(a, L, self.v, bcs=bcs)
-            sp = {
-                "ksp_type": "cg",
-                "pc_type": "bjacobi",
-                "pc_sub_type": "ilu",
-            }
-            self.solver = firedrake.LinearVariationalSolver(problem, solver_parameters=sp)
+            self.solver = firedrake.LinearVariationalSolver(
+                problem, solver_parameters=solver_parameters.cg,
+            )
         self.solver.solve()
 
     @PETSc.Log.EventDecorator("LaplacianSmoother.move")
@@ -59,4 +59,3 @@ class LaplacianSmoother(PrimeMover):
         # Update mesh coordinates
         self._x.dat.data_with_halos[:] += self.v.dat.data_with_halos*self.dt
         self.mesh.coordinates.assign(self._x)
-        # self._update_plex_coordinates()

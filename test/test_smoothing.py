@@ -1,5 +1,16 @@
 from firedrake import *
 from movement import *
+import pytest
+
+
+@pytest.fixture(params=['laplacian'])
+def method(request):
+    return request.param
+
+
+@pytest.fixture(params=[100])
+def num_timesteps(request):
+    return request.param
 
 
 def test_forced(method, num_timesteps, plot=False, test=True):
@@ -18,7 +29,6 @@ def test_forced(method, num_timesteps, plot=False, test=True):
     mesh = firedrake.SquareMesh(n, n, 2)
     V = mesh.coordinates.function_space()
     coords = mesh.coordinates.dat.data.copy()
-    bnd = mesh.exterior_facets
     if method == 'laplacian':
         mover = LaplacianSmoother(mesh, timestep=dt)
 
@@ -30,11 +40,9 @@ def test_forced(method, num_timesteps, plot=False, test=True):
             mover.f.dat.data[i][1] += A*np.sin(2*np.pi*t/T)*np.sin(np.pi*coords[i][0])
 
     # Move the mesh
-    outfile = File('mesh.pvd')
     time = 0.0
     for j in range(num_timesteps):
         mover.move(time, update_forcings=update_forcings, fixed_boundaries=[1, 2, 3])
-        outfile.write(mover.mesh.coordinates)
         time += dt
     new_coords = mover.mesh.coordinates.dat.data
 
@@ -50,11 +58,11 @@ def test_forced(method, num_timesteps, plot=False, test=True):
 
     # Check as expected
     if test:
-        expected = np.load(f"data/forced_mesh_laplacian.npy")
+        expected = np.load("data/forced_mesh_laplacian.npy")
         assert np.allclose(new_coords, expected)
     return mover
 
 
 if __name__ == "__main__":
     mesh = test_forced('laplacian', 100, plot=True, test=False).mesh
-    np.save(f"data/forced_mesh_laplacian", mesh.coordinates.dat.data)
+    np.save("data/forced_mesh_laplacian", mesh.coordinates.dat.data)
