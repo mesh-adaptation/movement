@@ -28,8 +28,10 @@ class PrimeMover(object):
         self.dS = firedrake.dS(domain=mesh, degree=degree)
 
         # Mesh coordinate functions
-        self._x = firedrake.Function(self.mesh.coordinates, name="Physical coordinates")
-        self.xi = firedrake.Function(self.mesh.coordinates, name="Computational coordinates")
+        self.coord_space = mesh.coordinates.function_space()
+        self._x = firedrake.Function(mesh.coordinates, name="Physical coordinates")
+        self.xi = firedrake.Function(mesh.coordinates, name="Computational coordinates")
+        self.v = firedrake.Function(self.coord_space, name="Mesh velocity")
 
     def _get_coordinate_section(self):
         entity_dofs = np.zeros(self.dim+1, dtype=np.int32)
@@ -41,6 +43,8 @@ class PrimeMover(object):
         self._update_plex_coordinates()
 
     def _update_plex_coordinates(self):
+        if not hasattr(self, '_coords_local_vec'):
+            self._get_coordinate_section()
         self._coords_local_vec.array[:] = np.reshape(
             self.mesh.coordinates.dat.data_with_halos,
             self._coords_local_vec.array.shape,
