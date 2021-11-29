@@ -71,7 +71,6 @@ def test_forced(method, time, plot=False, test=True):
     mesh = firedrake.SquareMesh(n, n, 2)
     V = mesh.coordinates.function_space()
     coords = mesh.coordinates.dat.data.copy()
-    bnd = mesh.exterior_facets
     mover = SpringMover(mesh, method=method)
 
     def update_forcings(t):
@@ -116,4 +115,4 @@ def test_plex_consistency(method, time):
 
 if __name__ == "__main__":
     mesh = test_forced('lineal', 0.25, plot=True, test=False).mesh
-    np.save(f"data/forced_mesh_lineal_4", mesh.coordinates.dat.data)
+    np.save("data/forced_mesh_lineal_4", mesh.coordinates.dat.data)

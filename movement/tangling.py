@@ -22,7 +22,7 @@ class MeshTanglingChecker(object):
             raise ValueError(f"Cannot check for tangling of {dim}D meshes (only 2D)")
         self.mesh = mesh
         if mode not in ['warn', 'error']:
-            raise ValueError(f"Choose mode from 'warn' and 'error'")
+            raise ValueError("Choose mode from 'warn' and 'error'")
         self.mode = mode
 
         # Store initial signs of Jacobian determinant
