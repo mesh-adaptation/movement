@@ -1,10 +1,16 @@
 from movement import *
 from monitors import *
 import pytest
+import numpy as np
 
 
 @pytest.fixture(params=['relaxation', 'quasi_newton'])
 def method(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def fix_boundary(request):
     return request.param
 
 
@@ -84,3 +90,30 @@ def test_change_monitor(method, exports=False):
     if exports:
         File("outputs/const.pvd").write(mover.phi, mover.sigma)
     assert np.allclose(coords, mesh.coordinates.dat.data, atol=tol)
+
+
+def test_bcs(method, fix_boundary):
+    """
+    Test that domain boundaries are fixed by
+    the Monge-Ampere movers.
+    """
+    n = 20
+    mesh = UnitSquareMesh(n, n)
+    one = Constant(1.0)
+    bnd = assemble(one*ds(domain=mesh))
+    bnodes = DirichletBC(mesh.coordinates.function_space(), 0, 'on_boundary').nodes
+    bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
+
+    # Adapt to a ring monitor
+    mover = MongeAmpereMover(mesh, ring_monitor, method=method,
+                             fix_boundary_nodes=fix_boundary)
+    mover.move()
+
+    # Check boundary lengths are preserved
+    bnd_new = assemble(one*ds(domain=mesh))
+    assert np.isclose(bnd, bnd_new)
+
+    # Check boundaries are indeed fixed
+    if fix_boundary:
+        bnd_coords_new = mesh.coordinates.dat.data[bnodes]
+        assert np.allclose(bnd_coords, bnd_coords_new)
