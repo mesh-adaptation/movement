@@ -1,5 +1,5 @@
 import firedrake
-from firedrake import PETSc
+from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
 import ufl
 import numpy as np
@@ -61,6 +61,7 @@ class MongeAmpereMover_Base(PrimeMover):
         :kwarg maxiter: maximum number of iterations for the relaxation
         :kwarg rtol: relative tolerance for the residual
         :kwarg dtol: divergence tolerance for the residual
+        :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
         """
         if monitor_function is None:
             raise ValueError("Please supply a monitor function")
@@ -70,6 +71,7 @@ class MongeAmpereMover_Base(PrimeMover):
         self.maxiter = kwargs.pop('maxiter', 1000)
         self.rtol = kwargs.pop('rtol', 1.0e-08)
         self.dtol = kwargs.pop('dtol', 2.0)
+        self.fix_boundary_nodes = kwargs.pop('fix_boundary_nodes', False)
         super().__init__(mesh, monitor_function=monitor_function)
 
         # Create function spaces
@@ -168,7 +170,12 @@ class MongeAmpereMover_Base(PrimeMover):
         n = ufl.FacetNormal(self.mesh)
         bcs = []
         for i in self.mesh.exterior_facets.unique_markers:
-            _n = [firedrake.assemble(n[j]*self.ds(i)) for j in range(self.dim)]
+            if self.fix_boundary_nodes:
+                bcs.append(firedrake.DirichletBC(self.P1_vec, 0, i))
+                continue
+
+            # Check for axis-aligned boundaries
+            _n = [firedrake.assemble(abs(n[j])*self.ds(i)) for j in range(self.dim)]
             if np.allclose(_n, 0.0):
                 raise ValueError(f"Invalid normal vector {_n}")
             else:
@@ -176,29 +183,37 @@ class MongeAmpereMover_Base(PrimeMover):
                     raise NotImplementedError  # TODO
                 if np.isclose(_n[0], 0.0):
                     bcs.append(firedrake.DirichletBC(self.P1_vec.sub(1), 0, i))
+                    continue
                 elif np.isclose(_n[1], 0.0):
                     bcs.append(firedrake.DirichletBC(self.P1_vec.sub(0), 0, i))
-                else:
-                    # Enforce no mesh movement normal to boundaries
-                    a_bc = ufl.dot(v_cts, n)*ufl.dot(u_cts, n)*self.ds
-                    L_bc = ufl.dot(v_cts, n)*firedrake.Constant(0.0)*self.ds
-                    bcs.append(firedrake.EquationBC(a_bc == L_bc, self.grad_phi, 'on_boundary'))
+                    continue
 
-                    # Allow tangential movement, but only up until the end of boundary segments
-                    s = ufl.perp(n)
-                    a_bc = ufl.dot(v_cts, s)*ufl.dot(u_cts, s)*self.ds
-                    L_bc = ufl.dot(v_cts, s)*ufl.dot(ufl.grad(self.phi_old), s)*self.ds
-                    edges = set(self.mesh.exterior_facets.unique_markers)
-                    if len(edges) > 1:  # NOTE: Assumes that all straight line segments are uniquely tagged
-                        corners = [(i, j) for i in edges for j in edges.difference([i])]
-                        bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
-                    else:
-                        bbc = None
-                    bcs.append(firedrake.EquationBC(a_bc == L_bc, self.grad_phi, 'on_boundary', bcs=bbc))
+            # Enforce no mesh movement normal to boundaries
+            a_bc = ufl.dot(v_cts, n)*ufl.dot(u_cts, n)*self.ds
+            L_bc = ufl.dot(v_cts, n)*firedrake.Constant(0.0)*self.ds
+            bcs.append(firedrake.EquationBC(a_bc == L_bc, self.grad_phi, 'on_boundary'))
+
+            # Allow tangential movement, but only up until the end of boundary segments
+            s = ufl.perp(n)
+            a_bc = ufl.dot(v_cts, s)*ufl.dot(u_cts, s)*self.ds
+            L_bc = ufl.dot(v_cts, s)*ufl.dot(ufl.grad(self.phi_old), s)*self.ds
+            edges = set(self.mesh.exterior_facets.unique_markers)
+            if len(edges) == 0:
+                bbc = None  # Periodic case
+            else:
+                from warnings import warn
+                warn('Have you checked that all straight line segments are uniquely tagged?')
+                corners = [(i, j) for i in edges for j in edges.difference([i])]
+                bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
+            bcs.append(firedrake.EquationBC(a_bc == L_bc, self.grad_phi, 'on_boundary', bcs=bbc))
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
-        sp = {"ksp_type": "cg"}
+        sp = {
+            "ksp_type": "cg",
+            "pc_type": "bjacobi",
+            "sub_pc_type": "ilu",
+        }
         self._l2_projector = firedrake.LinearVariationalSolver(problem, solver_parameters=sp)
         return self._l2_projector
 
