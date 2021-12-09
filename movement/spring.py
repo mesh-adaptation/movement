@@ -1,5 +1,5 @@
 import firedrake
-from firedrake import PETSc
+from firedrake.petsc import PETSc
 import ufl
 import numpy as np
 import movement.solver_parameters as solver_parameters
