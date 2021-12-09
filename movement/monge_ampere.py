@@ -191,7 +191,7 @@ class MongeAmpereMover_Base(PrimeMover):
             # Enforce no mesh movement normal to boundaries
             a_bc = ufl.dot(v_cts, n)*ufl.dot(u_cts, n)*self.ds
             L_bc = ufl.dot(v_cts, n)*firedrake.Constant(0.0)*self.ds
-            bcs.append(firedrake.EquationBC(a_bc == L_bc, self.grad_phi, 'on_boundary'))
+            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, i))
 
             # Allow tangential movement, but only up until the end of boundary segments
             s = ufl.perp(n)
@@ -205,7 +205,7 @@ class MongeAmpereMover_Base(PrimeMover):
                 warn('Have you checked that all straight line segments are uniquely tagged?')
                 corners = [(i, j) for i in edges for j in edges.difference([i])]
                 bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
-            bcs.append(firedrake.EquationBC(a_bc == L_bc, self.grad_phi, 'on_boundary', bcs=bbc))
+            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, i, bcs=bbc))
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
@@ -311,7 +311,11 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         L = -ufl.dot(ufl.div(tau), ufl.grad(self.phi))*self.dx \
             + (tau[0, 1]*n[1]*self.phi.dx(0) + tau[1, 0]*n[0]*self.phi.dx(1))*self.ds
         problem = firedrake.LinearVariationalProblem(a, L, self.sigma)
-        sp = {"ksp_type": "cg"}
+        sp = {
+            "ksp_type": "cg",
+            "pc_type": "bjacobi",
+            "sub_pc_type": "ilu",
+        }
         self._equidistributor = firedrake.LinearVariationalSolver(problem, solver_parameters=sp)
         return self._equidistributor
 
