@@ -302,14 +302,14 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         """
         if hasattr(self, '_equidistributor'):
             return self._equidistributor
-        if self.dim != 2:
-            raise NotImplementedError  # TODO
         n = ufl.FacetNormal(self.mesh)
         sigma = firedrake.TrialFunction(self.P1_ten)
         tau = firedrake.TestFunction(self.P1_ten)
         a = ufl.inner(tau, sigma)*self.dx
-        L = -ufl.dot(ufl.div(tau), ufl.grad(self.phi))*self.dx \
-            + (tau[0, 1]*n[1]*self.phi.dx(0) + tau[1, 0]*n[0]*self.phi.dx(1))*self.ds
+        L = -ufl.dot(ufl.div(tau), ufl.grad(self.phi))*self.dx
+        for i in range(self.dim):
+            for j in range(i+1, self.dim):
+                L += (tau[i, j]*n[j]*self.phi.dx(i) + tau[j, i]*n[i]*self.phi(j))*self.ds
         problem = firedrake.LinearVariationalProblem(a, L, self.sigma)
         sp = {
             "ksp_type": "cg",
@@ -415,16 +415,16 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         """
         if hasattr(self, '_equidistributor'):
             return self._equidistributor
-        if self.dim != 2:
-            raise NotImplementedError  # TODO
         n = ufl.FacetNormal(self.mesh)
         I = ufl.Identity(self.dim)
         phi, sigma = firedrake.split(self.phisigma)
         psi, tau = firedrake.TestFunctions(self.V)
         F = ufl.inner(tau, sigma)*self.dx \
             + ufl.dot(ufl.div(tau), ufl.grad(phi))*self.dx \
-            - (tau[0, 1]*n[1]*phi.dx(0) + tau[1, 0]*n[0]*phi.dx(1))*self.ds \
             - psi*(self.monitor*ufl.det(I + sigma) - self.theta)*self.dx
+        for i in range(self.dim):
+            for j in range(i+1, self.dim):
+                F += -(tau[i, j]*n[j]*self.phi.dx(i) + tau[j, i]*n[i]*self.phi(j))*self.ds
         phi, sigma = firedrake.TrialFunctions(self.V)
 
         @PETSc.Log.EventDecorator("MongeAmpereMover.update_monitor")
