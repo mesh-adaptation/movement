@@ -1,6 +1,7 @@
 plots/
 __pycache__/
 movement.egg-info/
+*.ipynb_checkpoints/
 
 *.pvd
 *.vtu
