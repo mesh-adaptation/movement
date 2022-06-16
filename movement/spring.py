@@ -111,6 +111,8 @@ class SpringMover_Base(PrimeMover):
                 prob, solver_parameters=solver_parameters.jacobi,
             )
         self._angles_solver.solve()
+        ones = np.ones_like(self._angles.dat.data)
+        self._angles.dat.data[:] = np.maximum(np.minimum(self._angles.dat.data, ones), -ones)
         self._angles.dat.data[:] = np.arccos(self._angles.dat.data)
         return self._angles
 

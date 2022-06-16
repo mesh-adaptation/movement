@@ -54,7 +54,6 @@ mass_inv = {
 }
 
 jacobi = {
-    "mat_type": "matfree",
     "snes_type": "ksponly",
     "ksp_type": "preonly",
     "pc_type": "jacobi",
@@ -64,4 +63,12 @@ cg = {
     "ksp_type": "cg",
     "pc_type": "bjacobi",
     "pc_sub_type": "ilu",
+}
+
+lu = {
+    "mat_type": "aij",
+    "snes_type": "ksponly",
+    "ksp_type": "preonly",
+    "pc_type": "lu",
+    "pc_factor_mat_solver_type": "mumps",
 }
