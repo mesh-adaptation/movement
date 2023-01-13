@@ -1,5 +1,7 @@
 from firedrake import *
 from movement import *
+import numpy as np
+import os
 import pytest
 
 
@@ -26,7 +28,7 @@ def test_forced(method, num_timesteps, plot=False, test=True):
     T = 1.0  # Forcing period
 
     # Construct mesh and mover
-    mesh = firedrake.SquareMesh(n, n, 2)
+    mesh = SquareMesh(n, n, 2)
     V = mesh.coordinates.function_space()
     coords = mesh.coordinates.dat.data.copy()
     if method == 'laplacian':
@@ -36,7 +38,7 @@ def test_forced(method, num_timesteps, plot=False, test=True):
         """
         Sinusoidal forcing on the top boundary.
         """
-        for i in firedrake.DirichletBC(V, 0, 4).nodes:
+        for i in DirichletBC(V, 0, 4).nodes:
             mover.f.dat.data[i][1] += A*np.sin(2*np.pi*t/T)*np.sin(np.pi*coords[i][0])
 
     # Move the mesh
@@ -51,15 +53,16 @@ def test_forced(method, num_timesteps, plot=False, test=True):
         import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots()
-        firedrake.triplot(mover.mesh, axes=axes)
+        triplot(mover.mesh, axes=axes)
         axes.axis(False)
         plt.tight_layout()
         plt.savefig(f"plots/mesh_{method}.png")
 
     # Check as expected
     if test:
-        expected = np.load("data/forced_mesh_laplacian.npy")
-        assert np.allclose(new_coords, expected)
+        pwd = os.path.dirname(__file__)
+        fname = os.path.join(pwd, "data", "forced_mesh_laplacian.npy")
+        assert np.allclose(new_coords, np.load(fname))
     return mover
 
 

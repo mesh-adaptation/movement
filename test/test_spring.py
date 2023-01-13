@@ -1,6 +1,7 @@
 import firedrake
 from movement import SpringMover
 import numpy as np
+import os
 import pytest
 
 
@@ -96,7 +97,9 @@ def test_forced(method, time, plot=False, test=True):
 
     # Check as expected
     if test:
-        expected = coords if np.isclose(time, 0.0) else np.load(f"data/forced_mesh_lineal_{it}.npy")
+        pwd = os.path.dirname(__file__)
+        fname = os.path.join(pwd, "data", f"forced_mesh_lineal_{it}.npy")
+        expected = coords if np.isclose(time, 0.0) else np.load(fname)
         assert np.allclose(new_coords, expected)
     return mover
 
