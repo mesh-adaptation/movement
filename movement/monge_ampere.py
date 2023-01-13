@@ -335,11 +335,11 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             # Update monitor function
             self.monitor.interpolate(self.monitor_function(self.mesh))
             firedrake.assemble(self.L_P0, tensor=self.volume)
-            self.volume.assign(self.volume*self.original_volume**(-1))
+            self.volume.interpolate(self.volume / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
 
             # Evaluate normalisation coefficient
-            self.theta.assign(firedrake.assemble(self.theta_form)*self.total_volume**(-1))
+            self.theta.assign(firedrake.assemble(self.theta_form) / self.total_volume)
 
             # Check convergence criteria
             minmax, residual, equi = self.diagnostics
@@ -470,7 +470,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             update_monitor(cursol)
             self.mesh.coordinates.assign(self.x)
             firedrake.assemble(self.L_P0, tensor=self.volume)
-            self.volume.assign(self.volume/self.original_volume)
+            self.volume.interpolate(self.volume/self.original_volume)
             self.mesh.coordinates.assign(self.xi)
             minmax, residual, equi = self.diagnostics
             PETSc.Sys.Print(f"{i:4d}"
