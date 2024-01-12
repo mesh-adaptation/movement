@@ -52,7 +52,7 @@ def test_angles():
     assert np.allclose(angles, expected)
 
 
-def test_forced(method, time, plot=False)
+def test_forced(method, time, plot=False):
     """
     Test that a uniform mesh is moved as expected
     when only one of its boundaries is forced.
