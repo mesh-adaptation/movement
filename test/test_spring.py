@@ -52,7 +52,7 @@ def test_angles():
     assert np.allclose(angles, expected)
 
 
-def test_forced(method, time, plot=False, test=True):
+def test_forced(method, time, plot=False)
     """
     Test that a uniform mesh is moved as expected
     when only one of its boundaries is forced.
@@ -88,29 +88,22 @@ def test_forced(method, time, plot=False, test=True):
     # Plotting
     if plot:
         import matplotlib.pyplot as plt
+        from firedrake.pyplot import triplot
 
         fig, axes = plt.subplots()
-        firedrake.triplot(mover.mesh, axes=axes)
+        triplot(mover.mesh, axes=axes)
         axes.axis(False)
         plt.tight_layout()
         plt.savefig(f"plots/mesh_{method}_{it}.png")
 
     # Check as expected
-    if test:
-        pwd = os.path.dirname(__file__)
-        fname = os.path.join(pwd, "data", f"forced_mesh_lineal_{it}.npy")
-        expected = coords if np.isclose(time, 0.0) else np.load(fname)
-        assert np.allclose(new_coords, expected)
-    return mover
+    pwd = os.path.dirname(__file__)
+    fname = os.path.join(pwd, "data", f"forced_mesh_lineal_{it}.npy")
+    expected = coords if np.isclose(time, 0.0) else np.load(fname)
+    assert np.allclose(new_coords, expected)
 
-
-def test_plex_consistency(method, time):
-    """
-    Test that the Firedrake mesh coordinates and the
-    underlying DMPlex's coordinates are consistent
-    after mesh movement.
-    """
-    mover = test_forced(method, time, test=False)
+    # Test that the Firedrake mesh coordinates and the underlying DMPlex's
+    # coordinates are consistent after mesh movement.
     plex_coords = mover.plex.getCoordinatesLocal().array
     mesh_coords = mover.mesh.coordinates.dat.data_with_halos
     assert np.allclose(plex_coords.reshape(*mesh_coords.shape), mesh_coords)

@@ -50,6 +50,7 @@ mesh = UnitSquareMesh(n, n)
 # We can plot the initial mesh using Matplotlib as follows.
 
 import matplotlib.pyplot as plt
+from firedrake.pyplot import triplot
 
 fig, axes = plt.subplots()
 triplot(mesh, axes=axes)

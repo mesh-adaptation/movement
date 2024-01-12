@@ -392,9 +392,9 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         # Create functions to hold solution data
         self.V = self.P1*self.P1_ten
         self.phisigma = firedrake.Function(self.V)
-        self.phi, self.sigma = self.phisigma.split()
+        self.phi, self.sigma = self.phisigma.subfunctions
         self.phisigma_old = firedrake.Function(self.V)
-        self.phi_old, self.sigma_old = self.phisigma_old.split()
+        self.phi_old, self.sigma_old = self.phisigma_old.subfunctions
 
         # Initialise phi and sigma
         self.apply_initial_guess(**kwargs)
