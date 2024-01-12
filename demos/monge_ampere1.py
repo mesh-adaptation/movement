@@ -54,9 +54,9 @@ import matplotlib.pyplot as plt
 fig, axes = plt.subplots()
 triplot(mesh, axes=axes)
 axes.set_aspect(1)
-plt.savefig("monge_ampere1-initial_mesh.png")
+plt.savefig("monge_ampere1-initial_mesh.jpg")
 
-# .. figure:: monge_ampere1-initial_mesh.png
+# .. figure:: monge_ampere1-initial_mesh.jpg
 #    :figwidth: 60%
 #    :align: center
 #
@@ -96,9 +96,9 @@ mover.move()
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
 axes.set_aspect(1)
-plt.savefig("monge_ampere1-adapted_mesh.png")
+plt.savefig("monge_ampere1-adapted_mesh.jpg")
 
-# .. figure:: monge_ampere1-adapted_mesh.png
+# .. figure:: monge_ampere1-adapted_mesh.jpg
 #    :figwidth: 60%
 #    :align: center
 #
