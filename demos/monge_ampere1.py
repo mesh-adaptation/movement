@@ -104,3 +104,9 @@ plt.savefig("monge_ampere1-adapted_mesh.jpg")
 #    :align: center
 #
 # This tutorial can be dowloaded as a `Python script <monge_ampere1.py>`__.
+#
+#
+# .. rubric:: References
+#
+# .. bibliography:: demo_references.bib
+#    :filter: docname in docnames
