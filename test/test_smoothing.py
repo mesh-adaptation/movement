@@ -63,7 +63,6 @@ def test_forced(method, num_timesteps, plot=False, test=True):
         pwd = os.path.dirname(__file__)
         fname = os.path.join(pwd, "data", "forced_mesh_laplacian.npy")
         assert np.allclose(new_coords, np.load(fname))
-    return mover
 
 
 if __name__ == "__main__":
