@@ -20,7 +20,7 @@
 #
 # Let :math:`\boldsymbol{\xi}` and :math:`\mathbf{x}` denote the coordinate fields in
 # the computational and physical domains. Skipping some of the details that can be
-# found in :ref:`McRae:2018`, of the possible mappings we choose one that takes the form
+# found in :cite:`McRae:2018`, of the possible mappings we choose one that takes the form
 #
 # .. math::
 #     \mathbf{x} = \boldsymbol{\xi}+\nabla_{\boldsymbol{\xi}}\phi,
