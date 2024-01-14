@@ -92,6 +92,7 @@ def test_change_monitor(method, exports=False):
     assert np.allclose(coords, mesh.coordinates.dat.data, atol=tol)
 
 
+@pytest.mark.slow
 def test_bcs(method, fix_boundary):
     """
     Test that domain boundaries are fixed by
