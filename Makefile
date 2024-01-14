@@ -17,7 +17,7 @@ lint:
 
 test: lint
 	@echo "Running test suite..."
-	@pytest -v test
+	@python3 -m pytest -v -n auto --durations=20 test
 	@echo "PASS"
 
 coverage:
