@@ -36,7 +36,9 @@ jobs:
         run: |
           . /home/firedrake/firedrake/bin/activate
           python $(which firedrake-clean)
-          python -m pytest -n 3 -v test
+          python -m coverage erase
+          python -m coverage run --source=movement -m pytest -v --durations=20 test
+          python -m coverage report
       - name: Lint
         if: ${{ always() }}
         run: |
