@@ -5,7 +5,7 @@ import os
 import pytest
 
 
-@pytest.fixture(params=['lineal'])
+@pytest.fixture(params=["lineal"])
 def method(request):
     return request.param
 
@@ -35,7 +35,7 @@ def test_tangents():
     mesh = firedrake.UnitTriangleMesh()
     mover = SpringMover(mesh)
     tangents = mover.tangents.dat.data
-    expected = [[1, 0], [np.sqrt(2)/2, np.sqrt(2)/2], [0, 1]]
+    expected = [[1, 0], [np.sqrt(2) / 2, np.sqrt(2) / 2], [0, 1]]
     assert np.allclose(np.abs(tangents), expected)
 
 
@@ -47,7 +47,7 @@ def test_angles():
     """
     mesh = firedrake.UnitTriangleMesh()
     mover = SpringMover(mesh)
-    angles = 180*mover.angles.dat.data/np.pi
+    angles = 180 * mover.angles.dat.data / np.pi
     expected = [0, 135, 90]
     assert np.allclose(angles, expected)
 
@@ -59,12 +59,14 @@ def test_forced(method, time, plot=False):
     """
     it = 0
     if not np.isclose(time, 0.0):
-        it = 1/time
-        assert np.isclose(np.round(it), it), "The time needs to be a reciprocal of an integer"
+        it = 1 / time
+        assert np.isclose(
+            np.round(it), it
+        ), "The time needs to be a reciprocal of an integer"
         it = int(np.round(it))
 
     # Set parameters
-    n = 10   # Mesh resolution
+    n = 10  # Mesh resolution
     A = 0.5  # Forcing amplitude
     T = 1.0  # Forcing period
 
@@ -79,7 +81,9 @@ def test_forced(method, time, plot=False):
         Sinusoidal forcing on the top boundary.
         """
         for i in firedrake.DirichletBC(V, 0, 4).nodes:
-            mover.f.dat.data[i][1] += A*np.sin(2*np.pi*t/T)*np.sin(np.pi*coords[i][0])
+            mover.f.dat.data[i][1] += (
+                A * np.sin(2 * np.pi * t / T) * np.sin(np.pi * coords[i][0])
+            )
 
     # Move the mesh
     mover.move(time, update_forcings=update_forcings, fixed_boundaries=[1, 2, 3])
@@ -110,5 +114,5 @@ def test_forced(method, time, plot=False):
 
 
 if __name__ == "__main__":
-    mesh = test_forced('lineal', 0.25, plot=True, test=False).mesh
+    mesh = test_forced("lineal", 0.25, plot=True, test=False).mesh
     np.save("data/forced_mesh_lineal_4", mesh.coordinates.dat.data)

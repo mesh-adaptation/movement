@@ -14,6 +14,7 @@ class LaplacianSmoother(PrimeMover):
     velocity, which is determined by solving a
     Poisson problem.
     """
+
     @PETSc.Log.EventDecorator("LaplacianSmoother.__init__")
     def __init__(self, mesh, forcing=None, timestep=1.0, **kwargs):
         super().__init__(mesh, **kwargs)
@@ -23,15 +24,16 @@ class LaplacianSmoother(PrimeMover):
 
     @PETSc.Log.EventDecorator("LaplacianSmoother.setup_solver")
     def setup_solver(self, fixed_boundaries=[]):
-        if not hasattr(self, '_solver'):
+        if not hasattr(self, "_solver"):
             test = firedrake.TestFunction(self.coord_space)
             trial = firedrake.TrialFunction(self.coord_space)
-            a = ufl.inner(ufl.grad(trial), ufl.grad(test))*self.dx
-            L = ufl.inner(self.f, test)*self.dx
+            a = ufl.inner(ufl.grad(trial), ufl.grad(test)) * self.dx
+            L = ufl.inner(self.f, test) * self.dx
             bcs = firedrake.DirichletBC(self.coord_space, 0, fixed_boundaries)
             problem = firedrake.LinearVariationalProblem(a, L, self.v, bcs=bcs)
             self.solver = firedrake.LinearVariationalSolver(
-                problem, solver_parameters=solver_parameters.cg,
+                problem,
+                solver_parameters=solver_parameters.cg,
             )
         self.solver.solve()
 
@@ -57,5 +59,5 @@ class LaplacianSmoother(PrimeMover):
         self.solver.solve()
 
         # Update mesh coordinates
-        self._x.dat.data_with_halos[:] += self.v.dat.data_with_halos*self.dt
+        self._x.dat.data_with_halos[:] += self.v.dat.data_with_halos * self.dt
         self.mesh.coordinates.assign(self._x)

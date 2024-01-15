@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 
-@pytest.fixture(params=['relaxation', 'quasi_newton'])
+@pytest.fixture(params=["relaxation", "quasi_newton"])
 def method(request):
     return request.param
 
@@ -47,8 +47,9 @@ def test_continue(method, exports=False):
         File("outputs/init.pvd").write(phi, sigma)
 
     # Continue with a new Mover
-    mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=rtol,
-                             phi_init=phi, sigma_init=sigma)
+    mover = MongeAmpereMover(
+        mesh, ring_monitor, method=method, rtol=rtol, phi_init=phi, sigma_init=sigma
+    )
     num_it_continue = mover.move()
     if exports:
         File("outputs/continue.pvd").write(mover.phi, mover.sigma)
@@ -101,17 +102,18 @@ def test_bcs(method, fix_boundary):
     n = 20
     mesh = UnitSquareMesh(n, n)
     one = Constant(1.0)
-    bnd = assemble(one*ds(domain=mesh))
-    bnodes = DirichletBC(mesh.coordinates.function_space(), 0, 'on_boundary').nodes
+    bnd = assemble(one * ds(domain=mesh))
+    bnodes = DirichletBC(mesh.coordinates.function_space(), 0, "on_boundary").nodes
     bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
 
     # Adapt to a ring monitor
-    mover = MongeAmpereMover(mesh, ring_monitor, method=method,
-                             fix_boundary_nodes=fix_boundary)
+    mover = MongeAmpereMover(
+        mesh, ring_monitor, method=method, fix_boundary_nodes=fix_boundary
+    )
     mover.move()
 
     # Check boundary lengths are preserved
-    bnd_new = assemble(one*ds(domain=mesh))
+    bnd_new = assemble(one * ds(domain=mesh))
     assert np.isclose(bnd, bnd_new)
 
     # Check boundaries are indeed fixed

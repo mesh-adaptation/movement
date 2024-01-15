@@ -5,7 +5,7 @@ import os
 import pytest
 
 
-@pytest.fixture(params=['laplacian'])
+@pytest.fixture(params=["laplacian"])
 def method(request):
     return request.param
 
@@ -20,10 +20,10 @@ def test_forced(method, num_timesteps, plot=False, test=True):
     Test that a uniform mesh is moved as expected
     when only one of its boundaries is forced.
     """
-    dt = 1.0/num_timesteps
+    dt = 1.0 / num_timesteps
 
     # Set parameters
-    n = 10   # Mesh resolution
+    n = 10  # Mesh resolution
     A = 0.5  # Forcing amplitude
     T = 1.0  # Forcing period
 
@@ -31,7 +31,7 @@ def test_forced(method, num_timesteps, plot=False, test=True):
     mesh = SquareMesh(n, n, 2)
     V = mesh.coordinates.function_space()
     coords = mesh.coordinates.dat.data.copy()
-    if method == 'laplacian':
+    if method == "laplacian":
         mover = LaplacianSmoother(mesh, timestep=dt)
 
     def update_forcings(t):
@@ -39,7 +39,9 @@ def test_forced(method, num_timesteps, plot=False, test=True):
         Sinusoidal forcing on the top boundary.
         """
         for i in DirichletBC(V, 0, 4).nodes:
-            mover.f.dat.data[i][1] += A*np.sin(2*np.pi*t/T)*np.sin(np.pi*coords[i][0])
+            mover.f.dat.data[i][1] += (
+                A * np.sin(2 * np.pi * t / T) * np.sin(np.pi * coords[i][0])
+            )
 
     # Move the mesh
     time = 0.0
@@ -66,5 +68,5 @@ def test_forced(method, num_timesteps, plot=False, test=True):
 
 
 if __name__ == "__main__":
-    mesh = test_forced('laplacian', 100, plot=True, test=False).mesh
+    mesh = test_forced("laplacian", 100, plot=True, test=False).mesh
     np.save("data/forced_mesh_laplacian", mesh.coordinates.dat.data)
