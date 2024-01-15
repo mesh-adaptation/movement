@@ -48,9 +48,6 @@ class MongeAmpereMover_Base(PrimeMover):
     Base class for mesh movers based on the solution
     of Monge-Ampere type equations.
     """
-    residual_l2_form = 0
-    norm_l2_form = 0
-    phi_old = None
 
     def __init__(self, mesh, monitor_function, **kwargs):
         """
@@ -106,6 +103,10 @@ class MongeAmpereMover_Base(PrimeMover):
         :kwarg sigma_init: initial guess for the Hessian
         """
         if phi_init is not None and sigma_init is not None:
+            assert hasattr(self, "phi")
+            assert hasattr(self, "sigma")
+            assert hasattr(self, "phi_old")
+            assert hasattr(self, "sigma_old")
             self.phi.assign(phi_init)
             self.sigma.assign(sigma_init)
             self.phi_old.assign(phi_init)
@@ -114,10 +115,10 @@ class MongeAmpereMover_Base(PrimeMover):
             raise ValueError("Need to initialise both phi *and* sigma")
 
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereBase.diagnostics")
-    def diagnostics(self):
+    @PETSc.Log.EventDecorator()
+    def _diagnostics(self):
         """
-        Compute diagnostics:
+        Compute the following diagnostics:
           1) the ratio of the smallest and largest element volumes;
           2) equidistribution of elemental volumes;
           3) relative L2 norm residual.
@@ -129,8 +130,10 @@ class MongeAmpereMover_Base(PrimeMover):
         w *= w
         std = np.sqrt(w.sum()/w.size)
         equi = std/mean
-        residual_l2 = firedrake.assemble(self.residual_l2_form).dat.norm
-        norm_l2 = firedrake.assemble(self.norm_l2_form).dat.norm
+        assert hasattr(self, "_residual_l2_form")
+        assert hasattr(self, "_norm_l2_form")
+        residual_l2 = firedrake.assemble(self._residual_l2_form).dat.norm
+        norm_l2 = firedrake.assemble(self._norm_l2_form).dat.norm
         residual_l2_rel = residual_l2/norm_l2
         return minmax, residual_l2_rel, equi
 
@@ -159,6 +162,7 @@ class MongeAmpereMover_Base(PrimeMover):
         """
         if hasattr(self, '_l2_projector'):
             return self._l2_projector
+        assert hasattr(self, "phi_old")
         u_cts = firedrake.TrialFunction(self.P1_vec)
         v_cts = firedrake.TestFunction(self.P1_vec)
 
@@ -266,8 +270,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         self.theta_form = self.monitor*ufl.det(I + self.sigma_old)*self.dx
         self.residual = self.monitor*ufl.det(I + self.sigma_old) - self.theta
         psi = firedrake.TestFunction(self.P1)
-        self.residual_l2_form = psi*self.residual*self.dx
-        self.norm_l2_form = psi*self.theta*self.dx
+        self._residual_l2_form = psi*self.residual*self.dx
+        self._norm_l2_form = psi*self.theta*self.dx
 
     @property
     @PETSc.Log.EventDecorator("MongeAmpereMover.create_pseudotimestepper")
@@ -277,6 +281,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         """
         if hasattr(self, '_pseudotimestepper'):
             return self._pseudotimestepper
+        assert hasattr(self, "phi")
+        assert hasattr(self, "phi_old")
         phi = firedrake.TrialFunction(self.P1)
         psi = firedrake.TestFunction(self.P1)
         a = ufl.inner(ufl.grad(psi), ufl.grad(phi))*self.dx
@@ -302,6 +308,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         """
         if hasattr(self, '_equidistributor'):
             return self._equidistributor
+        assert hasattr(self, "phi")
+        assert hasattr(self, "sigma")
         if self.dim != 2:
             raise NotImplementedError  # TODO
         n = ufl.FacetNormal(self.mesh)
@@ -324,6 +332,10 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         """
         Run the relaxation method to convergence and update the mesh.
         """
+        assert hasattr(self, "phi")
+        assert hasattr(self, "sigma")
+        assert hasattr(self, "phi_old")
+        assert hasattr(self, "sigma_old")
         for i in range(self.maxiter):
 
             # L2 project
@@ -342,7 +354,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.theta.assign(firedrake.assemble(self.theta_form) / self.total_volume)
 
             # Check convergence criteria
-            minmax, residual, equi = self.diagnostics
+            minmax, residual, equi = self._diagnostics
             if i == 0:
                 initial_norm = residual
             PETSc.Sys.Print(f"{i:4d}"
@@ -404,8 +416,8 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self.theta_form = self.monitor*ufl.det(I + self.sigma_old)*self.dx
         self.residual = self.monitor*ufl.det(I + self.sigma_old) - self.theta
         psi = firedrake.TestFunction(self.P1)
-        self.residual_l2_form = psi*self.residual*self.dx
-        self.norm_l2_form = psi*self.theta*self.dx
+        self._residual_l2_form = psi*self.residual*self.dx
+        self._norm_l2_form = psi*self.theta*self.dx
 
     @property
     @PETSc.Log.EventDecorator("MongeAmpereMover.create_equidistributor")
@@ -415,6 +427,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         """
         if hasattr(self, '_equidistributor'):
             return self._equidistributor
+        assert hasattr(self, "phisigma")
         if self.dim != 2:
             raise NotImplementedError  # TODO
         n = ufl.FacetNormal(self.mesh)
@@ -432,6 +445,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             """
             Callback for updating the monitor function.
             """
+            assert hasattr(self, "phisigma_old")
             with self.phisigma_old.dat.vec as v:
                 cursol.copy(v)
             self.l2_projector.solve()
@@ -472,7 +486,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             firedrake.assemble(self.L_P0, tensor=self.volume)
             self.volume.interpolate(self.volume/self.original_volume)
             self.mesh.coordinates.assign(self.xi)
-            minmax, residual, equi = self.diagnostics
+            minmax, residual, equi = self._diagnostics
             PETSc.Sys.Print(f"{i:4d}"
                             f"   Min/Max {minmax:10.4e}"
                             f"   Residual {residual:10.4e}"
