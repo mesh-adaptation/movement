@@ -10,5 +10,5 @@ def ring_monitor(mesh):
     beta = Constant(200.0)  # width
     gamma = Constant(0.15)  # radius
     x, y = SpatialCoordinate(mesh)
-    r = (x - 0.5)**2 + (y - 0.5)**2
-    return Constant(1.0) + alpha/cosh(beta*(r - gamma))**2
+    r = (x - 0.5) ** 2 + (y - 0.5) ** 2
+    return Constant(1.0) + alpha / cosh(beta * (r - gamma)) ** 2

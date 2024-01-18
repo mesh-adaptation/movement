@@ -10,19 +10,22 @@ class PrimeMover(object):
     """
     Base class for all mesh movers.
     """
+
     def __init__(self, mesh, monitor_function=None, **kwargs):
         self.mesh = mesh
         self.monitor_function = monitor_function
         self.dim = mesh.topological_dimension()
         if self.dim != 2:
-            raise NotImplementedError(f"Dimension {self.dim} has not been considered yet")
+            raise NotImplementedError(
+                f"Dimension {self.dim} has not been considered yet"
+            )
         self.gdim = mesh.geometric_dimension()
         self.plex = self.mesh.topology_dm
         self.vertex_indices = self.plex.getDepthStratum(0)
         self.edge_indices = self.plex.getDepthStratum(1)
 
         # Measures
-        degree = kwargs.get('quadrature_degree')
+        degree = kwargs.get("quadrature_degree")
         self.dx = firedrake.dx(domain=mesh, degree=degree)
         self.ds = firedrake.ds(domain=mesh, degree=degree)
         self.dS = firedrake.dS(domain=mesh, degree=degree)
@@ -34,7 +37,7 @@ class PrimeMover(object):
         self.v = firedrake.Function(self.coord_space, name="Mesh velocity")
 
     def _get_coordinate_section(self):
-        entity_dofs = np.zeros(self.dim+1, dtype=np.int32)
+        entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
         entity_dofs[0] = self.gdim
         self._coordinate_section = create_section(self.mesh, entity_dofs)
         dm_coords = self.plex.getCoordinateDM()
@@ -43,7 +46,7 @@ class PrimeMover(object):
         self._update_plex_coordinates()
 
     def _update_plex_coordinates(self):
-        if not hasattr(self, '_coords_local_vec'):
+        if not hasattr(self, "_coords_local_vec"):
             self._get_coordinate_section()
         self._coords_local_vec.array[:] = np.reshape(
             self.mesh.coordinates.dat.data_with_halos,
@@ -52,7 +55,7 @@ class PrimeMover(object):
         self.plex.setCoordinatesLocal(self._coords_local_vec)
 
     def _get_edge_vector_section(self):
-        entity_dofs = np.zeros(self.dim+1, dtype=np.int32)
+        entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
         entity_dofs[1] = 1
         self._edge_vector_section = create_section(self.mesh, entity_dofs)
 
@@ -61,16 +64,16 @@ class PrimeMover(object):
         Get the DMPlex coordinate section offset
         for a given `index`.
         """
-        if not hasattr(self, '_coordinate_section'):
+        if not hasattr(self, "_coordinate_section"):
             self._get_coordinate_section()
-        return self._coordinate_section.getOffset(index)//self.dim
+        return self._coordinate_section.getOffset(index) // self.dim
 
     def edge_vector_offset(self, index):
         """
         Get the DMPlex edge vector section offset
         for a given `index`.
         """
-        if not hasattr(self, '_edge_vector_section'):
+        if not hasattr(self, "_edge_vector_section"):
             self._get_edge_vector_section()
         return self._edge_vector_section.getOffset(index)
 
@@ -92,5 +95,10 @@ class PrimeMover(object):
         Alias of `move`.
         """
         from warnings import warn
-        warn("`adapt` is deprecated (use `move` instead)", DeprecationWarning, stacklevel=2)
+
+        warn(
+            "`adapt` is deprecated (use `move` instead)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.move()
