@@ -26,7 +26,7 @@ def test_uniform_monitor(method, exports=False):
     mover = MongeAmpereMover(mesh, const_monitor, method=method)
     num_iterations = mover.move()
 
-    assert np.allclose(coords, mesh.coordinates.dat.data)
+    assert np.allclose(coords, mover.mesh.coordinates.dat.data)
     assert num_iterations == 0
 
 
@@ -80,14 +80,14 @@ def test_change_monitor(method, exports=False):
     mover.move()
     if exports:
         File("outputs/ring.pvd").write(mover.phi, mover.sigma)
-    assert not np.allclose(coords, mesh.coordinates.dat.data, atol=tol)
+    assert not np.allclose(coords, mover.mesh.coordinates.dat.data, atol=tol)
 
     # Adapt to a constant monitor
     mover.monitor_function = const_monitor
     mover.move()
     if exports:
         File("outputs/const.pvd").write(mover.phi, mover.sigma)
-    assert np.allclose(coords, mesh.coordinates.dat.data, atol=tol)
+    assert np.allclose(coords, mover.mesh.coordinates.dat.data, atol=tol)
 
 
 @pytest.mark.slow
@@ -110,10 +110,10 @@ def test_bcs(method, fix_boundary):
     mover.move()
 
     # Check boundary lengths are preserved
-    bnd_new = assemble(one * ds(domain=mesh))
+    bnd_new = assemble(one * ds(domain=mover.mesh))
     assert np.isclose(bnd, bnd_new)
 
     # Check boundaries are indeed fixed
     if fix_boundary:
-        bnd_coords_new = mesh.coordinates.dat.data[bnodes]
+        bnd_coords_new = mover.mesh.coordinates.dat.data[bnodes]
         assert np.allclose(bnd_coords, bnd_coords_new)
