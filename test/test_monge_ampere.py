@@ -42,14 +42,11 @@ def test_continue(method, exports=False):
     # Solve the problem to a weak tolerance
     mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=0.1)
     num_it_init = mover.move()
-    phi, sigma = mover.phi, mover.sigma
     if exports:
-        File("outputs/init.pvd").write(phi, sigma)
+        File("outputs/init.pvd").write(mover.phi, mover.sigma)
 
-    # Continue with a new Mover
-    mover = MongeAmpereMover(
-        mesh, ring_monitor, method=method, rtol=rtol, phi_init=phi, sigma_init=sigma
-    )
+    # Continue with a tighter tolerance
+    mover.rtol = rtol
     num_it_continue = mover.move()
     if exports:
         File("outputs/continue.pvd").write(mover.phi, mover.sigma)
