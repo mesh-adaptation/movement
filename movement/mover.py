@@ -12,28 +12,30 @@ class PrimeMover(object):
     """
 
     def __init__(self, mesh, monitor_function=None, **kwargs):
-        self.mesh = mesh
+        self.mesh = firedrake.Mesh(mesh.coordinates.copy(deepcopy=True))
         self.monitor_function = monitor_function
-        self.dim = mesh.topological_dimension()
+        self.dim = self.mesh.topological_dimension()
         if self.dim != 2:
             raise NotImplementedError(
                 f"Dimension {self.dim} has not been considered yet"
             )
-        self.gdim = mesh.geometric_dimension()
+        self.gdim = self.mesh.geometric_dimension()
         self.plex = self.mesh.topology_dm
         self.vertex_indices = self.plex.getDepthStratum(0)
         self.edge_indices = self.plex.getDepthStratum(1)
 
         # Measures
         degree = kwargs.get("quadrature_degree")
-        self.dx = firedrake.dx(domain=mesh, degree=degree)
-        self.ds = firedrake.ds(domain=mesh, degree=degree)
-        self.dS = firedrake.dS(domain=mesh, degree=degree)
+        self.dx = firedrake.dx(domain=self.mesh, degree=degree)
+        self.ds = firedrake.ds(domain=self.mesh, degree=degree)
+        self.dS = firedrake.dS(domain=self.mesh, degree=degree)
 
         # Mesh coordinate functions
-        self.coord_space = mesh.coordinates.function_space()
-        self._x = firedrake.Function(mesh.coordinates, name="Physical coordinates")
-        self.xi = firedrake.Function(mesh.coordinates, name="Computational coordinates")
+        self.coord_space = self.mesh.coordinates.function_space()
+        self._x = firedrake.Function(self.mesh.coordinates, name="Physical coordinates")
+        self.xi = firedrake.Function(
+            self.mesh.coordinates, name="Computational coordinates"
+        )
         self.v = firedrake.Function(self.coord_space, name="Mesh velocity")
 
     def _get_coordinate_section(self):
