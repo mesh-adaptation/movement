@@ -77,17 +77,17 @@ class MongeAmpereMover_Base(PrimeMover):
         super().__init__(mesh, monitor_function=monitor_function)
 
         # Create function spaces
-        self.P0 = firedrake.FunctionSpace(mesh, "DG", 0)
-        self.P1 = firedrake.FunctionSpace(mesh, "CG", 1)
-        self.P1_vec = firedrake.VectorFunctionSpace(mesh, "CG", 1)
-        self.P1_ten = firedrake.TensorFunctionSpace(mesh, "CG", 1)
+        self.P0 = firedrake.FunctionSpace(self.mesh, "DG", 0)
+        self.P1 = firedrake.FunctionSpace(self.mesh, "CG", 1)
+        self.P1_vec = firedrake.VectorFunctionSpace(self.mesh, "CG", 1)
+        self.P1_ten = firedrake.TensorFunctionSpace(self.mesh, "CG", 1)
 
         # Create objects used during the mesh movement
         self.theta = firedrake.Constant(0.0)
         self.monitor = firedrake.Function(self.P1, name="Monitor function")
         self.monitor.interpolate(self.monitor_function(self.mesh))
         self.volume = firedrake.Function(self.P0, name="Mesh volume")
-        self.volume.interpolate(ufl.CellVolume(mesh))
+        self.volume.interpolate(ufl.CellVolume(self.mesh))
         self.original_volume = firedrake.Function(self.volume)
         self.total_volume = firedrake.assemble(firedrake.Constant(1.0) * self.dx)
         self.L_P0 = firedrake.TestFunction(self.P0) * self.monitor * self.dx

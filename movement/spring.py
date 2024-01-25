@@ -39,10 +39,10 @@ class SpringMover_Base(PrimeMover):
         :arg mesh: the physical mesh
         """
         super().__init__(mesh)
-        self.HDivTrace = firedrake.FunctionSpace(mesh, "HDiv Trace", 0)
-        self.HDivTrace_vec = firedrake.VectorFunctionSpace(mesh, "HDiv Trace", 0)
+        self.HDivTrace = firedrake.FunctionSpace(self.mesh, "HDiv Trace", 0)
+        self.HDivTrace_vec = firedrake.VectorFunctionSpace(self.mesh, "HDiv Trace", 0)
         self.f = firedrake.Function(self.mesh.coordinates.function_space())
-        self.displacement = np.zeros(mesh.num_vertices())
+        self.displacement = np.zeros(self.mesh.num_vertices())
 
     @property
     @PETSc.Log.EventDecorator("SpringMover_Base.facet_areas")
