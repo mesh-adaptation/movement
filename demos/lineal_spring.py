@@ -63,7 +63,7 @@ axes.legend()
 plt.savefig("lineal_spring-initial_mesh.jpg")
 
 # .. figure:: lineal_spring-initial_mesh.jpg
-#    :figwidth: 60%
+#    :figwidth: 50%
 #    :align: center
 #
 # Suppose we wish to apply a time-dependent forcing to the top boundary and see how the
@@ -142,7 +142,7 @@ axes[0, 1].axis(False)
 plt.savefig("lineal_spring-adapted_meshes.jpg")
 
 # .. figure:: lineal_spring-adapted_meshes.jpg
-#    :figwidth: 80%
+#    :figwidth: 100%
 #    :align: center
 #
 # The mesh is deformed according to the vertical forcing, with the left, right, and
@@ -158,6 +158,10 @@ fig, axes = plt.subplots()
 axes.spy(K)
 plt.savefig("lineal_spring-sparsity.jpg")
 
+# .. figure:: lineal_spring-sparsity.jpg
+#    :figwidth: 50%
+#    :align: center
+#
 # This tutorial can be dowloaded as a `Python script <lineal_spring.py>`__.
 #
 #
