@@ -42,14 +42,14 @@
 # are 'flattened' versions of the displacement and forcing vectors. By solving this
 # equation, we see how the structure of beams responds to the forcing.
 #
-# We begin by importing from the namespaces of Firedrake and Movement.
+# We begin by importing from the namespaces of Firedrake and Movement. ::
 
 from firedrake import *
 from movement import *
 
 # Let's start with a uniform mesh of the unit square. It has four boundary segments,
 # which are tagged with the integers 1, 2, 3, and 4. Note that segment 4 corresponds to
-# the top boundary.
+# the top boundary. ::
 
 import matplotlib.pyplot as plt
 from firedrake.pyplot import triplot
@@ -72,11 +72,11 @@ plt.savefig("lineal_spring-initial_mesh.jpg")
 # .. math::
 #     \mathbf{f}(x,y,t)=\left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right]
 #
-# acting only in the vertical direction.
+# acting only in the vertical direction. ::
 
 import numpy as np
 
-A = 0.5  # forcing amplitude
+A = 0.2  # forcing amplitude
 T = 1.0  # forcing period
 
 
@@ -90,10 +90,13 @@ times = np.arange(0, 1.001, dt)
 
 fig, axes = plt.subplots()
 for t in times:
-    axes.plot(X, forcing(X, t), label=f"{t:.1f}")
+    axes.plot(X, forcing(X, t), label=f"t={t:.1f}")
 axes.set_xlim([0, 1])
 axes.set_ylim([-A, A])
 axes.legend()
+box = axes.get_position()
+axes.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+axes.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 plt.savefig("lineal_spring-forcings.jpg")
 
 # .. figure:: lineal_spring-forcings.jpg
@@ -102,7 +105,7 @@ plt.savefig("lineal_spring-forcings.jpg")
 #
 # To apply this forcing, we need to create a :class:`~.SpringMover` instance and define
 # a function for updating the forcing applied to the boundary nodes. The way we get the
-# right indices for the top boundary is using a :class:`~.DirichletBC` object.
+# right indices for the top boundary is using a :class:`~.DirichletBC` object. ::
 
 mover = SpringMover(mesh, method="lineal")
 V = mesh.coordinates.function_space()
@@ -117,19 +120,35 @@ def update_forcings(t):
 
 # We are now able to apply the mesh movement method. The forcings effectively enforce a
 # Dirichlet condition on the top boundary. On other boundaries, we enforce that there is
-# no movement using the `fixed_boundaries` keyword argument.
+# no movement using the `fixed_boundaries` keyword argument. ::
 
-results = []
-for t in times:
+import matplotlib.patches as mpatches
+
+fig, axes = plt.subplots(ncols=4, nrows=3, figsize=(12, 10))
+for i, t in enumerate(times):
+    idx = 0 if i == 0 else i + 1
+
+    # Move the mesh and calculate the displacement
     mover.move(t, update_forcings=update_forcings, fixed_boundaries=[1, 2, 3])
-    print(
-        f"time = {t:.1f} s, displacement = {np.linalg.norm(mover.displacement):.2f} m"
-    )
-    results.append(Mesh(mover.mesh.coordinates.copy(deepcopy=True)))
+    displacement = np.linalg.norm(mover.displacement)
+    print(f"time = {t:.1f} s, displacement = {displacement:.2f} m")
 
-# TODO: Plot grid of adapted meshes
+    # Plot the current mesh, adding a time label
+    ax = axes[idx // 4, idx % 4]
+    triplot(mover.mesh, axes=ax)
+    ax.legend(handles=[mpatches.Patch(label=f"t={t:.1f}")], handlelength=0)
+    ax.set_ylim([-0.05, 1.45])
+axes[0, 1].axis(False)
+plt.savefig("lineal_spring-adapted_meshes.jpg")
 
-# Note that we can view the sparsity pattern of the stiffness matrix as follows.
+# .. figure:: lineal_spring-adapted_meshes.jpg
+#    :figwidth: 80%
+#    :align: center
+#
+# The mesh is deformed according to the vertical forcing, with the left, right, and
+# bottom boundaries remaining fixed, returning to be very close to its original state after one period.
+#
+# Note that we can view the sparsity pattern of the stiffness matrix as follows. ::
 
 K = mover.stiffness_matrix
 print(f"Stiffness matrix shape: {K.shape}")
