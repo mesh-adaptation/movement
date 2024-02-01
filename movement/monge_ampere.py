@@ -125,7 +125,7 @@ class MongeAmpereMover_Base(PrimeMover):
         """
         Compute the following diagnostics:
           1) the ratio of the smallest and largest element volumes;
-          2) equidistribution of elemental volumes;
+          2) coefficient of variation (σ/μ) of element volumes;
           3) relative L2 norm residual.
         """
         v = self.volume.vector().gather()
@@ -134,13 +134,13 @@ class MongeAmpereMover_Base(PrimeMover):
         w = v.copy() - mean
         w *= w
         std = np.sqrt(w.sum() / w.size)
-        equi = std / mean
+        cv = std / mean
         assert hasattr(self, "_residual_l2_form")
         assert hasattr(self, "_norm_l2_form")
         residual_l2 = firedrake.assemble(self._residual_l2_form).dat.norm
         norm_l2 = firedrake.assemble(self._norm_l2_form).dat.norm
         residual_l2_rel = residual_l2 / norm_l2
-        return minmax, residual_l2_rel, equi
+        return minmax, residual_l2_rel, cv
 
     @property
     @PETSc.Log.EventDecorator("MongeAmpereBase.update_coordinates")
@@ -373,14 +373,14 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.theta.assign(firedrake.assemble(self.theta_form) / self.total_volume)
 
             # Check convergence criteria
-            minmax, residual, equi = self._diagnostics
+            minmax, residual, cv = self._diagnostics
             if i == 0:
                 initial_norm = residual
             PETSc.Sys.Print(
                 f"{i:4d}"
                 f"   Min/Max {minmax:10.4e}"
                 f"   Residual {residual:10.4e}"
-                f"   Equidistribution {equi:10.4e}"
+                f"   Variation (σ/μ) {cv:10.4e}"
             )
             if residual < self.rtol:
                 PETSc.Sys.Print(f"Converged in {i+1} iterations.")
@@ -524,12 +524,12 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             firedrake.assemble(self.L_P0, tensor=self.volume)
             self.volume.interpolate(self.volume / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
-            minmax, residual, equi = self._diagnostics
+            minmax, residual, cv = self._diagnostics
             PETSc.Sys.Print(
                 f"{i:4d}"
                 f"   Min/Max {minmax:10.4e}"
                 f"   Residual {residual:10.4e}"
-                f"   Equidistribution {equi:10.4e}"
+                f"   Variation (σ/μ) {cv:10.4e}"
             )
 
         self.snes = self._equidistributor.snes
