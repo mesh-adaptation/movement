@@ -85,8 +85,9 @@ def forcing(x, t):
 
 
 X = np.linspace(0, 1, n + 1)
-dt = 0.1
-times = np.arange(0, 1.001, dt)
+num_timesteps = 10
+dt = T / num_timesteps
+times = np.arange(0, T + 0.5 * dt, dt)
 
 fig, axes = plt.subplots()
 for t in times:
@@ -108,14 +109,15 @@ plt.savefig("lineal_spring-forcings.jpg")
 # right indices for the top boundary is using a :class:`~.DirichletBC` object. ::
 
 mover = SpringMover(mesh, method="lineal")
-V = mesh.coordinates.function_space()
-boundary_nodes = DirichletBC(V, 0, 4).nodes
+boundary_nodes = DirichletBC(mesh.coordinates.function_space(), 0, 4).nodes
 
 
 def update_forcings(t):
-    coords = mover.mesh.coordinates.dat.data
+    coord_data = mover.mesh.coordinates.dat.data
+    forcing_data = mover.f.dat.data
     for i in boundary_nodes:
-        mover.f.dat.data[i, 1] = forcing(coords[i, 0], t)
+        x, y = coord_data[i]
+        forcing_data[i][1] = forcing(x, t)
 
 
 # We are now able to apply the mesh movement method. The forcings effectively enforce a
