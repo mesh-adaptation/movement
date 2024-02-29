@@ -22,7 +22,7 @@ class LaplacianSmoother(PrimeMover):
         self.f = firedrake.Function(self.coord_space)
 
     @PETSc.Log.EventDecorator()
-    def setup_solver(self, fixed_boundaries=[]):
+    def _setup_solver(self, fixed_boundaries=[]):
         if not hasattr(self, "_solver"):
             test = firedrake.TestFunction(self.coord_space)
             trial = firedrake.TrialFunction(self.coord_space)
@@ -30,11 +30,11 @@ class LaplacianSmoother(PrimeMover):
             L = ufl.inner(self.f, test) * self.dx
             bcs = firedrake.DirichletBC(self.coord_space, 0, fixed_boundaries)
             problem = firedrake.LinearVariationalProblem(a, L, self.v, bcs=bcs)
-            self.solver = firedrake.LinearVariationalSolver(
+            self._solver = firedrake.LinearVariationalSolver(
                 problem,
                 solver_parameters=solver_parameters.cg,
             )
-        self.solver.solve()
+        self._solver.solve()
 
     @PETSc.Log.EventDecorator()
     def move(self, time, update_forcings=None, fixed_boundaries=[]):
@@ -49,11 +49,11 @@ class LaplacianSmoother(PrimeMover):
         """
         if update_forcings is not None:
             update_forcings(time)
-        self.setup_solver(fixed_boundaries=fixed_boundaries)
+        self._setup_solver(fixed_boundaries=fixed_boundaries)
 
         # Solve on computational mesh
         self.mesh.coordinates.assign(self.xi)
-        self.solver.solve()
+        self._solver.solve()
 
         # Update mesh coordinates
         self._x.dat.data_with_halos[:] += self.v.dat.data_with_halos * self.dt
