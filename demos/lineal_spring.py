@@ -56,6 +56,7 @@ from firedrake.pyplot import triplot
 
 n = 10
 mesh = UnitSquareMesh(n, n)
+coord_data_init = mesh.coordinates.dat.data.copy()
 fig, axes = plt.subplots()
 triplot(mesh, axes=axes)
 axes.set_aspect(1)
@@ -148,8 +149,14 @@ plt.savefig("lineal_spring-adapted_meshes.jpg")
 #    :align: center
 #
 # The mesh is deformed according to the vertical forcing, with the left, right, and
-# bottom boundaries remaining fixed, returning to be very close to its original state after one period.
-#
+# bottom boundaries remaining fixed, returning to be very close to its original state
+# after one period. Let's check this in the :math:`\ell_\infty` norm. ::
+
+coord_data = mover.mesh.coordinates.dat.data
+linf_error = np.max(np.abs(coord_data - coord_data_init))
+print(f"l_infinity error: {linf_error:.3f} m")
+assert linf_error < 0.01
+
 # Note that we can view the sparsity pattern of the stiffness matrix as follows. ::
 
 K = mover.stiffness_matrix
