@@ -10,19 +10,18 @@ __all__ = ["LaplacianSmoother"]
 
 class LaplacianSmoother(PrimeMover):
     """
-    Movement of a ``mesh`` is driven by a mesh
-    velocity, which is determined by solving a
-    Poisson problem.
+    Movement of a ``mesh`` is driven by a mesh velocity, which is determined by solving
+    a Poisson problem.
     """
 
-    @PETSc.Log.EventDecorator("LaplacianSmoother.__init__")
-    def __init__(self, mesh, forcing=None, timestep=1.0, **kwargs):
+    @PETSc.Log.EventDecorator()
+    def __init__(self, mesh, timestep, **kwargs):
         super().__init__(mesh, **kwargs)
-        self.f = forcing or firedrake.Function(self.coord_space)
         assert timestep > 0.0
         self.dt = timestep
+        self.f = firedrake.Function(self.coord_space)
 
-    @PETSc.Log.EventDecorator("LaplacianSmoother.setup_solver")
+    @PETSc.Log.EventDecorator()
     def setup_solver(self, fixed_boundaries=[]):
         if not hasattr(self, "_solver"):
             test = firedrake.TestFunction(self.coord_space)
@@ -37,17 +36,15 @@ class LaplacianSmoother(PrimeMover):
             )
         self.solver.solve()
 
-    @PETSc.Log.EventDecorator("LaplacianSmoother.move")
+    @PETSc.Log.EventDecorator()
     def move(self, time, update_forcings=None, fixed_boundaries=[]):
         """
-        Assemble and solve the Laplacian system and
-        update the coordinates.
+        Assemble and solve the Laplacian system and update the coordinates.
 
         :arg time: the current time
-        :kwarg update_forcings: function that updates
-            the forcing :attr:`f` at the current time
-        :kwarg fixed_boundaries: list of boundaries
-            where Dirichlet conditions are to be
+        :kwarg update_forcings: function that updates the forcing :attr:`f` at the
+            current time
+        :kwarg fixed_boundaries: list of boundaries where Dirichlet conditions are to be
             enforced
         """
         if update_forcings is not None:
