@@ -50,17 +50,17 @@ coord_data_init = mesh.coordinates.dat.data.copy()
 
 import numpy as np
 
-A = 50  # forcing amplitude
-T = 1.0  # forcing period
+forcing_period = 1.0
+num_timesteps = 10
+timestep = forcing_period / num_timesteps
+forcing_amplitude = 50
 
 
 def forcing(x, t):
-    return A * np.sin(2 * pi * t / T) * np.sin(pi * x)
+    return forcing_amplitude * np.sin(2 * pi * t / forcing_period) * np.sin(pi * x)
 
 
-num_timesteps = 10
-dt = T / num_timesteps
-times = np.arange(0, T + 0.5 * dt, dt)
+times = np.arange(0, forcing_period + 0.5 * timestep, timestep)
 
 # .. figure:: lineal_spring-forcings.jpg
 #    :figwidth: 60%
@@ -72,7 +72,7 @@ times = np.arange(0, T + 0.5 * dt, dt)
 # top boundary, we need to extract the indices for the associated boundary nodes. We
 # can then define the :func:`update_forcings` as in the other demo. ::
 
-mover = LaplacianSmoother(mesh, dt)
+mover = LaplacianSmoother(mesh, timestep)
 boundary_nodes = DirichletBC(mesh.coordinates.function_space(), 0, 4).nodes
 
 

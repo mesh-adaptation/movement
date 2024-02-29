@@ -73,28 +73,30 @@ plt.savefig("lineal_spring-initial_mesh.jpg")
 # .. math::
 #     \mathbf{f}(x,y,t)=\left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right]
 #
-# acting only in the vertical direction. ::
+# acting only in the vertical direction, where :math:`A` is the amplitude and :math:`T`
+# is the time period. ::
 
 import numpy as np
 
-A = 0.2  # forcing amplitude
-T = 1.0  # forcing period
+forcing_period = 1.0
+num_timesteps = 10
+timestep = forcing_period / num_timesteps
+forcing_amplitude = 50
 
 
-def forcing(x, t):
-    return A * np.sin(2 * pi * t / T) * np.sin(pi * x)
+def forcing(index, x, t):
+    K = mesh.cell_sizes.dat.data[index] ** 2 / 4
+    return forcing_amplitude * np.sin(2 * pi * t / forcing_period) * np.sin(pi * x) * K
 
 
 X = np.linspace(0, 1, n + 1)
-num_timesteps = 10
-dt = T / num_timesteps
-times = np.arange(0, T + 0.5 * dt, dt)
+times = np.arange(0, forcing_period + 0.5 * timestep, timestep)
+boundary_nodes = DirichletBC(mesh.coordinates.function_space(), 0, 4).nodes
 
 fig, axes = plt.subplots()
 for t in times:
-    axes.plot(X, forcing(X, t), label=f"t={t:.1f}")
+    axes.plot(X, forcing(boundary_nodes, X, t), label=f"t={t:.1f}")
 axes.set_xlim([0, 1])
-axes.set_ylim([-A, A])
 axes.legend()
 box = axes.get_position()
 axes.set_position([box.x0, box.y0, box.width * 0.8, box.height])
@@ -110,7 +112,6 @@ plt.savefig("lineal_spring-forcings.jpg")
 # right indices for the top boundary is using a :class:`~.DirichletBC` object. ::
 
 mover = SpringMover(mesh, method="lineal")
-boundary_nodes = DirichletBC(mesh.coordinates.function_space(), 0, 4).nodes
 
 
 def update_forcings(t):
@@ -118,7 +119,7 @@ def update_forcings(t):
     forcing_data = mover.f.dat.data
     for i in boundary_nodes:
         x, y = coord_data[i]
-        forcing_data[i][1] = forcing(x, t)
+        forcing_data[i][1] = forcing(i, x, t)
 
 
 # We are now able to apply the mesh movement method. The forcings effectively enforce a
