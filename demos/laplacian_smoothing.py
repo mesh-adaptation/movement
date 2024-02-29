@@ -85,7 +85,6 @@ def update_forcings(t):
 
 
 # We are now able to apply the mesh movement method. This works just as before. ::
-# TODO: displacement
 
 time = 0.0
 fig, axes = plt.subplots(ncols=4, nrows=3, figsize=(12, 10))
@@ -94,6 +93,8 @@ for i, t in enumerate(times):
 
     # Move the mesh and calculate the mesh speed
     mover.move(t, update_forcings=update_forcings, fixed_boundaries=[1, 2, 3])
+    displacement = np.linalg.norm(mover.displacement)
+    print(f"time = {t:.1f} s, displacement = {displacement:.2f} m")
 
     # Plot the current mesh, adding a time label
     ax = axes[idx // 4, idx % 4]
@@ -114,6 +115,6 @@ plt.savefig("laplacian_smoothing-adapted_meshes.jpg")
 coord_data = mover.mesh.coordinates.dat.data
 linf_error = np.max(np.abs(coord_data - coord_data_init))
 print(f"l_infinity error: {linf_error:.3f} m")
-assert linf_error < 0.01
+assert np.isclose(linf_error, 0.0)
 
 # This tutorial can be downloaded as a `Python script <laplacian_smoothing.py>`__.

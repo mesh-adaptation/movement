@@ -3,6 +3,7 @@ from firedrake.petsc import PETSc
 import ufl
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
+import numpy as np
 
 
 __all__ = ["LaplacianSmoother"]
@@ -20,6 +21,8 @@ class LaplacianSmoother(PrimeMover):
         assert timestep > 0.0
         self.dt = timestep
         self.f = firedrake.Function(self.coord_space)
+        dim = self.mesh.topological_dimension()
+        self.displacement = np.zeros((self.mesh.num_vertices(), dim))
 
     @PETSc.Log.EventDecorator()
     def _setup_solver(self, fixed_boundaries=[]):
@@ -56,5 +59,6 @@ class LaplacianSmoother(PrimeMover):
         self._solver.solve()
 
         # Update mesh coordinates
-        self._x.dat.data_with_halos[:] += self.v.dat.data_with_halos * self.dt
+        self.displacement[:] = self.v.dat.data_with_halos * self.dt
+        self._x.dat.data_with_halos[:] += self.displacement
         self.mesh.coordinates.assign(self._x)
