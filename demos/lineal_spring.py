@@ -2,7 +2,9 @@
 # ==============================================
 #
 # In this demo, we demonstrate a basic example using the *lineal spring* method, as
-# described in :cite:`Farhat:1998`.
+# described in :cite:`Farhat:1998`. For simplicity of presentation, we consider the same
+# example considered in the `Laplacian smoothing <laplacian_smoothing.py.html>`__ demo,
+# where mesh movement is driven by a forcing on the top boundary of a square mesh.
 #
 # The idea of the lineal spring method is to re-interpret the edges of a mesh as a
 # structure of stiff beams. Each beam has a stiffness associated with it, which is
@@ -22,7 +24,9 @@
 # :math:`\underline{\mathbf{K}_{ij}}\in\mathbb{R}^{2\times2}` and
 # :math:`\underline{\mathbf{K}}\in\mathbb{R}^{2N\times2N}`.
 #
-# Suppose we apply a forcing, which acts on the vertices according to a forcing matrix,
+# As with the Laplacian smoothing method, the lineal spring approach relies on there
+# being a user-specified forcing function. This acts on the vertices according to a
+# forcing matrix,
 #
 # .. math::
 #     \underline{\mathbf{f}} = \begin{bmatrix}
@@ -47,9 +51,9 @@
 from firedrake import *
 from movement import *
 
-# Let's start with a uniform mesh of the unit square. It has four boundary segments,
-# which are tagged with the integers 1, 2, 3, and 4. Note that segment 4 corresponds to
-# the top boundary. ::
+# Recall the initial uniform mesh of the unit square used in the Laplacian smoothing
+# demo, which has four boundary segments tagged with the integers 1, 2, 3, and 4. Note
+# that segment 4 corresponds to the top boundary. ::
 
 import matplotlib.pyplot as plt
 from firedrake.pyplot import triplot
@@ -67,14 +71,22 @@ plt.savefig("lineal_spring-initial_mesh.jpg")
 #    :figwidth: 50%
 #    :align: center
 #
-# Suppose we wish to apply a time-dependent forcing to the top boundary and see how the
-# mesh structure responds. Consider the forcing
+# We consider the same time-dependent forcing to the top boundary and see how the mesh
+# structure responds. Recall the formula
 #
 # .. math::
-#     \mathbf{f}(x,y,t)=\left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right]
+#     \mathbf{f}(x,y,t)=\left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right],
 #
-# acting only in the vertical direction, where :math:`A` is the amplitude and :math:`T`
-# is the time period. ::
+# where :math:`A` is the amplitude and :math:`T` is the time period. However, we cannot
+# simply apply this formula in the same way as when solving the Poisson equation. We
+# first need to apply a transformation to account for the fact that we are considering
+# a discrete Poisson formulation. This amounts to applying the scale factor
+#
+# .. math::
+#    K = \Delta x^2 / 4,
+#
+# where :math:`\Delta x` is the local mesh size. To account for this, we need to provide
+# an additional index argument to :func:`forcing`. ::
 
 import numpy as np
 
@@ -108,8 +120,7 @@ plt.savefig("lineal_spring-forcings.jpg")
 #    :align: center
 #
 # To apply this forcing, we need to create a :class:`~.SpringMover` instance and define
-# a function for updating the forcing applied to the boundary nodes. The way we get the
-# right indices for the top boundary is using a :class:`~.DirichletBC` object. ::
+# a function for updating the forcing applied to the boundary nodes. ::
 
 mover = SpringMover(mesh, method="lineal")
 
@@ -149,8 +160,8 @@ plt.savefig("lineal_spring-adapted_meshes.jpg")
 #    :figwidth: 100%
 #    :align: center
 #
-# The mesh is deformed according to the vertical forcing, with the left, right, and
-# bottom boundaries remaining fixed, returning to be very close to its original state
+# Again, the mesh is deformed according to the vertical forcing, with the left, right,
+# and bottom boundaries remaining fixed, returning to be very close to its original state
 # after one period. Let's check this in the :math:`\ell_\infty` norm. ::
 
 coord_data = mover.mesh.coordinates.dat.data
@@ -158,7 +169,10 @@ linf_error = np.max(np.abs(coord_data - coord_data_init))
 print(f"l_infinity error: {linf_error:.3f} m")
 assert linf_error < 0.01
 
-# Note that we can view the sparsity pattern of the stiffness matrix as follows. ::
+# Note that the mesh doesn't return to its original state quite as neatly with the lineal
+# spring method as it does with the Laplacian smoothing method.
+#
+# We can view the sparsity pattern of the stiffness matrix as follows. ::
 
 K = mover.stiffness_matrix
 print(f"Stiffness matrix shape: {K.shape}")
