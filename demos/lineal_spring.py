@@ -46,7 +46,22 @@
 # are 'flattened' versions of the displacement and forcing vectors. By solving this
 # equation, we see how the structure of beams responds to the forcing.
 #
-# TODO: Note the difference with Laplacian smoothing.
+# The main difference to note with the Laplacian smoothing approach is the following.
+# The Laplacian smoothing method is formulated in terms of a mesh velocity
+# :math:`\mathbf{v}`, which at timestep :math:`n` can be approximated as
+#
+# .. math::
+#     \mathbf{v}_n \approx \frac{\mathbf{x}_n - \mathbf{x}_{n-1}}{\Delta t},
+#
+# where :math:`\mathbf{x}_n` are the mesh coordinates at timestep :math:`n` and
+# :math:`\Delta t` is the timestep length. In the lineal spring method, however, we
+# solve for the *overall* displacement, which at timestep :math:`n` takes the form
+#
+# .. math::
+#     \mathbf{u}_n = \mathbf{x}_n - \mathbf{x}_0.
+#
+# So the former is related to recent changes in position, whereas the latter is
+# concerned with changes in position *since the start of the simulation*.
 #
 # We begin by importing from the namespaces of Firedrake and Movement. ::
 
