@@ -93,12 +93,11 @@ import numpy as np
 forcing_period = 1.0
 num_timesteps = 10
 timestep = forcing_period / num_timesteps
-forcing_amplitude = 50
+forcing_amplitude = 0.2
 
 
-def forcing(index, x, t):
-    K = mesh.cell_sizes.dat.data[index] ** 2 / 4
-    return forcing_amplitude * np.sin(2 * pi * t / forcing_period) * np.sin(pi * x) * K
+def forcing(x, t):
+    return forcing_amplitude * np.sin(2 * pi * t / forcing_period) * np.sin(pi * x)
 
 
 X = np.linspace(0, 1, n + 1)
@@ -107,7 +106,7 @@ boundary_nodes = DirichletBC(mesh.coordinates.function_space(), 0, 4).nodes
 
 fig, axes = plt.subplots()
 for t in times:
-    axes.plot(X, forcing(boundary_nodes, X, t), label=f"t={t:.1f}")
+    axes.plot(X, forcing(X, t), label=f"t={t:.1f}")
 axes.set_xlim([0, 1])
 axes.legend()
 box = axes.get_position()
@@ -130,7 +129,7 @@ def update_forcings(t):
     forcing_data = mover.f.dat.data
     for i in boundary_nodes:
         x, y = coord_data[i]
-        forcing_data[i][1] = forcing(i, x, t)
+        forcing_data[i][1] = forcing(x, t)
 
 
 # We are now able to apply the mesh movement method. The forcings effectively enforce a
