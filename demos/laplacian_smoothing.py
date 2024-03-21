@@ -59,7 +59,7 @@ import numpy as np
 forcing_period = 1.0
 num_timesteps = 10
 timestep = forcing_period / num_timesteps
-forcing_amplitude = 50
+forcing_amplitude = 0.2
 
 
 def forcing(x, t):
@@ -84,25 +84,33 @@ plt.savefig("laplacian_smoothing-forcings.jpg")
 #    :align: center
 #
 # To apply this forcing, we need to create a :class:`~.LaplacianSmoother` instance and
-# define a function for updating the forcing applied to the boundary nodes. Since we are
-# going to apply a forcing to the top boundary, we need to extract the indices for the
-# associated boundary nodes. This is done using a :class:`~.DirichletBC` object. ::
+# define a function for updating the forcing and/or boundary conditions. Since we are
+# going to apply a forcing to the top boundary, we create a :class:`~.Function` to
+# represent the boundary condition values and pass this to a :class:`~.DirichletBC`
+# object. We then define a function which updates it as time progresses. ::
 
 mover = LaplacianSmoother(mesh, timestep)
-boundary_nodes = DirichletBC(mesh.coordinates.function_space(), 0, 4).nodes
+top = Function(mover.coord_space)
+moving_boundary = DirichletBC(mover.coord_space, top, 4)
 
 
 def update_forcings(t):
     coord_data = mesh.coordinates.dat.data
-    forcing_data = mover.f.dat.data
-    for i in boundary_nodes:
+    forcing_data = top.dat.data
+    for i in moving_boundary.nodes:
         x, y = coord_data[i]
         forcing_data[i][1] = forcing(x, t)
 
 
-# We are now able to apply the mesh movement method. The forcings effectively enforce a
-# Dirichlet condition on the top boundary. On other boundaries, we enforce that there is
-# no movement using the `fixed_boundaries` keyword argument. ::
+# In addition to the moving boundary, we specify the remaining boundaries to be fixed. ::
+
+fixed_boundaries = DirichletBC(mover.coord_space, 0, [1, 2, 3])
+boundary_conditions = (fixed_boundaries, moving_boundary)
+
+
+# We are now able to apply the mesh movement method, passing the ``update_forcings``
+# function and ``boundary_conditions`` tuple to the :meth:`~.LaplacianSmoother.move`
+# method. ::
 
 import matplotlib.patches as mpatches
 
@@ -112,7 +120,9 @@ for i, t in enumerate(times):
     idx = 0 if i == 0 else (i + 1)
 
     # Move the mesh and calculate the displacement
-    mover.move(t, update_forcings=update_forcings, fixed_boundaries=[1, 2, 3])
+    mover.move(
+        t, update_forcings=update_forcings, boundary_conditions=boundary_conditions
+    )
     displacement = np.linalg.norm(mover.displacement)
     print(f"time = {t:.1f} s, displacement = {displacement:.2f} m")
 

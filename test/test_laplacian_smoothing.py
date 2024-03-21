@@ -29,16 +29,15 @@ def test_forced(method, num_timesteps, plot=False, test=True):
 
     # Construct mesh and mover
     mesh = SquareMesh(n, n, 2)
-    V = mesh.coordinates.function_space()
     coords = mesh.coordinates.dat.data.copy()
-    if method == "laplacian":
-        mover = LaplacianSmoother(mesh, dt)
+    mover = LaplacianSmoother(mesh, dt)
+    fixed_boundaries = DirichletBC(mover.coord_space, 0, [1, 2, 3])
 
     def update_forcings(t):
         """
         Sinusoidal forcing on the top boundary.
         """
-        for i in DirichletBC(V, 0, 4).nodes:
+        for i in DirichletBC(mover.coord_space, 0, 4).nodes:
             mover.f.dat.data[i][1] += (
                 A * np.sin(2 * np.pi * t / T) * np.sin(np.pi * coords[i][0])
             )
@@ -46,7 +45,9 @@ def test_forced(method, num_timesteps, plot=False, test=True):
     # Move the mesh
     time = 0.0
     for j in range(num_timesteps):
-        mover.move(time, update_forcings=update_forcings, fixed_boundaries=[1, 2, 3])
+        mover.move(
+            time, update_forcings=update_forcings, boundary_conditions=fixed_boundaries
+        )
         time += dt
     new_coords = mover.mesh.coordinates.dat.data
 
