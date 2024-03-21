@@ -75,6 +75,8 @@ def test_forced(method, time, plot=False):
     V = mesh.coordinates.function_space()
     coords = mesh.coordinates.dat.data.copy()
     mover = SpringMover(mesh, method=method)
+    fixed_boundaries = firedrake.DirichletBC(mover.coord_space, 0, [1, 2, 3])
+    # TODO: use moving_boundary
 
     def update_forcings(t):
         """
@@ -86,7 +88,9 @@ def test_forced(method, time, plot=False):
             )
 
     # Move the mesh
-    mover.move(time, update_forcings=update_forcings, fixed_boundaries=[1, 2, 3])
+    mover.move(
+        time, update_forcings=update_forcings, boundary_conditions=fixed_boundaries
+    )
     new_coords = mover.mesh.coordinates.dat.data
 
     # Plotting

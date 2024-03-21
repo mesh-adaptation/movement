@@ -102,7 +102,6 @@ def forcing(x, t):
 
 X = np.linspace(0, 1, n + 1)
 times = np.arange(0, forcing_period + 0.5 * timestep, timestep)
-boundary_nodes = DirichletBC(mesh.coordinates.function_space(), 0, 4).nodes
 
 fig, axes = plt.subplots()
 for t in times:
@@ -122,15 +121,22 @@ plt.savefig("lineal_spring-forcings.jpg")
 # a function for updating the forcing applied to the boundary nodes. ::
 
 mover = SpringMover(mesh, method="lineal")
+top = Function(mover.coord_space)
+moving_boundary = DirichletBC(mover.coord_space, top, 4)
 
 
 def update_forcings(t):
     coord_data = mover.mesh.coordinates.dat.data
     forcing_data = mover.f.dat.data
-    for i in boundary_nodes:
+    for i in moving_boundary.nodes:
         x, y = coord_data[i]
         forcing_data[i][1] = forcing(x, t)
 
+
+# In addition to the moving boundary, we specify the remaining boundaries to be fixed. ::
+
+fixed_boundaries = DirichletBC(mover.coord_space, 0, [1, 2, 3])
+boundary_conditions = (fixed_boundaries, moving_boundary)
 
 # We are now able to apply the mesh movement method. The forcings effectively enforce a
 # Dirichlet condition on the top boundary. On other boundaries, we enforce that there is
@@ -143,7 +149,7 @@ for i, t in enumerate(times):
     idx = 0 if i == 0 else i + 1
 
     # Move the mesh and calculate the displacement
-    mover.move(t, update_forcings=update_forcings, fixed_boundaries=[1, 2, 3])
+    mover.move(t, update_forcings=update_forcings, boundary_conditions=fixed_boundaries)
     displacement = np.linalg.norm(mover.displacement)
     print(f"time = {t:.1f} s, displacement = {displacement:.2f} m")
 

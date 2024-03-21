@@ -1,6 +1,8 @@
 import firedrake
+import firedrake.function as ffunc
 from firedrake.petsc import PETSc
 import ufl
+from collections.abc import Iterable
 import numpy as np
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
@@ -41,7 +43,7 @@ class SpringMover_Base(PrimeMover):
         super().__init__(mesh)
         self.HDivTrace = firedrake.FunctionSpace(self.mesh, "HDiv Trace", 0)
         self.HDivTrace_vec = firedrake.VectorFunctionSpace(self.mesh, "HDiv Trace", 0)
-        self.f = firedrake.Function(self.mesh.coordinates.function_space())
+        self.f = ffunc.Function(self.mesh.coordinates.function_space())
         self.displacement = np.zeros(self.mesh.num_vertices())
 
     @property
@@ -55,7 +57,7 @@ class SpringMover_Base(PrimeMover):
         if not hasattr(self, "_facet_area_solver"):
             test = firedrake.TestFunction(self.HDivTrace)
             trial = firedrake.TrialFunction(self.HDivTrace)
-            self._facet_area = firedrake.Function(self.HDivTrace)
+            self._facet_area = ffunc.Function(self.HDivTrace)
             A = ufl.FacetArea(self.mesh)
             a = trial("+") * test("+") * self.dS + trial * test * self.ds
             L = test("+") * A * self.dS + test * A * self.ds
@@ -76,7 +78,7 @@ class SpringMover_Base(PrimeMover):
         if not hasattr(self, "_tangents_solver"):
             test = firedrake.TestFunction(self.HDivTrace_vec)
             trial = firedrake.TrialFunction(self.HDivTrace_vec)
-            self._tangents = firedrake.Function(self.HDivTrace_vec)
+            self._tangents = ffunc.Function(self.HDivTrace_vec)
             n = ufl.FacetNormal(self.mesh)
             s = ufl.perp(n)
             a = (
@@ -103,7 +105,7 @@ class SpringMover_Base(PrimeMover):
         if not hasattr(self, "_angles_solver"):
             test = firedrake.TestFunction(self.HDivTrace)
             trial = firedrake.TrialFunction(self.HDivTrace)
-            self._angles = firedrake.Function(self.HDivTrace)
+            self._angles = ffunc.Function(self.HDivTrace)
             e0 = np.zeros(self.dim)
             e0[0] = 1.0
             X = ufl.as_vector(e0)
@@ -166,23 +168,54 @@ class SpringMover_Base(PrimeMover):
         return K
 
     @PETSc.Log.EventDecorator()
-    def apply_dirichlet_conditions(self, tags):
+    def apply_dirichlet_conditions(self, boundary_conditions=None):
         """
         Enforce that nodes on certain tagged boundaries do not move.
 
-        :arg tags: a list of boundary tags
+        :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
+        :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
         """
-        bnd = self.mesh.exterior_facets
-        if not set(tags).issubset(set(bnd.unique_markers)):
-            raise ValueError(f"{tags} contains invalid boundary tags")
-        subsets = sum([list(bnd.subset(physID).indices) for physID in tags], start=[])
-        for e in range(*self.edge_indices):
-            i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
-            if bnd.point2facetnumber[e] in subsets:
-                self.displacement[2 * i] = 0.0
-                self.displacement[2 * i + 1] = 0.0
-                self.displacement[2 * j] = 0.0
-                self.displacement[2 * j + 1] = 0.0
+        if not boundary_conditions:
+            boundary_conditions = firedrake.DirichletBC(
+                self.coord_space, 0, "on_boundary"
+            )
+        if isinstance(boundary_conditions, firedrake.DirichletBC):
+            boundary_conditions = [boundary_conditions]
+        assert isinstance(boundary_conditions, Iterable)
+
+        # Loop over each boundary condition provided
+        for boundary_condition in boundary_conditions:
+            if boundary_condition.function_space() != self.coord_space:
+                raise ValueError(
+                    f"Boundary conditions must have {type(self)}.coord_space as their"
+                    " function space"
+                )
+
+            # Determine boundary subsets for the associated tags
+            tags = boundary_condition.sub_domain
+            if not isinstance(tags, Iterable):
+                tags = [tags]
+            bnd = self.mesh.exterior_facets
+            if not set(tags).issubset(set(bnd.unique_markers)):
+                raise ValueError(f"{tags} contains invalid boundary tags")
+            subsets = sum(
+                [list(bnd.subset(physID).indices) for physID in tags], start=[]
+            )
+
+            # Get vertex-based boundary data to be enforced
+            boundary_value = boundary_condition._original_arg
+            if not isinstance(boundary_value, ffunc.Function):
+                boundary_value = ffunc.Function(self.coord_space).assign(boundary_value)
+            boundary_data = boundary_value.dat.data
+
+            # Loop over boundary edges and enforce the boundary values at their vertices
+            for e in range(*self.edge_indices):
+                i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
+                if bnd.point2facetnumber[e] in subsets:
+                    self.displacement[2 * i] = boundary_data[i, 0]
+                    self.displacement[2 * i + 1] = boundary_data[i, 1]
+                    self.displacement[2 * j] = boundary_data[j, 0]
+                    self.displacement[2 * j + 1] = boundary_data[j, 1]
 
 
 class SpringMover_Lineal(SpringMover_Base):
@@ -196,15 +229,18 @@ class SpringMover_Lineal(SpringMover_Base):
     """
 
     @PETSc.Log.EventDecorator()
-    def move(self, time, update_forcings=None, fixed_boundaries=[]):
+    def move(self, time, update_forcings=None, boundary_conditions=None):
         """
         Assemble and solve the lineal spring system and update the coordinates.
 
         :arg time: the current time
-        :kwarg update_forcings: function that updates the forcing :attr:`f` at the
-            current time
-        :kwarg fixed_boundaries: list of boundaries where Dirichlet conditions are to be
-            enforced
+        :type time: :class:`float`
+        :kwarg update_forcings: function that updates the forcing :attr:`f` and/or
+            boundary conditions at the current time
+        :type update_forcings: :class:`~.Callable` with a single argument of
+            :class:`float` type
+        :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
+        :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
         """
         if update_forcings is not None:
             update_forcings(time)
@@ -217,8 +253,7 @@ class SpringMover_Lineal(SpringMover_Base):
         self.displacement = np.linalg.solve(K, rhs)
 
         # Enforce Dirichlet conditions as a post-process
-        if len(fixed_boundaries) > 0:
-            self.apply_dirichlet_conditions(fixed_boundaries)
+        self.apply_dirichlet_conditions(boundary_conditions)
 
         # Update mesh coordinates
         shape = self.mesh.coordinates.dat.data_with_halos.shape
