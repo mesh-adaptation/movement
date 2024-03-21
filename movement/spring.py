@@ -254,6 +254,7 @@ class SpringMover_Lineal(SpringMover_Base):
 
         # Enforce Dirichlet conditions as a post-process
         self.apply_dirichlet_conditions(boundary_conditions)
+        # FIXME: Surely the boundary conditions should be applied before the solve?
 
         # Update mesh coordinates
         shape = self.mesh.coordinates.dat.data_with_halos.shape

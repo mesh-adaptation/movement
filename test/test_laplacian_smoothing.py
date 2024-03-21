@@ -32,6 +32,7 @@ def test_forced(method, num_timesteps, plot=False, test=True):
     coords = mesh.coordinates.dat.data.copy()
     mover = LaplacianSmoother(mesh, dt)
     fixed_boundaries = DirichletBC(mover.coord_space, 0, [1, 2, 3])
+    # TODO: Use moving boundary
 
     def update_forcings(t):
         """

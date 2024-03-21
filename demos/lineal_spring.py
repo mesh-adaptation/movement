@@ -46,6 +46,8 @@
 # are 'flattened' versions of the displacement and forcing vectors. By solving this
 # equation, we see how the structure of beams responds to the forcing.
 #
+# TODO: Note the difference with Laplacian smoothing.
+#
 # We begin by importing from the namespaces of Firedrake and Movement. ::
 
 from firedrake import *
@@ -127,7 +129,7 @@ moving_boundary = DirichletBC(mover.coord_space, top, 4)
 
 def update_forcings(t):
     coord_data = mover.mesh.coordinates.dat.data
-    forcing_data = mover.f.dat.data
+    forcing_data = top.dat.data
     for i in moving_boundary.nodes:
         x, y = coord_data[i]
         forcing_data[i][1] = forcing(x, t)
@@ -149,7 +151,9 @@ for i, t in enumerate(times):
     idx = 0 if i == 0 else i + 1
 
     # Move the mesh and calculate the displacement
-    mover.move(t, update_forcings=update_forcings, boundary_conditions=fixed_boundaries)
+    mover.move(
+        t, update_forcings=update_forcings, boundary_conditions=boundary_conditions
+    )
     displacement = np.linalg.norm(mover.displacement)
     print(f"time = {t:.1f} s, displacement = {displacement:.2f} m")
 
