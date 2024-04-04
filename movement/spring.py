@@ -127,9 +127,8 @@ class SpringMover_Base(PrimeMover):
         self._angles.dat.data[:] = np.arccos(self._angles.dat.data)
         return self._angles
 
-    @property
     @PETSc.Log.EventDecorator()
-    def stiffness_matrix(self):
+    def _stiffness_matrix(self):
         angles = self.angles
         edge_lengths = self.facet_areas
         bnd = self.mesh.exterior_facets
@@ -168,12 +167,14 @@ class SpringMover_Base(PrimeMover):
         return K
 
     @PETSc.Log.EventDecorator()
-    def apply_dirichlet_conditions(self, boundary_conditions=None):
+    def assemble_stiffness_matrix(self, boundary_conditions=None):
         """
         Enforce that nodes on certain tagged boundaries do not move.
 
         :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
         :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
+        :returns: the stiffness matrix with boundary conditions applied
+        :rtype: :class:`numpy.ndarray`
         """
         if not boundary_conditions:
             boundary_conditions = firedrake.DirichletBC(
@@ -184,6 +185,8 @@ class SpringMover_Base(PrimeMover):
         assert isinstance(boundary_conditions, Iterable)
 
         # Loop over each boundary condition provided
+        K = self._stiffness_matrix()
+        rhs = self.f.dat.data
         for boundary_condition in boundary_conditions:
             if boundary_condition.function_space() != self.coord_space:
                 raise ValueError(
@@ -211,11 +214,14 @@ class SpringMover_Base(PrimeMover):
             # Loop over boundary edges and enforce the boundary values at their vertices
             for e in range(*self.edge_indices):
                 i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
+                rhs[i, :] = boundary_data[i, :]
+                rhs[j, :] = boundary_data[j, :]
                 if bnd.point2facetnumber[e] in subsets:
-                    self.displacement[2 * i] = boundary_data[i, 0]
-                    self.displacement[2 * i + 1] = boundary_data[i, 1]
-                    self.displacement[2 * j] = boundary_data[j, 0]
-                    self.displacement[2 * j + 1] = boundary_data[j, 1]
+                    for k in (2 * i, 2 * i + 1, 2 * j, 2 * j + 1):
+                        K[k][:] = 0
+                        K[:][k] = 0
+                        K[k][k] = 1
+        return K
 
 
 class SpringMover_Lineal(SpringMover_Base):
@@ -245,16 +251,10 @@ class SpringMover_Lineal(SpringMover_Base):
         if update_forcings is not None:
             update_forcings(time)
 
-        # Assemble
-        K = self.stiffness_matrix
+        # Assemble and solve the linear system
+        K = self.assemble_stiffness_matrix(boundary_conditions=boundary_conditions)
         rhs = self.f.dat.data.flatten()
-
-        # Solve
         self.displacement = np.linalg.solve(K, rhs)
-
-        # Enforce Dirichlet conditions as a post-process
-        self.apply_dirichlet_conditions(boundary_conditions)
-        # FIXME: Surely the boundary conditions should be applied before the solve?
 
         # Update mesh coordinates
         shape = self.mesh.coordinates.dat.data_with_halos.shape
