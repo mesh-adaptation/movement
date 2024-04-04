@@ -191,14 +191,15 @@ plt.savefig("lineal_spring-adapted_meshes.jpg")
 coord_data = mover.mesh.coordinates.dat.data
 linf_error = np.max(np.abs(coord_data - coord_data_init))
 print(f"l_infinity error: {linf_error:.3f} m")
-assert linf_error < 0.01
+assert linf_error < 0.002
 
 # Note that the mesh doesn't return to its original state quite as neatly with the lineal
-# spring method as it does with the Laplacian smoothing method.
+# spring method as it does with the Laplacian smoothing method. However, the result is
+# still very good (as can be seen from the plots above).
 #
 # We can view the sparsity pattern of the stiffness matrix as follows. ::
 
-K = mover.stiffness_matrix
+K = mover.assemble_stiffness_matrix(boundary_conditions=boundary_conditions)
 print(f"Stiffness matrix shape: {K.shape}")
 print(f"Number of mesh vertices: {mesh.num_vertices()}")
 
