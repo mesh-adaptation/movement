@@ -60,7 +60,8 @@ class MeshTanglingChecker:
         sj = self.scaled_jacobian.dat.data_with_halos
         num_tangled = len(sj[sj < 0])
         if num_tangled > 0:
-            msg = f"Mesh has {num_tangled} tangled elements."
+            plural = "s" if num_tangled > 1 else ""
+            msg = f"Mesh has {num_tangled} tangled element{plural}."
             if self.raise_error:
                 raise ValueError(msg)
             warnings.warn(msg)
