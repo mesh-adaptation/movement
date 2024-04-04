@@ -1,30 +1,29 @@
 import firedrake
 import ufl
+import warnings
 
 
 __all__ = ["MeshTanglingChecker"]
 
 
-class MeshTanglingChecker(object):
+class MeshTanglingChecker:
     """
-    A class for tracking whether a mesh has
-    tangled, i.e. whether any of its elements
+    A class for tracking whether a mesh has tangled, i.e. whether any of its elements
     have become inverted.
     """
 
-    def __init__(self, mesh, mode="warn"):
+    def __init__(self, mesh, raise_error=True):
         """
         :arg mesh: the mesh to track if tangled
-        :kwarg mode: should a warning or an error
-            be raised when tangling is encountered?
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :kwarg raise_error: if ``True``, an error is raised if any element is tangled,
+            otherwise a warning is raised
+        :type raise_error: :class:`bool`
         """
-        dim = mesh.topological_dimension()
-        if dim != 2:
-            raise ValueError(f"Cannot check for tangling of {dim}D meshes (only 2D)")
+        if mesh.topological_dimension() != 2:
+            raise NotImplementedError("Tangling check only currently supported in 2D.")
         self.mesh = mesh
-        if mode not in ["warn", "error"]:
-            raise ValueError("Choose mode from 'warn' and 'error'")
-        self.mode = mode
+        self.raise_error = raise_error
 
         # Store initial signs of Jacobian determinant
         P0 = firedrake.FunctionSpace(mesh, "DG", 0)
@@ -55,17 +54,14 @@ class MeshTanglingChecker(object):
 
     def check(self):
         """
-        Check for tangling.
+        Check whether any element orientations have changed since the tangling checker
+        was created.
         """
-        sj = self.scaled_jacobian.dat.data
+        sj = self.scaled_jacobian.dat.data_with_halos
         num_tangled = len(sj[sj < 0])
-        if num_tangled == 0:
-            return 0
-        msg = f"Mesh has {num_tangled} tangled elements"
-        if self.mode == "warn":
-            import warnings
-
+        if num_tangled > 0:
+            msg = f"Mesh has {num_tangled} tangled elements."
+            if self.raise_error:
+                raise ValueError(msg)
             warnings.warn(msg)
-        else:
-            raise ValueError(msg)
         return num_tangled
