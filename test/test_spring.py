@@ -20,7 +20,8 @@ def test_facet_areas():
     triangle are computed correctly.
     """
     mesh = firedrake.UnitTriangleMesh()
-    mover = SpringMover(mesh)
+    timestep = 1.0
+    mover = SpringMover(mesh, timestep)
     facet_areas = mover.facet_areas.dat.data
     expected = [1, np.sqrt(2), 1]
     assert np.allclose(facet_areas, expected)
@@ -32,7 +33,8 @@ def test_tangents():
     triangle are computed correctly.
     """
     mesh = firedrake.UnitTriangleMesh()
-    mover = SpringMover(mesh)
+    timestep = 1.0
+    mover = SpringMover(mesh, timestep)
     tangents = mover.tangents.dat.data
     expected = [[1, 0], [np.sqrt(2) / 2, np.sqrt(2) / 2], [0, 1]]
     assert np.allclose(np.abs(tangents), expected)
@@ -45,7 +47,8 @@ def test_angles():
     computed correctly.
     """
     mesh = firedrake.UnitTriangleMesh()
-    mover = SpringMover(mesh)
+    timestep = 1.0
+    mover = SpringMover(mesh, timestep)
     angles = 180 * mover.angles.dat.data / np.pi
     expected = [0, 135, 90]
     assert np.allclose(angles, expected)
