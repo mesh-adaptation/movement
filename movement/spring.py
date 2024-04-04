@@ -201,9 +201,7 @@ class SpringMover_Base(PrimeMover):
             bnd = self.mesh.exterior_facets
             if not set(tags).issubset(set(bnd.unique_markers)):
                 raise ValueError(f"{tags} contains invalid boundary tags")
-            subsets = sum(
-                [list(bnd.subset(physID).indices) for physID in tags], start=[]
-            )
+            subsets = np.array([bnd.subset(tag).indices for tag in tags]).flatten()
 
             # Get vertex-based boundary data to be enforced
             boundary_value = boundary_condition._original_arg
@@ -213,14 +211,15 @@ class SpringMover_Base(PrimeMover):
 
             # Loop over boundary edges and enforce the boundary values at their vertices
             for e in range(*self.edge_indices):
+                if bnd.point2facetnumber[e] not in subsets:
+                    continue
                 i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
                 rhs[i, :] = boundary_data[i, :]
                 rhs[j, :] = boundary_data[j, :]
-                if bnd.point2facetnumber[e] in subsets:
-                    for k in (2 * i, 2 * i + 1, 2 * j, 2 * j + 1):
-                        K[k][:] = 0
-                        K[:][k] = 0
-                        K[k][k] = 1
+                for k in (2 * i, 2 * i + 1, 2 * j, 2 * j + 1):
+                    K[k][:] = 0
+                    K[:][k] = 0
+                    K[k][k] = 1
         return K
 
 
