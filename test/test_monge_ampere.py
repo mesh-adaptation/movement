@@ -75,7 +75,7 @@ def test_continue(mesh_dim, method, exports=False):
     #        for the relaxation method, which is concerning.
 
 
-def test_change_monitor(mesh_dim, method, exports=True):
+def test_change_monitor(mesh_dim, method, exports=False):
     """
     Test that the mover can handle changes to
     the monitor function, such as would happen

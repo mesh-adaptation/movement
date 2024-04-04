@@ -1,5 +1,5 @@
 # Monge-Ampère mesh movement in three dimensions
-# ====================================================================
+# ==============================================
 
 # In this demo we demonstrate that the  Monge-Ampère mesh movement
 # can also be applied to 3D meshes. We employ the `sinatan3` function
@@ -11,7 +11,7 @@ from firedrake import *
 
 def sinatan3(mesh):
     x, y, z = SpatialCoordinate(mesh)
-    return 0.1*sin(50*x*z)+atan2(0.1, sin(5*y)-2*x*z)
+    return 0.1 * sin(50 * x * z) + atan2(0.1, sin(5 * y) - 2 * x * z)
 
 
 # We will now try to use mesh movement to optimize the mesh such that it can
@@ -32,7 +32,7 @@ def sinatan3(mesh):
 # moved mesh as :math:`1+\alpha`.
 #
 # As in the `previous Monge-Ampère demo <./monge_ampere1.py.html>`__, we use the
-# MongeAmpereMover to perform the mesh movement based on this monitor. We need
+# :class:`~.MongeAmpereMover` to perform the mesh movement based on this monitor. We need
 # to provide the monitor as a callback function that takes the mesh as its
 # input. During the iterations of the mesh movement process the monitor will then
 # be re-evaluated in the (iteratively)
@@ -42,14 +42,15 @@ def sinatan3(mesh):
 # that we will write to in every call when the monitor gets re-evaluated.
 
 from firedrake.output import VTKFile
-f = VTKFile('monitor.pvd')
-alpha = Constant(10.)
+
+f = VTKFile("monitor.pvd")
+alpha = Constant(10.0)
 
 
 def monitor(mesh):
     V = FunctionSpace(mesh, "CG", 1)
     # interpolation of the function itself, for output purposes only:
-    u = Function(V, name='sinatan3')
+    u = Function(V, name="sinatan3")
     u.interpolate(sinatan3(mesh))
 
     # NOTE: we are taking the Hessian of the _symbolic_ UFL expression
@@ -59,15 +60,15 @@ def monitor(mesh):
     # the gradient of that again would simply be zero.
     hess = grad(grad(sinatan3(mesh)))
 
-    hnorm = Function(V, name='hessian_norm')
+    hnorm = Function(V, name="hessian_norm")
     hnorm.interpolate(inner(hess, hess))
     hmax = hnorm.dat.data[:].max()
     f.write(u, hnorm)
-    return 1.0 + alpha * hnorm/Constant(hmax)
+    return 1.0 + alpha * hnorm / Constant(hmax)
 
 
 # Let us try this on a fairly coarse unit cube mesh. Note that
-# we use the `"relaxation"` method (see :cite:`McRae:20181),
+# we use the `"relaxation"` method (see :cite:`McRae:2018`),
 # which gives faster convergence for this case.
 
 n = 20
@@ -78,12 +79,16 @@ mover.move()
 # The results will be written to the `monitor.pvd` file which represents
 # a series of outputs storing the function and hessian norm evaluated
 # on each of the iteratively moved meshes. This can be viewed, e.g., using
-# [ParaView](https://www.paraview.org/) to produce the following
+# `ParaView <https://www.paraview.org/>`_, to produce the following
 # image:
 #
 # .. figure:: monge_ampere_3d-paraview.jpg
 #    :figwidth: 60%
 #    :align: center
+#
+# In the `next demo <./monge_ampere_helmholtz.py.html>`__, we will demonstrate
+# how to optimize the mesh for the discretisation of a PDE with the aim to
+# minimize its discretisation error.
 #
 # This tutorial can be dowloaded as a `Python script <monge_ampere_3d.py>`__.
 #

@@ -228,3 +228,5 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 # .. code-block:: none
 #
 #    L2-norm error on moved mesh: 0.00630874419681285
+#
+# This tutorial can be dowloaded as a `Python script <monge_ampere_helmholtz.py>`__.
