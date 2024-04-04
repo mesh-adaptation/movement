@@ -15,23 +15,24 @@ def fix_boundary(request):
 
 
 @pytest.fixture(params=[2, 3])
-def mesh_dim(request):
-    if request.param == 2:
-        def mesh(n):
-            return UnitSquareMesh(n, n)
+def dimension(request):
+    return request.param
+
+
+def uniform_mesh(dim, n):
+    if dim == 2:
+        return UnitSquareMesh(n, n)
     else:
-        def mesh(n):
-            return UnitCubeMesh(n, n, n)
-    return mesh
+        return UnitCubeMesh(n, n, n)
 
 
-def test_uniform_monitor(mesh_dim, method, exports=False):
+def test_uniform_monitor(dimension, method, exports=False):
     """
     Test that the mesh mover converges in one
     iteration for a constant monitor function.
     """
     n = 10
-    mesh = mesh_dim(n)
+    mesh = uniform_mesh(dimension, n)
     coords = mesh.coordinates.dat.data.copy()
 
     mover = MongeAmpereMover(mesh, const_monitor, method=method)
@@ -41,13 +42,13 @@ def test_uniform_monitor(mesh_dim, method, exports=False):
     assert num_iterations == 0
 
 
-def test_continue(mesh_dim, method, exports=False):
+def test_continue(dimension, method, exports=False):
     """
     Test that providing a good initial guess
     benefits the solver.
     """
     n = 20
-    mesh = mesh_dim(n)
+    mesh = uniform_mesh(dimension, n)
     rtol = 1.0e-03
 
     # Solve the problem to a weak tolerance
@@ -63,7 +64,7 @@ def test_continue(mesh_dim, method, exports=False):
         File("outputs/continue.pvd").write(mover.phi, mover.sigma)
 
     # Solve the problem again to a tight tolerance
-    mesh = mesh_dim(n)
+    mesh = uniform_mesh(dimension, n)
     mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=rtol)
     num_it_naive = mover.move()
     if exports:
@@ -75,20 +76,20 @@ def test_continue(mesh_dim, method, exports=False):
     #        for the relaxation method, which is concerning.
 
 
-def test_change_monitor(mesh_dim, method, exports=False):
+def test_change_monitor(dimension, method, exports=False):
     """
     Test that the mover can handle changes to
     the monitor function, such as would happen
     during timestepping.
     """
     n = 20
-    mesh = mesh_dim(n)
+    mesh = uniform_mesh(dimension, n)
     dim = mesh.geometric_dimension()
     coords = mesh.coordinates.dat.data.copy()
     tol = 1.0e-03
 
     # Adapt to a ring monitor
-    mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=1e3*tol**dim)
+    mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=1e3 * tol**dim)
     mover.move()
     if exports:
         File("outputs/ring.pvd").write(mover.phi, mover.sigma)
@@ -103,13 +104,13 @@ def test_change_monitor(mesh_dim, method, exports=False):
 
 
 @pytest.mark.slow
-def test_bcs(mesh_dim, method, fix_boundary):
+def test_bcs(dimension, method, fix_boundary):
     """
     Test that domain boundaries are fixed by
     the Monge-Ampere movers.
     """
     n = 20
-    mesh = mesh_dim(n)
+    mesh = uniform_mesh(dimension, n)
     one = Constant(1.0)
     bnd = assemble(one * ds(domain=mesh))
     bnodes = DirichletBC(mesh.coordinates.function_space(), 0, "on_boundary").nodes
