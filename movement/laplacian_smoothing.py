@@ -28,6 +28,12 @@ class LaplacianSmoother(PrimeMover):
 
     @PETSc.Log.EventDecorator()
     def __init__(self, mesh, timestep, **kwargs):
+        """
+        :arg mesh: the physical mesh to be moved
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :arg timestep: the timestep length used
+        :type timestep: :class:`float`
+        """
         super().__init__(mesh, **kwargs)
         assert timestep > 0.0
         self.dt = timestep

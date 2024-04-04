@@ -11,7 +11,7 @@ from movement.mover import PrimeMover
 __all__ = ["SpringMover_Lineal", "SpringMover_Torsional", "SpringMover"]
 
 
-def SpringMover(mesh, method="lineal", **kwargs):
+def SpringMover(*args, method="lineal", **kwargs):
     """
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
     beams and solving an associated discrete linear elasticity problem.
@@ -20,13 +20,17 @@ def SpringMover(mesh, method="lineal", **kwargs):
     dynamic unstructured fluid meshes" (1998), Computer methods in applied mechanics and
     engineering, 163:231-245.
 
-    :arg mesh: the mesh to be moved
+    :arg mesh: the physical mesh to be moved
+    :type mesh: :class:`firedrake.mesh.MeshGeometry`
+    :arg timestep: the timestep length used
+    :type timestep: :class:`float`
     :kwarg method: flavour of spring-based method to use
+    :type method: :class:`str`
     """
     if method == "lineal":
-        return SpringMover_Lineal(mesh, **kwargs)
+        return SpringMover_Lineal(*args, **kwargs)
     elif method == "torsional":
-        return SpringMover_Torsional(mesh, **kwargs)
+        return SpringMover_Torsional(*args, **kwargs)
     else:
         raise ValueError(f"Method {method} not recognised.")
 
@@ -36,11 +40,16 @@ class SpringMover_Base(PrimeMover):
     Base class for mesh movers based on spring analogies.
     """
 
-    def __init__(self, mesh, **kwargs):
+    def __init__(self, mesh, timestep, **kwargs):
         """
-        :arg mesh: the physical mesh
+        :arg mesh: the physical mesh to be moved
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :arg timestep: the timestep length used
+        :type timestep: :class:`float`
         """
         super().__init__(mesh)
+        assert timestep > 0.0
+        self.dt = timestep
         self.HDivTrace = firedrake.FunctionSpace(self.mesh, "HDiv Trace", 0)
         self.HDivTrace_vec = firedrake.VectorFunctionSpace(self.mesh, "HDiv Trace", 0)
         self.f = ffunc.Function(self.mesh.coordinates.function_space())
@@ -253,7 +262,7 @@ class SpringMover_Lineal(SpringMover_Base):
         # Assemble and solve the linear system
         K = self.assemble_stiffness_matrix(boundary_conditions=boundary_conditions)
         rhs = self.f.dat.data.flatten()
-        self.displacement = np.linalg.solve(K, rhs)
+        self.displacement = np.linalg.solve(K, rhs) * self.dt
 
         # Update mesh coordinates
         shape = self.mesh.coordinates.dat.data_with_halos.shape

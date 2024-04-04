@@ -137,7 +137,7 @@ plt.savefig("lineal_spring-forcings.jpg")
 # To apply this forcing, we need to create a :class:`~.SpringMover` instance and define
 # a function for updating the forcing applied to the boundary nodes. ::
 
-mover = SpringMover(mesh, method="lineal")
+mover = SpringMover(mesh, timestep, method="lineal")
 top = Function(mover.coord_space)
 moving_boundary = DirichletBC(mover.coord_space, top, 4)
 
