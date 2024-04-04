@@ -103,6 +103,27 @@ plt.savefig("monge_ampere1-adapted_mesh.jpg")
 #    :figwidth: 60%
 #    :align: center
 #
+# Whilst it looks like the mesh might have tangled elements, closer inspection shows
+# that this is not the case.
+
+fig, axes = plt.subplots()
+triplot(mover.mesh, axes=axes)
+axes.set_xlim([0.15, 0.3])
+axes.set_ylim([0.15, 0.3])
+axes.set_aspect(1)
+plt.savefig("monge_ampere1-adapted_mesh_zoom.jpg")
+
+# .. figure:: monge_ampere1-adapted_mesh_zoom.jpg
+#    :figwidth: 60%
+#    :align: center
+#
+# .. rubric:: Exercise
+#
+# To further convince yourself that there are no tangled elements, go back to the start
+# of the demo and set up a :class:`movement.tangling.MeshTanglingChecker` object using
+# the initial mesh. Use it to check for tangling after the mesh movement has been
+# applied.
+#
 # This tutorial can be dowloaded as a `Python script <monge_ampere1.py>`__.
 #
 #
