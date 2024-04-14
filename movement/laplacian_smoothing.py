@@ -12,15 +12,19 @@ __all__ = ["LaplacianSmoother"]
 class LaplacianSmoother(PrimeMover):
     r"""
     Movement of a ``mesh`` is driven by a mesh velocity :math:`\mathbf{v}`, which is
-    determined by solving  a vector Poisson problem
+    determined by solving  a vector Laplace problem
 
     .. math::
-        \nabla^2_{\boldsymbol{\xi}}\mathbf{v} = \mathbf{f}, \quad \boldsymbol{\xi}\in\Omega,
+        \nabla^2_{\boldsymbol{\xi}}\mathbf{v} = \boldsymbol{0}, \quad \boldsymbol{\xi}\in\Omega,
 
-    with a forcing term :math:`\mathbf{f}` under Dirichlet boundary conditions
+    under non-zero Dirichlet boundary conditions on a forced boundary section
+    :math:`\partial\Omega_f` and zero Dirichlet boundary conditions elsewhere:
 
     .. math::
-        \mathbf{v} = \mathbf{v}_D, \quad \boldsymbol{\xi}\in\partial\Omega,
+        \mathbf{v} = \left\{\begin{array}{rl}
+            \mathbf{v}_D, & \boldsymbol{\xi}\in\partial\Omega_f\\
+            \boldsymbol{0}, & \boldsymbol{\xi}\in\partial\Omega\backslash\partial\Omega_f
+        \end{array}\right.
 
     where the computational coordinates :math:`\boldsymbol{\xi} := \mathbf{x}(t_0)` are
     the physical coordinates at the beginning of the simulation.
@@ -37,7 +41,6 @@ class LaplacianSmoother(PrimeMover):
         super().__init__(mesh, **kwargs)
         assert timestep > 0.0
         self.dt = timestep
-        self.f = firedrake.Function(self.coord_space)
         dim = self.mesh.topological_dimension()
         self.displacement = np.zeros((self.mesh.num_vertices(), dim))
 
@@ -46,8 +49,10 @@ class LaplacianSmoother(PrimeMover):
         if not hasattr(self, "_solver"):
             test = firedrake.TestFunction(self.coord_space)
             trial = firedrake.TrialFunction(self.coord_space)
+            f = firedrake.Function(self.coord_space, name="Zero RHS")
+
             a = ufl.inner(ufl.grad(trial), ufl.grad(test)) * self.dx
-            L = ufl.inner(self.f, test) * self.dx
+            L = ufl.inner(f, test) * self.dx
             problem = firedrake.LinearVariationalProblem(
                 a, L, self.v, bcs=boundary_conditions
             )
@@ -58,21 +63,21 @@ class LaplacianSmoother(PrimeMover):
         self._solver.solve()
 
     @PETSc.Log.EventDecorator()
-    def move(self, time, update_forcings=None, boundary_conditions=None):
+    def move(self, time, update_boundary_velocity=None, boundary_conditions=None):
         """
         Assemble and solve the Laplacian system and update the coordinates.
 
         :arg time: the current time
         :type time: :class:`float`
-        :kwarg update_forcings: function that updates the forcing :attr:`f` and/or
-            boundary conditions at the current time
-        :type update_forcings: :class:`~.Callable` with a single argument of
+        :kwarg update_boundary_velocity: function that updates the boundary conditions at
+            the current time
+        :type update_boundary_velocity: :class:`~.Callable` with a single argument of
             :class:`float` type
         :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
         :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
         """
-        if update_forcings is not None:
-            update_forcings(time)
+        if update_boundary_velocity is not None:
+            update_boundary_velocity(time)
         if not boundary_conditions:
             boundary_conditions = firedrake.DirichletBC(
                 self.coord_space, 0, "on_boundary"

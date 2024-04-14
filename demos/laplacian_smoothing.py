@@ -2,20 +2,20 @@
 # =======================================
 #
 # In this demo, we demonstrate the *Laplacian smoothing* approach. This method relies on
-# there being a user-specified forcing function, :math:`f`. With this, we can define a
-# Poisson equation of the form
+# there being a user-specified boundary condition. With this, we can define a vector
+# Laplace equation of the form
 #
 # .. math::
-#    -\Delta\mathbf{v} = f
+#    -\Delta\mathbf{v} = \boldsymbol{0},
 #
 # where :math:`\mathbf{v}` is the so-called *mesh velocity* that we solve for. That is,
-# with the mesh velocity, we update the mesh coordinates according to
+# with the mesh velocity, we update the mesh coordinate field :math:`\mathbf{u}`
+# according to
 #
 # .. math::
 #    \mathbf{u} := \mathbf{u} + \mathbf{v} * \Delta t,
 #
-# where :math:`\mathbf{u}` is the mesh coordinate field and :math:`\Delta t` is the
-# timestep.
+# where :math:`\Delta t` is the timestep.
 #
 # To motivate why we might want to take this sort of approach, consider momentarily the
 # 1D case, where we have velocities :math:`\{v_i\}_{i=1}^n at each of a sequence of
@@ -60,50 +60,50 @@ plt.savefig("laplacian_smoothing-initial_mesh.jpg")
 #    :figwidth: 50%
 #    :align: center
 #
-# Suppose we wish to apply a time-dependent forcing to the top boundary and see how the
-# mesh responds. Consider the forcing
+# Suppose we wish to enforce a time-dependent velocity :math:`\mathbf{v}_f`
+# on the top boundary :math and see how the mesh responds. Consider the velocity
 #
 # .. math::
-#     \mathbf{f}(x,y,t)=\left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right]
+#     \mathbf{v}_f(x,y,t) = \left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right]
 #
 # acting only in the vertical direction, where :math:`A` is the amplitude and :math:`T`
 # is the time period. The displacement following a sinusoidal pattern along that
-# boundary. The forcing is also sinusoidal in time, such that it ramps up and then
-# reverses, with the analytical solution being that the final mesh coincides with the
-# initial mesh.
+# boundary. The boundary movement is also sinusoidal in time, such that it ramps up and
+# then reverses, with the analytical solution being that the final mesh coincides with
+# the initial mesh.
 
 import numpy as np
 
-forcing_period = 1.0
+bv_period = 1.0
 num_timesteps = 10
-timestep = forcing_period / num_timesteps
-forcing_amplitude = 0.2
+timestep = bv_period / num_timesteps
+bv_amplitude = 0.2
 
 
-def forcing(x, t):
-    return forcing_amplitude * np.sin(2 * pi * t / forcing_period) * np.sin(pi * x)
+def boundary_velocity(x, t):
+    return bv_amplitude * np.sin(2 * pi * t / bv_period) * np.sin(pi * x)
 
 
 X = np.linspace(0, 1, n + 1)
-times = np.arange(0, forcing_period + 0.5 * timestep, timestep)
+times = np.arange(0, bv_period + 0.5 * timestep, timestep)
 
 fig, axes = plt.subplots()
-for t in times:
-    axes.plot(X, forcing(X, t), label=f"t={t:.1f}")
+for time in times:
+    axes.plot(X, boundary_velocity(X, time), label=f"t={time:.1f}")
 axes.set_xlim([0, 1])
 axes.legend()
 box = axes.get_position()
 axes.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 axes.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-plt.savefig("laplacian_smoothing-forcings.jpg")
+plt.savefig("laplacian_smoothing-boundary_velocity.jpg")
 
-# .. figure:: laplacian_smoothing-forcings.jpg
+# .. figure:: laplacian_smoothing-boundary_velocity.jpg
 #    :figwidth: 60%
 #    :align: center
 #
-# To apply this forcing, we need to create a :class:`~.LaplacianSmoother` instance and
-# define a function for updating the forcing and/or boundary conditions. Since we are
-# going to apply a forcing to the top boundary, we create a :class:`~.Function` to
+# To enforce this boundary velocity, we need to create a :class:`~.LaplacianSmoother`
+# instance and define a function for updating the boundary conditions. Since we are
+# going to enforce the velocity on the top boundary, we create a :class:`~.Function` to
 # represent the boundary condition values and pass this to a :class:`~.DirichletBC`
 # object. We then define a function which updates it as time progresses. ::
 
@@ -112,12 +112,12 @@ top = Function(mover.coord_space)
 moving_boundary = DirichletBC(mover.coord_space, top, 4)
 
 
-def update_forcings(t):
+def update_boundary_velocity(t):
     coord_data = mesh.coordinates.dat.data
-    forcing_data = top.dat.data
+    bv_data = top.dat.data
     for i in moving_boundary.nodes:
         x, y = coord_data[i]
-        forcing_data[i][1] = forcing(x, t)
+        bv_data[i][1] = boundary_velocity(x, t)
 
 
 # In addition to the moving boundary, we specify the remaining boundaries to be fixed. ::
@@ -125,29 +125,29 @@ def update_forcings(t):
 fixed_boundaries = DirichletBC(mover.coord_space, 0, [1, 2, 3])
 boundary_conditions = (fixed_boundaries, moving_boundary)
 
-
-# We are now able to apply the mesh movement method, passing the ``update_forcings``
-# function and ``boundary_conditions`` tuple to the :meth:`~.LaplacianSmoother.move`
-# method. ::
+# We are now able to apply the mesh movement method, passing the
+# ``update_boundary_velocity`` function and ``boundary_conditions`` tuple to the
+# :meth:`~.LaplacianSmoother.move` method. ::
 
 import matplotlib.patches as mpatches
 
-time = 0.0
 fig, axes = plt.subplots(ncols=4, nrows=3, figsize=(12, 10))
-for i, t in enumerate(times):
+for i, time in enumerate(times):
     idx = 0 if i == 0 else (i + 1)
 
     # Move the mesh and calculate the displacement
     mover.move(
-        t, update_forcings=update_forcings, boundary_conditions=boundary_conditions
+        time,
+        update_boundary_velocity=update_boundary_velocity,
+        boundary_conditions=boundary_conditions,
     )
     displacement = np.linalg.norm(mover.displacement)
-    print(f"time = {t:.1f} s, displacement = {displacement:.2f} m")
+    print(f"time = {time:.1f} s, displacement = {displacement:.2f} m")
 
     # Plot the current mesh, adding a time label
     ax = axes[idx // 4, idx % 4]
     triplot(mover.mesh, axes=ax)
-    ax.legend(handles=[mpatches.Patch(label=f"t={t:.1f}")], handlelength=0)
+    ax.legend(handles=[mpatches.Patch(label=f"t={time:.1f}")], handlelength=0)
     ax.set_ylim([-0.05, 1.45])
 axes[0, 1].axis(False)
 plt.savefig("laplacian_smoothing-adapted_meshes.jpg")
@@ -156,9 +156,10 @@ plt.savefig("laplacian_smoothing-adapted_meshes.jpg")
 #    :figwidth: 100%
 #    :align: center
 #
-# The mesh is deformed according to the vertical forcing, with the left, right, and
-# bottom boundaries remaining fixed, returning it to be very close to its original state
-# after one period. Let's check this in the :math:`\ell_\infty` norm. ::
+# The mesh is deformed according to the vertical velocity on the top boundary, with the
+# left, right, and bottom boundaries remaining fixed, returning it to be very close to
+# its original state after one period. Let's check this in the :math:`\ell_\infty` norm.
+# ::
 
 coord_data = mover.mesh.coordinates.dat.data
 linf_error = np.max(np.abs(coord_data - coord_data_init))
