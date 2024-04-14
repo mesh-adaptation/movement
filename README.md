@@ -1,7 +1,29 @@
-# Mesh Movement in Firedrake
+# Movement
+## Mesh Movement in Firedrake
+![GitHub top language](https://img.shields.io/github/languages/top/mesh-adaptation/movement)
+![GitHub repo size](https://img.shields.io/github/repo-size/mesh-adaptation/movement)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Several drivers for applying different mesh movement methods
-within the [Firedrake finite element library](https://firedrakeproject.org/), as
-well as tools for detecting mesh tangling.
+Movement is a mesh adaptation toolkit enabling users to spatially redistribute mesh degrees of freedom using a variety of different methods from the literature, as well as tools for detecting mesh tangling.
 
-[Jupyter notebooks](https://github.com/pyroteus/movement-notebooks) are also provided as training material.
+Movement is built for use with the [Firedrake finite element library](https://firedrakeproject.org/).
+
+## Installation
+
+To install Firedrake, follow the instructions on the Firedrake [download webpage](https://www.firedrakeproject.org/download.html). This will create a Python virtual environment, which Firedrake is installed into.
+
+Activate the virtual environment and then execute the following commands:
+```
+cd ${VIRTUAL_ENV}/src
+git clone https://github.com/mesh-adaptation/movement.git
+cd movement
+make install
+```
+
+The above assumes that you wish to clone the repo using the web URL. If you would prefer to clone using a password-protected SSH key then instead execute
+```
+cd ${VIRTUAL_ENV}/src
+git clone git@github.com:mesh-adaptation/movement.git
+cd movement
+make install
+```
