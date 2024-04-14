@@ -6,14 +6,16 @@
 # Laplace equation of the form
 #
 # .. math::
-#    -\Delta\mathbf{v} = \boldsymbol{0},
+#    -\Delta_{\boldsymbol{\xi}}\mathbf{v} = \boldsymbol{0},
 #
-# where :math:`\mathbf{v}` is the so-called *mesh velocity* that we solve for. That is,
-# with the mesh velocity, we update the mesh coordinate field :math:`\mathbf{u}`
-# according to
+# where :math:`\mathbf{v}` is the so-called *mesh velocity* that we solve for. Note that
+# the derivatives in the Laplace equation are in terms of the *computational coordinates*
+# :math:`\boldsymbol{\xi}}`, rather than the physical coordinates :math:`\mathbf{x}`.
+#
+# With the mesh velocity, we update the physical coordinates according to
 #
 # .. math::
-#    \mathbf{u} := \mathbf{u} + \mathbf{v} * \Delta t,
+#    \mathbf{x} := \mathbf{x} + \mathbf{v} * \Delta t,
 #
 # where :math:`\Delta t` is the timestep.
 #
