@@ -1,8 +1,14 @@
+# .gitignore
+
+# Subdirectories
 __pycache__/
+build/
 movement.egg-info/
 
+# Specific files
 .coverage
 
+# File extensions
 *.jpg
 *.pvd
 *.vtu
