@@ -2,9 +2,10 @@
 # ==============================================
 #
 # In this demo, we demonstrate a basic example using the *lineal spring* method, as
-# described in :cite:`Farhat:1998`. For simplicity of presentation, we consider the same
-# example considered in the `Laplacian smoothing <laplacian_smoothing.py.html>`__ demo,
-# where mesh movement is driven by a forcing on the top boundary of a square mesh.
+# described in :cite:`Farhat:1998`. For simplicity of presentation, we consider a very
+# similar example to that considered in the
+# `Laplacian smoothing <laplacian_smoothing.py.html>`__ demo, where mesh movement is
+# driven by enforcing a particular displacement of the top boundary of a square mesh.
 #
 # The idea of the lineal spring method is to re-interpret the edges of a mesh as a
 # structure of stiff beams. Each beam has a stiffness associated with it, which is
@@ -25,30 +26,22 @@
 # :math:`\underline{\mathbf{K}}\in\mathbb{R}^{2N\times2N}`.
 #
 # As with the Laplacian smoothing method, the lineal spring approach relies on there
-# being a user-specified forcing function. This acts on the vertices according to a
-# forcing matrix,
+# being a user-specified boundary condition, but note that it is now expressed as a
+# boundary *displacement*, rather than a boundary velocity. Then we are able to compute
+# the displacement of the vertices by solving the linear system
 #
 # .. math::
-#     \underline{\mathbf{f}} = \begin{bmatrix}
-#         \mathbf{f}_1\\
-#         \vdots\\
-#         \mathbf{f}_N\\
-#     \end{bmatrix}
-#     \in\mathbb{R}^{N\times2}.
+#     \underline{\mathbf{K}} \mathbf{u} = \boldsymbol{0},
 #
-# That is, vertex :math:`i` is forced according to a vector :math:`\mathbf{f}_i`. Then
-# we are able to compute the displacement of the vertices by solving the linear system
+# where :math:`\mathbf{u}\in\mathbb{R}^{2N}` is a 'flattened' version of the displacement
+# vector. By solving this equation, we see how the structure of beams responds to the
+# forced boundary displacement.
 #
-# .. math::
-#     \underline{\mathbf{K}} \mathbf{u} = \mathbf{f},
-#
-# where :math:`\mathbf{u}\in\mathbb{R}^{2N}` and :math:`\mathbf{f}\in\mathbb{R}^{2N}`
-# are 'flattened' versions of the displacement and forcing vectors. By solving this
-# equation, we see how the structure of beams responds to the forcing.
-#
-# The main difference to note with the Laplacian smoothing approach is the following.
-# The Laplacian smoothing method is formulated in terms of a mesh velocity
-# :math:`\mathbf{v}`, which at timestep :math:`n` can be approximated as
+# There are two main differences to note with the Laplacian smoothing approach. The first
+# is that Laplacian smoothing is formulated in terms of *mesh velocity*, whereas this
+# method is formulated in terms of displacements. Secondly, the mesh velocity
+# :math:`\mathbf{v}` in the Laplacian smoothing method may be approximated at timestep
+# :math:`n` as
 #
 # .. math::
 #     \mathbf{v}_n \approx \frac{\mathbf{x}_n - \mathbf{x}_{n-1}}{\Delta t},
@@ -60,8 +53,9 @@
 # .. math::
 #     \mathbf{u}_n = \mathbf{x}_n - \mathbf{x}_0.
 #
-# So the former is related to recent changes in position, whereas the latter is
-# concerned with changes in position *since the start of the simulation*.
+# So Laplacian smoothing is related to *recent* changes in **velocity**, whereas the
+# lineal spring method considered here is concerned with changes in **position** *since
+# the start of the simulation*.
 #
 # We begin by importing from the namespaces of Firedrake and Movement. ::
 
@@ -89,65 +83,59 @@ plt.savefig("lineal_spring-initial_mesh.jpg")
 #    :align: center
 #
 # We consider the same time-dependent forcing to the top boundary and see how the mesh
-# structure responds. Recall the formula
+# structure responds. We use a very similar formula,
 #
 # .. math::
-#     \mathbf{f}(x,y,t)=\left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right],
+#     \mathbf{u}_f(x,y,t)=\left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right],
 #
-# where :math:`A` is the amplitude and :math:`T` is the time period. However, we cannot
-# simply apply this formula in the same way as when solving the Poisson equation. We
-# first need to apply a transformation to account for the fact that we are considering
-# a discrete Poisson formulation. This amounts to applying the scale factor
-#
-# .. math::
-#    K = \Delta x^2 / 4,
-#
-# where :math:`\Delta x` is the local mesh size. To account for this, we need to provide
-# an additional index argument to :func:`forcing`. ::
+# where :math:`A` is the amplitude and :math:`T` is the time period, but again note that
+# it is now expressed as a boundary *displacement* :math:`\mathbf{u}_f`:, rather than a
+# boundary velocity. As such, we should not expect the boundary movement to be the same.
+# ::
 
 import numpy as np
 
-forcing_period = 1.0
+bd_period = 1.0
 num_timesteps = 10
-timestep = forcing_period / num_timesteps
-forcing_amplitude = 0.2
+timestep = bd_period / num_timesteps
+bd_amplitude = 0.2
 
 
-def forcing(x, t):
-    return forcing_amplitude * np.sin(2 * pi * t / forcing_period) * np.sin(pi * x)
+def boundary_displacement(x, t):
+    return bd_amplitude * np.sin(2 * pi * t / bd_period) * np.sin(pi * x)
 
 
 X = np.linspace(0, 1, n + 1)
-times = np.arange(0, forcing_period + 0.5 * timestep, timestep)
+times = np.arange(0, bd_period + 0.5 * timestep, timestep)
 
 fig, axes = plt.subplots()
-for t in times:
-    axes.plot(X, forcing(X, t), label=f"t={t:.1f}")
+for time in times:
+    axes.plot(X, boundary_displacement(X, time), label=f"t={time:.1f}")
 axes.set_xlim([0, 1])
 axes.legend()
 box = axes.get_position()
 axes.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 axes.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-plt.savefig("lineal_spring-forcings.jpg")
+plt.savefig("lineal_spring-boundary_displacement.jpg")
 
-# .. figure:: lineal_spring-forcings.jpg
+# .. figure:: lineal_spring-boundary_displacement.jpg
 #    :figwidth: 60%
 #    :align: center
 #
-# To apply this forcing, we need to create a :class:`~.SpringMover` instance and define
-# a function for updating the forcing applied to the boundary nodes. ::
+# To apply this boundary displacement, we need to create a :class:`~.SpringMover`
+# instance and define a function for updating the boundary conditions. ::
 
 mover = SpringMover(mesh, timestep, method="lineal")
 top = Function(mover.coord_space)
 moving_boundary = DirichletBC(mover.coord_space, top, 4)
 
 
-def update_forcings(t):
+def update_boundary_displacement(t):
     coord_data = mover.mesh.coordinates.dat.data
-    forcing_data = top.dat.data
+    bd_data = top.dat.data
     for i in moving_boundary.nodes:
         x, y = coord_data[i]
-        forcing_data[i][1] = forcing(x, t)
+        bd_data[i][1] = boundary_displacement(x, t)
 
 
 # In addition to the moving boundary, we specify the remaining boundaries to be fixed. ::
@@ -155,27 +143,27 @@ def update_forcings(t):
 fixed_boundaries = DirichletBC(mover.coord_space, 0, [1, 2, 3])
 boundary_conditions = (fixed_boundaries, moving_boundary)
 
-# We are now able to apply the mesh movement method. The forcings effectively enforce a
-# Dirichlet condition on the top boundary. On other boundaries, we enforce that there is
-# no movement using the `fixed_boundaries` keyword argument. ::
+# We are now able to apply the mesh movement method. ::
 
 import matplotlib.patches as mpatches
 
 fig, axes = plt.subplots(ncols=4, nrows=3, figsize=(12, 10))
-for i, t in enumerate(times):
+for i, time in enumerate(times):
     idx = 0 if i == 0 else i + 1
 
     # Move the mesh and calculate the displacement
     mover.move(
-        t, update_forcings=update_forcings, boundary_conditions=boundary_conditions
+        time,
+        update_boundary_displacement=update_boundary_displacement,
+        boundary_conditions=boundary_conditions,
     )
     displacement = np.linalg.norm(mover.displacement)
-    print(f"time = {t:.1f} s, displacement = {displacement:.2f} m")
+    print(f"time = {time:.1f} s, displacement = {displacement:.2f} m")
 
     # Plot the current mesh, adding a time label
     ax = axes[idx // 4, idx % 4]
     triplot(mover.mesh, axes=ax)
-    ax.legend(handles=[mpatches.Patch(label=f"t={t:.1f}")], handlelength=0)
+    ax.legend(handles=[mpatches.Patch(label=f"t={time:.1f}")], handlelength=0)
     ax.set_ylim([-0.05, 1.45])
 axes[0, 1].axis(False)
 plt.savefig("lineal_spring-adapted_meshes.jpg")
@@ -184,9 +172,10 @@ plt.savefig("lineal_spring-adapted_meshes.jpg")
 #    :figwidth: 100%
 #    :align: center
 #
-# Again, the mesh is deformed according to the vertical forcing, with the left, right,
-# and bottom boundaries remaining fixed, returning to be very close to its original state
-# after one period. Let's check this in the :math:`\ell_\infty` norm. ::
+# Again, the mesh is deformed according to the vertical displacement on the top boundary,
+# with the left, right, and bottom boundaries remaining fixed, returning to be very
+# close to its original state after one period. Let's check this in the
+# :math:`\ell_\infty` norm. ::
 
 coord_data = mover.mesh.coordinates.dat.data
 linf_error = np.max(np.abs(coord_data - coord_data_init))

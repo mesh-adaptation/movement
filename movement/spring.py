@@ -52,8 +52,9 @@ class SpringMover_Base(PrimeMover):
         self.dt = timestep
         self.HDivTrace = firedrake.FunctionSpace(self.mesh, "HDiv Trace", 0)
         self.HDivTrace_vec = firedrake.VectorFunctionSpace(self.mesh, "HDiv Trace", 0)
-        self.f = ffunc.Function(self.mesh.coordinates.function_space())
-        self.displacement = np.zeros(self.mesh.num_vertices())
+        num_vertices = mesh.num_vertices()
+        self._forcing = np.zeros((num_vertices, mesh.topological_dimension()))
+        self.displacement = np.zeros(num_vertices)
 
     @property
     @PETSc.Log.EventDecorator()
@@ -195,7 +196,6 @@ class SpringMover_Base(PrimeMover):
 
         # Loop over each boundary condition provided
         K = self._stiffness_matrix()
-        rhs = self.f.dat.data
         for boundary_condition in boundary_conditions:
             if boundary_condition.function_space() != self.coord_space:
                 raise ValueError(
@@ -223,8 +223,8 @@ class SpringMover_Base(PrimeMover):
                 if bnd.point2facetnumber[e] not in subsets:
                     continue
                 i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
-                rhs[i, :] = boundary_data[i, :]
-                rhs[j, :] = boundary_data[j, :]
+                self._forcing[i, :] = boundary_data[i, :]
+                self._forcing[j, :] = boundary_data[j, :]
                 for k in (2 * i, 2 * i + 1, 2 * j, 2 * j + 1):
                     K[k][:] = 0
                     K[:][k] = 0
@@ -243,26 +243,25 @@ class SpringMover_Lineal(SpringMover_Base):
     """
 
     @PETSc.Log.EventDecorator()
-    def move(self, time, update_forcings=None, boundary_conditions=None):
+    def move(self, time, update_boundary_displacement=None, boundary_conditions=None):
         """
         Assemble and solve the lineal spring system and update the coordinates.
 
         :arg time: the current time
         :type time: :class:`float`
-        :kwarg update_forcings: function that updates the forcing :attr:`f` and/or
-            boundary conditions at the current time
-        :type update_forcings: :class:`~.Callable` with a single argument of
+        :kwarg update_boundary_displacement: function that updates the boundary
+            conditions at the current time
+        :type update_boundary_displacement: :class:`~.Callable` with a single argument of
             :class:`float` type
         :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
         :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
         """
-        if update_forcings is not None:
-            update_forcings(time)
+        if update_boundary_displacement is not None:
+            update_boundary_displacement(time)
 
         # Assemble and solve the linear system
         K = self.assemble_stiffness_matrix(boundary_conditions=boundary_conditions)
-        rhs = self.f.dat.data.flatten()
-        self.displacement = np.linalg.solve(K, rhs) * self.dt
+        self.displacement = np.linalg.solve(K, self._forcing.flatten()) * self.dt
 
         # Update mesh coordinates
         shape = self.mesh.coordinates.dat.data_with_halos.shape
