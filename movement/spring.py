@@ -1,6 +1,8 @@
 import firedrake
+import firedrake.function as ffunc
 from firedrake.petsc import PETSc
 import ufl
+from collections.abc import Iterable
 import numpy as np
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
@@ -9,54 +11,63 @@ from movement.mover import PrimeMover
 __all__ = ["SpringMover_Lineal", "SpringMover_Torsional", "SpringMover"]
 
 
-def SpringMover(mesh, method="lineal", **kwargs):
+def SpringMover(*args, method="lineal", **kwargs):
     """
-    Movement of a ``mesh`` is determined by reinterpreting
-    it as a structure of stiff beams and solving an
-    associated discrete linear elasticity problem.
+    Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
+    beams and solving an associated discrete linear elasticity problem.
 
-    See Farhat, Degand, Koobus and Lesoinne, "Torsional
-    springs for two-dimensional dynamic unstructured fluid
-    meshes" (1998), Computer methods in applied mechanics
-    and engineering, 163:231-245.
+    See Farhat, Degand, Koobus and Lesoinne, "Torsional springs for two-dimensional
+    dynamic unstructured fluid meshes" (1998), Computer methods in applied mechanics and
+    engineering, 163:231-245.
+
+    :arg mesh: the physical mesh to be moved
+    :type mesh: :class:`firedrake.mesh.MeshGeometry`
+    :arg timestep: the timestep length used
+    :type timestep: :class:`float`
+    :kwarg method: flavour of spring-based method to use
+    :type method: :class:`str`
     """
     if method == "lineal":
-        return SpringMover_Lineal(mesh, **kwargs)
+        return SpringMover_Lineal(*args, **kwargs)
     elif method == "torsional":
-        return SpringMover_Torsional(mesh, **kwargs)
+        return SpringMover_Torsional(*args, **kwargs)
     else:
         raise ValueError(f"Method {method} not recognised.")
 
 
 class SpringMover_Base(PrimeMover):
     """
-    Base class for mesh movers based on spring
-    analogies.
+    Base class for mesh movers based on spring analogies.
     """
 
-    def __init__(self, mesh, **kwargs):
+    def __init__(self, mesh, timestep, **kwargs):
         """
-        :arg mesh: the physical mesh
+        :arg mesh: the physical mesh to be moved
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :arg timestep: the timestep length used
+        :type timestep: :class:`float`
         """
         super().__init__(mesh)
+        assert timestep > 0.0
+        self.dt = timestep
         self.HDivTrace = firedrake.FunctionSpace(self.mesh, "HDiv Trace", 0)
         self.HDivTrace_vec = firedrake.VectorFunctionSpace(self.mesh, "HDiv Trace", 0)
-        self.f = firedrake.Function(self.mesh.coordinates.function_space())
-        self.displacement = np.zeros(self.mesh.num_vertices())
+        num_vertices = mesh.num_vertices()
+        self._forcing = np.zeros((num_vertices, mesh.topological_dimension()))
+        self.displacement = np.zeros(num_vertices)
 
     @property
-    @PETSc.Log.EventDecorator("SpringMover_Base.facet_areas")
+    @PETSc.Log.EventDecorator()
     def facet_areas(self):
         """
-        Compute the areas of all facets in the
-        mesh.
+        Compute the areas of all facets in the mesh.
 
         In 2D, this corresponds to edge lengths.
         """
         if not hasattr(self, "_facet_area_solver"):
             test = firedrake.TestFunction(self.HDivTrace)
             trial = firedrake.TrialFunction(self.HDivTrace)
-            self._facet_area = firedrake.Function(self.HDivTrace)
+            self._facet_area = ffunc.Function(self.HDivTrace)
             A = ufl.FacetArea(self.mesh)
             a = trial("+") * test("+") * self.dS + trial * test * self.ds
             L = test("+") * A * self.dS + test * A * self.ds
@@ -69,16 +80,15 @@ class SpringMover_Base(PrimeMover):
         return self._facet_area
 
     @property
-    @PETSc.Log.EventDecorator("SpringMover_Base.tangents")
+    @PETSc.Log.EventDecorator()
     def tangents(self):
         """
-        Compute tangent vectors for all edges in
-        the mesh.
+        Compute tangent vectors for all edges in the mesh.
         """
         if not hasattr(self, "_tangents_solver"):
             test = firedrake.TestFunction(self.HDivTrace_vec)
             trial = firedrake.TrialFunction(self.HDivTrace_vec)
-            self._tangents = firedrake.Function(self.HDivTrace_vec)
+            self._tangents = ffunc.Function(self.HDivTrace_vec)
             n = ufl.FacetNormal(self.mesh)
             s = ufl.perp(n)
             a = (
@@ -95,18 +105,17 @@ class SpringMover_Base(PrimeMover):
         return self._tangents
 
     @property
-    @PETSc.Log.EventDecorator("SpringMover_Base.angles")
+    @PETSc.Log.EventDecorator()
     def angles(self):
         r"""
-        Compute the argument of each edge in the
-        mesh, i.e. its angle from the :math:`x`-axis
-        in the :math:`x-y` plane.
+        Compute the argument of each edge in the mesh, i.e. its angle from the
+        :math:`x`-axis in the :math:`x-y` plane.
         """
         t = self.tangents
         if not hasattr(self, "_angles_solver"):
             test = firedrake.TestFunction(self.HDivTrace)
             trial = firedrake.TrialFunction(self.HDivTrace)
-            self._angles = firedrake.Function(self.HDivTrace)
+            self._angles = ffunc.Function(self.HDivTrace)
             e0 = np.zeros(self.dim)
             e0[0] = 1.0
             X = ufl.as_vector(e0)
@@ -128,9 +137,8 @@ class SpringMover_Base(PrimeMover):
         self._angles.dat.data[:] = np.arccos(self._angles.dat.data)
         return self._angles
 
-    @property
-    @PETSc.Log.EventDecorator("SpringMover_Base.stiffness_matrix")
-    def stiffness_matrix(self):
+    @PETSc.Log.EventDecorator()
+    def _stiffness_matrix(self):
         angles = self.angles
         edge_lengths = self.facet_areas
         bnd = self.mesh.exterior_facets
@@ -168,66 +176,92 @@ class SpringMover_Base(PrimeMover):
                 K[2 * j + 1][2 * j + 1] += s * s / l
         return K
 
-    @PETSc.Log.EventDecorator("SpringMover_Lineal.apply_dirichlet_conditions")
-    def apply_dirichlet_conditions(self, tags):
+    @PETSc.Log.EventDecorator()
+    def assemble_stiffness_matrix(self, boundary_conditions=None):
         """
-        Enforce that nodes on certain tagged boundaries
-        do not move.
+        Enforce that nodes on certain tagged boundaries do not move.
 
-        :arg tags: a list of boundary tags
+        :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
+        :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
+        :returns: the stiffness matrix with boundary conditions applied
+        :rtype: :class:`numpy.ndarray`
         """
-        bnd = self.mesh.exterior_facets
-        if not set(tags).issubset(set(bnd.unique_markers)):
-            raise ValueError(f"{tags} contains invalid boundary tags")
-        subsets = sum([list(bnd.subset(physID).indices) for physID in tags], start=[])
-        for e in range(*self.edge_indices):
-            i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
-            if bnd.point2facetnumber[e] in subsets:
-                self.displacement[2 * i] = 0.0
-                self.displacement[2 * i + 1] = 0.0
-                self.displacement[2 * j] = 0.0
-                self.displacement[2 * j + 1] = 0.0
+        if not boundary_conditions:
+            boundary_conditions = firedrake.DirichletBC(
+                self.coord_space, 0, "on_boundary"
+            )
+        if isinstance(boundary_conditions, firedrake.DirichletBC):
+            boundary_conditions = [boundary_conditions]
+        assert isinstance(boundary_conditions, Iterable)
+
+        # Loop over each boundary condition provided
+        K = self._stiffness_matrix()
+        for boundary_condition in boundary_conditions:
+            if boundary_condition.function_space() != self.coord_space:
+                raise ValueError(
+                    f"Boundary conditions must have {type(self)}.coord_space as their"
+                    " function space"
+                )
+
+            # Determine boundary subsets for the associated tags
+            tags = boundary_condition.sub_domain
+            if not isinstance(tags, Iterable):
+                tags = [tags]
+            bnd = self.mesh.exterior_facets
+            if not set(tags).issubset(set(bnd.unique_markers)):
+                raise ValueError(f"{tags} contains invalid boundary tags")
+            subsets = np.array([bnd.subset(tag).indices for tag in tags]).flatten()
+
+            # Get vertex-based boundary data to be enforced
+            boundary_value = boundary_condition._original_arg
+            if not isinstance(boundary_value, ffunc.Function):
+                boundary_value = ffunc.Function(self.coord_space).assign(boundary_value)
+            boundary_data = boundary_value.dat.data
+
+            # Loop over boundary edges and enforce the boundary values at their vertices
+            for e in range(*self.edge_indices):
+                if bnd.point2facetnumber[e] not in subsets:
+                    continue
+                i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
+                self._forcing[i, :] = boundary_data[i, :]
+                self._forcing[j, :] = boundary_data[j, :]
+                for k in (2 * i, 2 * i + 1, 2 * j, 2 * j + 1):
+                    K[k][:] = 0
+                    K[:][k] = 0
+                    K[k][k] = 1
+        return K
 
 
 class SpringMover_Lineal(SpringMover_Base):
     """
-    Movement of a ``mesh`` is determined by reinterpreting
-    it as a structure of stiff beams and solving an
-    associated discrete linear elasticity problem.
+    Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
+    beams and solving an associated discrete linear elasticity problem.
 
-    We consider the 'lineal' case, as described in
-    Farhat, Degand, Koobus and Lesoinne, "Torsional
-    springs for two-dimensional dynamic unstructured fluid
-    meshes" (1998), Computer methods in applied mechanics
-    and engineering, 163:231-245.
+    We consider the 'lineal' case, as described in Farhat, Degand, Koobus and Lesoinne,
+    "Torsional springs for two-dimensional dynamic unstructured fluid meshes" (1998),
+    Computer methods in applied mechanics and engineering, 163:231-245.
     """
 
-    @PETSc.Log.EventDecorator("SpringMover_Lineal.move")
-    def move(self, time, update_forcings=None, fixed_boundaries=[]):
+    @PETSc.Log.EventDecorator()
+    def move(self, time, update_boundary_displacement=None, boundary_conditions=None):
         """
-        Assemble and solve the lineal spring system and
-        update the coordinates.
+        Assemble and solve the lineal spring system and update the coordinates.
 
         :arg time: the current time
-        :kwarg update_forcings: function that updates
-            the forcing :attr:`f` at the current time
-        :kwarg fixed_boundaries: list of boundaries
-            where Dirichlet conditions are to be
-            enforced
+        :type time: :class:`float`
+        :kwarg update_boundary_displacement: function that updates the boundary
+            conditions at the current time
+        :type update_boundary_displacement: :class:`~.Callable` with a single argument of
+            :class:`float` type
+        :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
+        :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
         """
-        if update_forcings is not None:
-            update_forcings(time)
+        if update_boundary_displacement is not None:
+            update_boundary_displacement(time)
 
-        # Assemble
-        K = self.stiffness_matrix
-        rhs = self.f.dat.data.flatten()
-
-        # Solve
-        self.displacement = np.linalg.solve(K, rhs)
-
-        # Enforce Dirichlet conditions as a post-process
-        if len(fixed_boundaries) > 0:
-            self.apply_dirichlet_conditions(fixed_boundaries)
+        # Assemble and solve the linear system
+        K = self.assemble_stiffness_matrix(boundary_conditions=boundary_conditions)
+        self.displacement = np.linalg.solve(K, self._forcing.flatten()) * self.dt
 
         # Update mesh coordinates
         shape = self.mesh.coordinates.dat.data_with_halos.shape
@@ -237,15 +271,12 @@ class SpringMover_Lineal(SpringMover_Base):
 
 class SpringMover_Torsional(SpringMover_Lineal):
     """
-    Movement of a ``mesh`` is determined by reinterpreting
-    it as a structure of stiff beams and solving an
-    associated discrete linear elasticity problem.
+    Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
+    beams and solving an associated discrete linear elasticity problem.
 
-    We consider the 'torsional' case, as described in
-    Farhat, Degand, Koobus and Lesoinne, "Torsional
-    springs for two-dimensional dynamic unstructured fluid
-    meshes" (1998), Computer methods in applied mechanics
-    and engineering, 163:231-245.
+    We consider the 'torsional' case, as described in Farhat, Degand, Koobus and
+    Lesoinne, "Torsional springs for two-dimensional dynamic unstructured fluid meshes"
+    (1998), Computer methods in applied mechanics and engineering, 163:231-245.
     """
 
     def __init__(self, *args, **kwargs):
