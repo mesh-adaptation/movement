@@ -16,20 +16,4 @@ Movement has two sources of documentation:
 
 ## Installation
 
-To install Firedrake, follow the instructions on the Firedrake [download webpage](https://www.firedrakeproject.org/download.html). This will create a Python virtual environment, which Firedrake is installed into.
-
-Activate the virtual environment and then execute the following commands:
-```
-cd ${VIRTUAL_ENV}/src
-git clone https://github.com/mesh-adaptation/movement.git
-cd movement
-make install
-```
-
-The above assumes that you wish to clone the repo using the web URL. If you would prefer to clone using a password-protected SSH key then instead execute
-```
-cd ${VIRTUAL_ENV}/src
-git clone git@github.com:mesh-adaptation/movement.git
-cd movement
-make install
-```
+Forinstallation instructions, we refer to the [Wiki page](https://github.com/mesh-adaptation/mesh-adaptation-docs/wiki/Installation-Instructions).
