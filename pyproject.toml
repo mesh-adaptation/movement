@@ -1,3 +1,36 @@
+[build-system]
+requires = ["setuptools"]
+
+[project]
+name = "movement"
+version = "0.2"
+dependencies = ["black", "flake8", "pre-commit"]
+authors = [
+  {name = "Joe Wallwork", email = "joe.wallwork@outlook.com"},
+  {name = "Stephan Kramer"},
+]
+maintainers = [
+  {name = "Joe Wallwork", email = "joe.wallwork@outlook.com"},
+  {name = "Stephan Kramer"},
+  {name = "Mingrui Zhang"},
+]
+description = "Mesh movement methods for finite element problems solved using Firedrake"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["python", "meshing", "finite-element-method", "firedrake"]
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Programming Language :: Python",
+]
+
+[project.urls]
+Homepage = "https://mesh-adaptation.github.io"
+Documentation = "https://mesh-adaptation.github.io/movement/index.html"
+Repository = "https://github.com/mesh-adaptation/movement"
+
+[tool.setuptools]
+packages = ["movement"]
+
 [tool.black]
 line-length = 88
 include = '\.pyi?$'
