@@ -17,6 +17,24 @@
 # where :math:`\mathbf{u}` is the mesh coordinate field and :math:`\Delta t` is the
 # timestep.
 #
+# To motivate why we might want to take this sort of approach, consider momentarily the
+# 1D case, where we have velocities :math:`\{v_i\}_{i=1}^n at each of a sequence of
+# :math:`n\in\mathbb{N}` points with uniform separation :math:`h`. If we want to smooth
+# out the local variation in the velocities in the vicinity of :math:`v_i, we might
+# consider averaging out :math:`(v_{i-1}-v_i)/h` and :math:`(v_{i+1}-v_i)/h`. Doing so
+# gives
+#
+# .. math::
+#    \frac1h(\frac{v_{i-1}-v_i}{h} + \frac{v_{i+1}-v_i}{h}) = 0,
+#
+# i.e.,
+#
+# .. math::
+#    \frac1{h^2}(-v_{i-1} + 2v_i - v_{i+1})) = 0,
+#
+# the left-hand side of which you might recognise as a finite difference approximation
+# of the second derivative, i.e., the Laplace operator.
+#
 # We begin by importing from the namespaces of Firedrake and Movement. ::
 
 from firedrake import *
