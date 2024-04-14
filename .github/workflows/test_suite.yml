@@ -36,7 +36,6 @@ jobs:
       - name: Install
         run: |
           . /home/firedrake/firedrake/bin/activate
-          python -m pip install -r requirements.txt
           python -m pip install -e .
       - name: Test
         run: |

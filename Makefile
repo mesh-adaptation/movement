@@ -3,9 +3,6 @@ all: install
 .PHONY: test
 
 install:
-	@echo "Installing dependencies..."
-	@python3 -m pip install -r requirements.txt
-	@echo "Done."
 	@echo "Installing Movement..."
 	@python3 -m pip install -e .
 	@echo "Done."
