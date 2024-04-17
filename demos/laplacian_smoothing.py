@@ -10,17 +10,17 @@
 #
 # where :math:`\mathbf{v}` is the so-called *mesh velocity* that we solve for. Note that
 # the derivatives in the Laplace equation are in terms of the *computational coordinates*
-# :math:`\boldsymbol{\xi}}`, rather than the physical coordinates :math:`\mathbf{x}`.
+# :math:`\boldsymbol{\xi}`, rather than the physical coordinates :math:`\mathbf{x}`.
 #
 # With the mesh velocity, we update the physical coordinates according to
 #
 # .. math::
-#    \mathbf{x} := \mathbf{x} + \mathbf{v} * \Delta t,
+#    \mathbf{x} := \mathbf{x} + \mathbf{v} \Delta t,
 #
 # where :math:`\Delta t` is the timestep.
 #
 # To motivate why we might want to take this sort of approach, consider momentarily the
-# 1D case, where we have velocities :math:`\{v_i\}_{i=1}^n at each of a sequence of
+# 1D case, where we have velocities :math:`\{v_i\}_{i=1}^n` at each of a sequence of
 # :math:`n\in\mathbb{N}` points with uniform separation :math:`h`. If we want to smooth
 # out the local variation in the velocities in the vicinity of :math:`v_i, we might
 # consider averaging out :math:`(v_{i-1}-v_i)/h` and :math:`(v_{i+1}-v_i)/h`. Doing so
