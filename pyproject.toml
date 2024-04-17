@@ -8,6 +8,7 @@ dependencies = ["black", "flake8", "pre-commit"]
 authors = [
   {name = "Joseph G. Wallwork", email = "joe.wallwork@outlook.com"},
   {name = "Stephan C. Kramer"},
+  {name = "Mingrui Zhang"},
 ]
 maintainers = [
   {name = "Joseph G. Wallwork", email = "joe.wallwork@outlook.com"},
