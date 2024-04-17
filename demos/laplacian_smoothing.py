@@ -22,7 +22,7 @@
 # To motivate why we might want to take this sort of approach, consider momentarily the
 # 1D case, where we have velocities :math:`\{v_i\}_{i=1}^n` at each of a sequence of
 # :math:`n\in\mathbb{N}` points with uniform separation :math:`h`. If we want to smooth
-# out the local variation in the velocities in the vicinity of :math:`v_i, we might
+# out the local variation in the velocities in the vicinity of :math:`v_i`, we might
 # consider averaging out :math:`(v_{i-1}-v_i)/h` and :math:`(v_{i+1}-v_i)/h`. Doing so
 # gives
 #
