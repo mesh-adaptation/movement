@@ -1,6 +1,7 @@
+from collections.abc import Iterable
+
 import firedrake
 import firedrake.function as ffunc
-from collections.abc import Iterable
 import numpy as np
 import ufl
 from firedrake.petsc import PETSc
