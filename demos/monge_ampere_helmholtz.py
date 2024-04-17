@@ -132,7 +132,10 @@ fig, axes = plt.subplots()
 #    :figwidth: 60%
 #    :align: center
 
-mover = MongeAmpereMover(mesh, monitor, method="quasi_newton")
+import os
+
+rtol = 1.0e-03 if os.environ.get("MOVEMENT_REGRESSION_TEST") else 1.0e-08
+mover = MongeAmpereMover(mesh, monitor, method="quasi_newton", rtol=rtol)
 mover.move()
 
 # For every iteration the MongeAmpereMover prints the minimum to maximum ratio of
@@ -219,7 +222,7 @@ def monitor2(mesh):
     return m
 
 
-mover = MongeAmpereMover(mesh, monitor2, method="quasi_newton")
+mover = MongeAmpereMover(mesh, monitor2, method="quasi_newton", rtol=rtol)
 mover.move()
 
 u_h = solve_helmholtz(mover.mesh)

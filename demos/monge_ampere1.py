@@ -87,9 +87,16 @@ def ring_monitor(mesh):
 
 
 # With an initial mesh and a monitor function, we are able to construct a
-# :class:`~.MongeAmpereMover` instance and adapt the mesh.
+# :class:`~.MongeAmpereMover` instance and adapt the mesh. By default, the Monge-Ampère
+# equation is solved to a relative tolerance of :math:`10^{-8}`. However, for the
+# purposes of continuous integration testing, a tolerance of :math:`10^{-3}` is used
+# instead to reduce the runtime. Feel free to ignore the `"MOVEMENT_REGRESSION_TEST"`,
+# as it is only used when this demo is run in the test suite. ::
 
-mover = MongeAmpereMover(mesh, ring_monitor, method="quasi_newton")
+import os
+
+rtol = 1.0e-03 if os.environ.get("MOVEMENT_REGRESSION_TEST") else 1.0e-08
+mover = MongeAmpereMover(mesh, ring_monitor, method="quasi_newton", rtol=rtol)
 mover.move()
 
 # The adapted mesh can be accessed via the `mesh` attribute of the mover. Plotting it,
