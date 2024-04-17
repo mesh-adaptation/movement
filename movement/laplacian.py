@@ -1,9 +1,9 @@
 import firedrake
-from firedrake.petsc import PETSc
 import ufl
+from firedrake.petsc import PETSc
+
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
-
 
 __all__ = ["LaplacianSmoother"]
 

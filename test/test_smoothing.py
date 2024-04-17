@@ -1,8 +1,10 @@
-from firedrake import *
-from movement import *
-import numpy as np
 import os
+
+import numpy as np
 import pytest
+from firedrake import *
+
+from movement import *
 
 
 @pytest.fixture(params=["laplacian"])

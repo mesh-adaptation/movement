@@ -1,10 +1,10 @@
 import firedrake
-from firedrake.petsc import PETSc
-import ufl
 import numpy as np
+import ufl
+from firedrake.petsc import PETSc
+
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
-
 
 __all__ = ["SpringMover_Lineal", "SpringMover_Torsional", "SpringMover"]
 

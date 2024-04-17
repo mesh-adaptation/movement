@@ -1,7 +1,7 @@
-import firedrake
-import ufl
 import warnings
 
+import firedrake
+import ufl
 
 __all__ = ["MeshTanglingChecker"]
 
