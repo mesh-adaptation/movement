@@ -5,8 +5,9 @@
 # can also be applied to 3D meshes. We employ the `sinatan3` function
 # from :cite:`park2019` to introduce an interesting pattern.
 
-import movement
 from firedrake import *
+
+import movement
 
 
 def sinatan3(mesh):

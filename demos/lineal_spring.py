@@ -59,15 +59,15 @@
 #
 # We begin by importing from the namespaces of Firedrake and Movement. ::
 
+import matplotlib.pyplot as plt
 from firedrake import *
+from firedrake.pyplot import triplot
+
 from movement import *
 
 # Recall the initial uniform mesh of the unit square used in the Laplacian smoothing
 # demo, which has four boundary segments tagged with the integers 1, 2, 3, and 4. Note
 # that segment 4 corresponds to the top boundary. ::
-
-import matplotlib.pyplot as plt
-from firedrake.pyplot import triplot
 
 n = 10
 mesh = UnitSquareMesh(n, n)

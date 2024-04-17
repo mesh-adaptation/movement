@@ -1,11 +1,11 @@
 import firedrake
+import numpy as np
+import ufl
 from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
-import ufl
-import numpy as np
+
 import movement.solver_parameters as solver_parameters
 from movement.mover import PrimeMover
-
 
 __all__ = [
     "MongeAmpereMover_Relaxation",
@@ -194,7 +194,7 @@ class MongeAmpereMover_Base(PrimeMover):
             nzero = sum(iszero)
             if nzero == self.dim:
                 raise ValueError(f"Invalid normal vector {_n}")
-            elif nzero == self.dim-1:
+            elif nzero == self.dim - 1:
                 idx = iszero.index(False)
                 bcs.append(firedrake.DirichletBC(self.P1_vec.sub(idx), 0, i))
                 continue
@@ -206,7 +206,10 @@ class MongeAmpereMover_Base(PrimeMover):
 
             # Allow tangential movement, but only up until the end of boundary segments
             a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * self.ds
-            L_bc = ufl.dot(tangential(v_cts, n), tangential(ufl.grad(self.phi_old), n)) * self.ds
+            L_bc = (
+                ufl.dot(tangential(v_cts, n), tangential(ufl.grad(self.phi_old), n))
+                * self.ds
+            )
             edges = set(self.mesh.exterior_facets.unique_markers)
             if len(edges) == 0:
                 bbc = None  # Periodic case
@@ -332,8 +335,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         a = ufl.inner(tau, sigma) * self.dx
         L = (
             -ufl.dot(ufl.div(tau), ufl.grad(self.phi)) * self.dx
-            + ufl.dot(ufl.dot(tangential(ufl.grad(self.phi), n), tau), n)
-            * self.ds
+            + ufl.dot(ufl.dot(tangential(ufl.grad(self.phi), n), tau), n) * self.ds
         )
         problem = firedrake.LinearVariationalProblem(a, L, self.sigma)
         sp = {

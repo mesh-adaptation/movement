@@ -1,7 +1,10 @@
+import os
+
 import firedrake
-from movement import SpringMover
 import numpy as np
 import pytest
+
+from movement import SpringMover
 
 
 @pytest.fixture(params=["lineal"])
