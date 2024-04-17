@@ -37,17 +37,15 @@
 # the left-hand side of which you might recognise as a finite difference approximation
 # of the second derivative, i.e., the Laplace operator.
 #
-# We begin by importing from the namespaces of Firedrake and Movement. ::
-
-from firedrake import *
-from movement import *
-
 # Let's start with a uniform mesh of the unit square. It has four boundary segments,
 # which are tagged with the integers 1, 2, 3, and 4. Note that segment 4 corresponds to
 # the top boundary. ::
 
 import matplotlib.pyplot as plt
+from firedrake import *
 from firedrake.pyplot import triplot
+
+from movement import *
 
 n = 10
 mesh = UnitSquareMesh(n, n)

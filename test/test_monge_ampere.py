@@ -1,7 +1,8 @@
-from movement import *
-from monitors import *
-import pytest
 import numpy as np
+import pytest
+from monitors import *
+
+from movement import *
 
 
 @pytest.fixture(params=["relaxation", "quasi_newton"])

@@ -1,11 +1,57 @@
-[tool.black]
+[build-system]
+requires = ["setuptools"]
+
+[project]
+name = "movement"
+version = "0.2"
+dependencies = ["pre-commit", "ruff"]
+authors = [
+  {name = "Joseph G. Wallwork", email = "joe.wallwork@outlook.com"},
+  {name = "Stephan C. Kramer"},
+  {name = "Mingrui Zhang"},
+  {name = "Davor Dundovic"},
+]
+maintainers = [
+  {name = "Joseph G. Wallwork", email = "joe.wallwork@outlook.com"},
+  {name = "Stephan C. Kramer"},
+  {name = "Mingrui Zhang"},
+]
+description = "Mesh movement methods for finite element problems solved using Firedrake"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["python", "meshing", "finite-element-method", "firedrake"]
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Programming Language :: Python",
+]
+
+[project.urls]
+Homepage = "https://mesh-adaptation.github.io"
+Documentation = "https://mesh-adaptation.github.io/movement/index.html"
+Repository = "https://github.com/mesh-adaptation/movement"
+
+[tool.setuptools]
+packages = ["movement"]
+
+[tool.ruff]
 line-length = 88
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-)/
-'''
+
+[tool.ruff.lint]
+select = [
+#  "B",  # flake8-bugbear  TODO: enable this  (#72)
+#  "C",  # mccabe complexity  TODO: enable this (#72)
+  "E", "W",  # Pycodestyle
+  "F",  # Pyflakes
+  "I",  # isort
+]
+ignore = [
+  "E501",  # line too long
+  "E226",  # missing whitespace around arithmetic operator
+  "E402",  # module level import not at top of file
+  "E741",  # ambiguous variable name
+  "F403",  # unable to detect undefined names
+  "F405",  # name may be undefined, or defined from star imports
+]
 
 [tool.pytest.ini_options]
 filterwarnings = [

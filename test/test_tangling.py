@@ -1,6 +1,8 @@
-from firedrake import *
-from movement import *
 import unittest
+
+from firedrake import *
+
+from movement import *
 
 
 class TestTangling(unittest.TestCase):

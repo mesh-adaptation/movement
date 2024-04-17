@@ -1,7 +1,6 @@
 import firedrake
-from firedrake.cython.dmcommon import create_section
 import numpy as np
-
+from firedrake.cython.dmcommon import create_section
 
 __all__ = ["PrimeMover"]
 

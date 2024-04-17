@@ -40,6 +40,7 @@
 # We begin the example by importing from the namespaces of Firedrake and Movement.
 
 from firedrake import *
+
 from movement import *
 
 # To start with a simple example, consider a uniform mesh of the unit square.
