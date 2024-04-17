@@ -9,6 +9,7 @@ authors = [
   {name = "Joseph G. Wallwork", email = "joe.wallwork@outlook.com"},
   {name = "Stephan C. Kramer"},
   {name = "Mingrui Zhang"},
+  {name = "Davor Dundovic"},
 ]
 maintainers = [
   {name = "Joseph G. Wallwork", email = "joe.wallwork@outlook.com"},
