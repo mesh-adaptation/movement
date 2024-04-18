@@ -133,10 +133,10 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :type sigma_init: :class:`firedrake.function.Function`
         """
         if phi_init is not None and sigma_init is not None:
-            self.phi.assign(phi_init)
-            self.sigma.assign(sigma_init)
-            self.phi_old.assign(phi_init)
-            self.sigma_old.assign(sigma_init)
+            self.phi.project(phi_init)
+            self.sigma.project(sigma_init)
+            self.phi_old.project(phi_init)
+            self.sigma_old.project(sigma_init)
         elif phi_init is not None or sigma_init is not None:
             raise ValueError("Need to initialise both phi *and* sigma")
 

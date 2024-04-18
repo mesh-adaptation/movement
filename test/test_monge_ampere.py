@@ -45,8 +45,17 @@ class TestMongeAmpere(unittest.TestCase):
         """
         mesh = self.mesh(dim)
         coords = mesh.coordinates.dat.data.copy()
+        P1 = FunctionSpace(mesh, "CG", 1)
+        P1_ten = TensorFunctionSpace(mesh, "CG", 1)
 
-        mover = MongeAmpereMover(mesh, const_monitor, method=method, rtol=1e-3)
+        mover = MongeAmpereMover(
+            mesh,
+            const_monitor,
+            method=method,
+            phi_init=Function(P1),
+            sigma_init=Function(P1_ten),
+            rtol=1e-3,
+        )
         num_iterations = mover.move()
 
         self.assertTrue(np.allclose(coords, mover.mesh.coordinates.dat.data))
