@@ -176,3 +176,15 @@ class TestMongeAmpere(unittest.TestCase):
         with self.assertRaises(ConvergenceError) as cm:
             mover.move()
         self.assertEqual(str(cm.exception), "Diverged after 1 iteration.")
+
+    def test_coordinate_update(self):
+        mesh = self.mesh(2, n=2)
+        dg_coords = Function(VectorFunctionSpace(mesh, "DG", 1))
+        dg_coords.project(mesh.coordinates)
+        mover = MongeAmpereMover(Mesh(dg_coords), const_monitor)
+        mover._grad_phi.assign(2.0)
+        mover._update_coordinates()
+        self.assertNotEqual(mover.grad_phi.dof_dset.size, mover._grad_phi.dof_dset.size)
+        self.assertAlmostEqual(errornorm(mover.grad_phi, mover._grad_phi), 0)
+        mover.xi += 2
+        self.assertAlmostEqual(errornorm(mover.x, mover.xi), 0)

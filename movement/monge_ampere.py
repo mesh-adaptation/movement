@@ -163,19 +163,19 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         residual_l2_rel = residual_l2 / norm_l2
         return minmax, residual_l2_rel, cv
 
-    @property
     @PETSc.Log.EventDecorator()
-    def x(self):
-        """
-        Update the coordinate :class:`Function` using
-        the recovered gradient.
+    def _update_coordinates(self):
+        r"""
+        Update the physical coordinates :math:`\mathbf{x}` using the recovered gradient:
+        .. math::
+            \mathbf{x} = \boldsymbol{\xi} + \nabla_{\boldsymbol{\xi}}\phi.
         """
         try:
             self.grad_phi.assign(self._grad_phi)
         except Exception:
             self.grad_phi.interpolate(self._grad_phi)
-        self._x.assign(self.xi + self.grad_phi)  # x = ξ + grad(φ)
-        return self._x
+        self.x.assign(self.xi + self.grad_phi)
+        self.mesh.coordinates.assign(self.x)
 
     @property
     @PETSc.Log.EventDecorator()
@@ -367,11 +367,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         :rtype: :class:`int`
         """
         for i in range(self.maxiter):
-            # L2 project
             self.l2_projector.solve()
-
-            # Update mesh coordinates
-            self.mesh.coordinates.assign(self.x)
+            self._update_coordinates()
 
             # Update monitor function
             self.monitor.interpolate(self.monitor_function(self.mesh))
@@ -410,7 +407,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.equidistributor.solve()
             self.phi_old.assign(self.phi)
             self.sigma_old.assign(self.sigma)
-        self.mesh.coordinates.assign(self.x)
+        self._update_coordinates()
         return i
 
 
@@ -493,7 +490,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             with self.phisigma_old.dat.vec as v:
                 cursol.copy(v)
             self.l2_projector.solve()
-            self.mesh.coordinates.assign(self.x)
+            self._update_coordinates()
             self.monitor.interpolate(self.monitor_function(self.mesh))
             self.mesh.coordinates.assign(self.xi)
             self.theta.assign(
@@ -538,7 +535,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             """
             cursol = snes.getSolution()
             update_monitor(cursol)
-            self.mesh.coordinates.assign(self.x)
+            self._update_coordinates()
             firedrake.assemble(self.L_P0, tensor=self.volume)
             self.volume.interpolate(self.volume / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
@@ -573,5 +570,5 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             raise firedrake.ConvergenceError(
                 f"Failed to converge in {i} iteration{plural}."
             )
-        self.mesh.coordinates.assign(self.x)
+        self._update_coordinates()
         return i

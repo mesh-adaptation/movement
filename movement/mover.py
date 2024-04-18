@@ -27,7 +27,7 @@ class PrimeMover(object):
 
         # Mesh coordinate functions
         self.coord_space = self.mesh.coordinates.function_space()
-        self._x = firedrake.Function(self.mesh.coordinates, name="Physical coordinates")
+        self.x = firedrake.Function(self.mesh.coordinates, name="Physical coordinates")
         self.xi = firedrake.Function(
             self.mesh.coordinates, name="Computational coordinates"
         )

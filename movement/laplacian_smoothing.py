@@ -90,5 +90,5 @@ class LaplacianSmoother(PrimeMover):
 
         # Update mesh coordinates
         self.displacement[:] = self.v.dat.data_with_halos * self.dt
-        self._x.dat.data_with_halos[:] += self.displacement
-        self.mesh.coordinates.assign(self._x)
+        self.x.dat.data_with_halos[:] += self.displacement
+        self.mesh.coordinates.assign(self.x)
