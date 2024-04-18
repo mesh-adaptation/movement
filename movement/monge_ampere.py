@@ -1,4 +1,5 @@
 import abc
+from warnings import warn
 
 import firedrake
 import numpy as np
@@ -181,8 +182,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
     @PETSc.Log.EventDecorator()
     def l2_projector(self):
         """
-        Create a linear solver for obtaining the gradient
-        of the potential using an L2 projection.
+        Create a linear solver for obtaining the gradient of the potential using an
+        :math:`L^2` projection.
 
         Boundary conditions are imposed as a post-processing step.
 
@@ -201,26 +202,26 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         # Enforce no movement normal to boundary
         n = ufl.FacetNormal(self.mesh)
         bcs = []
-        for i in self.mesh.exterior_facets.unique_markers:
+        for tag in self.mesh.exterior_facets.unique_markers:
             if self.fix_boundary_nodes:
-                bcs.append(firedrake.DirichletBC(self.P1_vec, 0, i))
+                bcs.append(firedrake.DirichletBC(self.P1_vec, 0, tag))
                 continue
 
             # Check for axis-aligned boundaries
-            _n = [firedrake.assemble(abs(n[j]) * self.ds(i)) for j in range(self.dim)]
+            _n = [firedrake.assemble(abs(n[j]) * self.ds(tag)) for j in range(self.dim)]
             iszero = [np.allclose(ni, 0.0) for ni in _n]
             nzero = sum(iszero)
             if nzero == self.dim:
                 raise ValueError(f"Invalid normal vector {_n}")
             elif nzero == self.dim - 1:
                 idx = iszero.index(False)
-                bcs.append(firedrake.DirichletBC(self.P1_vec.sub(idx), 0, i))
+                bcs.append(firedrake.DirichletBC(self.P1_vec.sub(idx), 0, tag))
                 continue
 
             # Enforce no mesh movement normal to boundaries
             a_bc = ufl.dot(v_cts, n) * ufl.dot(u_cts, n) * self.ds
             L_bc = ufl.dot(v_cts, n) * firedrake.Constant(0.0) * self.ds
-            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, i))
+            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, tag))
 
             # Allow tangential movement, but only up until the end of boundary segments
             a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * self.ds
@@ -232,14 +233,12 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             if len(edges) == 0:
                 bbc = None  # Periodic case
             else:
-                from warnings import warn
-
                 warn(
                     "Have you checked that all straight line segments are uniquely tagged?"
                 )
                 corners = [(i, j) for i in edges for j in edges.difference([i])]
                 bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
-            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, i, bcs=bbc))
+            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, tag, bcs=bbc))
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
