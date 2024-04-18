@@ -35,6 +35,14 @@ class TestSetup(unittest.TestCase):
         )
         self.assertEqual(str(cm.exception), msg)
 
+    def test_invalid_bc_tag_valueerror(self):
+        mover = SpringMover(self.mesh, 1.0)
+        bc = DirichletBC(mover.coord_space, 0, 4)
+        with self.assertRaises(ValueError) as cm:
+            mover.assemble_stiffness_matrix(bc)
+        msg = "[4] contains invalid boundary tags."
+        self.assertEqual(str(cm.exception), msg)
+
 
 class TestQuantities(unittest.TestCase):
     """

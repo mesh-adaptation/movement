@@ -207,7 +207,7 @@ class SpringMover_Base(PrimeMover):
                 tags = [tags]
             bnd = self.mesh.exterior_facets
             if not set(tags).issubset(set(bnd.unique_markers)):
-                raise ValueError(f"{tags} contains invalid boundary tags")
+                raise ValueError(f"{tags} contains invalid boundary tags.")
             subsets = np.array([bnd.subset(tag).indices for tag in tags]).flatten()
 
             # Get vertex-based boundary data to be enforced
