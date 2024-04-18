@@ -55,6 +55,14 @@ class TestStiffness(unittest.TestCase):
         self.assertTrue(np.allclose(mover._stiffness_matrix(), 2 * np.eye(6)))
         self.assertTrue(np.allclose(mover.assemble_stiffness_matrix(), np.eye(6)))
 
+    def test_boundary_conditions_triangle_one_segment(self):
+        mesh = UnitTriangleMesh()
+        mover = SpringMover(mesh, 1.0, method="lineal")
+        self.assertTrue(np.allclose(mover._stiffness_matrix(), 2 * np.eye(6)))
+        bc = DirichletBC(mover.coord_space, 0, 1)
+        expected = np.diag([2, 2, 1, 1, 1, 1])
+        self.assertTrue(np.allclose(mover.assemble_stiffness_matrix(bc), expected))
+
 
 class TestQuantities(unittest.TestCase):
     """
