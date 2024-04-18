@@ -145,3 +145,15 @@ class TestMongeAmpere(unittest.TestCase):
         if fix_boundary:
             bnd_coords_new = mover.mesh.coordinates.dat.data[bnodes]
             self.assertTrue(np.allclose(bnd_coords, bnd_coords_new))
+
+    @parameterized.expand([("relaxation"), ("quasi_newton")])
+    def test_maxiter_convergenceerror(self, method):
+        """
+        Test that the mesh mover raises a :class:`~.ConvergenceError` if it reaches the
+        maximum number of iterations.
+        """
+        mesh = self.mesh(2, n=4)
+        mover = MongeAmpereMover(mesh, ring_monitor, method=method, maxiter=1)
+        with self.assertRaises(ConvergenceError) as cm:
+            mover.move()
+        self.assertEqual(str(cm.exception), "Failed to converge in 1 iteration.")

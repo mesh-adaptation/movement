@@ -374,14 +374,17 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
                 f"   Residual {residual:10.4e}"
                 f"   Variation (σ/μ) {cv:10.4e}"
             )
+            plural = "s" if i != 0 else ""
             if residual < self.rtol:
-                PETSc.Sys.Print(f"Converged in {i+1} iterations.")
+                PETSc.Sys.Print(f"Converged in {i+1} iteration{plural}.")
                 break
             if residual > self.dtol * initial_norm:
-                raise firedrake.ConvergenceError(f"Diverged after {i+1} iterations.")
+                raise firedrake.ConvergenceError(
+                    f"Diverged after {i+1} iteration{plural}."
+                )
             if i == self.maxiter - 1:
                 raise firedrake.ConvergenceError(
-                    f"Failed to converge in {i+1} iterations."
+                    f"Failed to converge in {i+1} iteration{plural}."
                 )
 
             # Apply pseudotimestepper and equidistributor
@@ -527,9 +530,13 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         try:
             self.equidistributor.solve()
             i = self.snes.getIterationNumber()
-            PETSc.Sys.Print(f"Converged in {i} iterations.")
+            plural = "s" if i != 1 else ""
+            PETSc.Sys.Print(f"Converged in {i} iteration{plural}.")
         except firedrake.ConvergenceError:
             i = self.snes.getIterationNumber()
-            raise firedrake.ConvergenceError(f"Failed to converge in {i} iterations.")
+            plural = "s" if i != 1 else ""
+            raise firedrake.ConvergenceError(
+                f"Failed to converge in {i} iteration{plural}."
+            )
         self.mesh.coordinates.assign(self.x)
         return i
