@@ -15,11 +15,8 @@ __all__ = ["SpringMover_Lineal", "SpringMover_Torsional", "SpringMover"]
 def SpringMover(*args, method="lineal", **kwargs):
     """
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
-    beams and solving an associated discrete linear elasticity problem.
-
-    See Farhat, Degand, Koobus and Lesoinne, "Torsional springs for two-dimensional
-    dynamic unstructured fluid meshes" (1998), Computer methods in applied mechanics and
-    engineering, 163:231-245.
+    beams and solving an associated discrete linear elasticity problem. (See
+    :cite:`FDK+:98` for details.)
 
     :arg mesh: the physical mesh to be moved
     :type mesh: :class:`firedrake.mesh.MeshGeometry`
@@ -238,9 +235,7 @@ class SpringMover_Lineal(SpringMover_Base):
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
     beams and solving an associated discrete linear elasticity problem.
 
-    We consider the 'lineal' case, as described in Farhat, Degand, Koobus and Lesoinne,
-    "Torsional springs for two-dimensional dynamic unstructured fluid meshes" (1998),
-    Computer methods in applied mechanics and engineering, 163:231-245.
+    We consider the 'lineal' case, as described in :cite:`FDK+:98`.
     """
 
     @PETSc.Log.EventDecorator()
@@ -252,8 +247,8 @@ class SpringMover_Lineal(SpringMover_Base):
         :type time: :class:`float`
         :kwarg update_boundary_displacement: function that updates the boundary
             conditions at the current time
-        :type update_boundary_displacement: :class:`~.Callable` with a single argument of
-            :class:`float` type
+        :type update_boundary_displacement: :class:`~.Callable` with a single argument
+            of :class:`float` type
         :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
         :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
         """
@@ -275,9 +270,7 @@ class SpringMover_Torsional(SpringMover_Lineal):
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
     beams and solving an associated discrete linear elasticity problem.
 
-    We consider the 'torsional' case, as described in Farhat, Degand, Koobus and
-    Lesoinne, "Torsional springs for two-dimensional dynamic unstructured fluid meshes"
-    (1998), Computer methods in applied mechanics and engineering, 163:231-245.
+    We consider the 'torsional' case, as described in :cite:`FDK+:98`.
     """
 
     def __init__(self, *args, **kwargs):
