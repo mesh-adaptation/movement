@@ -22,28 +22,28 @@ def tangential(v, n):
 
 def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     r"""
-        Movement of a `mesh` is determined by a `monitor_function`
-        :math:`m` and the Monge-Ampère type equation
+    Movement of a `mesh` is determined by a `monitor_function`
+    :math:`m` and the Monge-Ampère type equation
 
-    ..  math::
-            m(x)\det(I + H(\phi)) = \theta,
+    .. math::
+        m(x)\det(I + H(\phi)) = \theta,
 
-        for a scalar potential :math:`\phi`, where :math:`I` is the
-        identity matrix, :math:`\theta` is a normalisation coefficient
-        and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
-        respect to the coordinates :math:`\xi` of the computational mesh.
+    for a scalar potential :math:`\phi`, where :math:`I` is the
+    identity matrix, :math:`\theta` is a normalisation coefficient
+    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
+    respect to the coordinates :math:`\xi` of the computational mesh.
 
-        The physical mesh coordinates :math:`x` are updated according to
+    The physical mesh coordinates :math:`x` are updated according to
 
-    ..  math::
-            x = \xi + \nabla\phi.
+    .. math::
+        x = \xi + \nabla\phi.
 
-        :arg mesh: the physical mesh
-        :arg monitor_function: a Python function which takes a mesh as input
-        :kwarg method: choose from 'relaxation' and 'quasi_newton'
-        :kwarg phi_init: initial guess for the scalar potential
-        :kwarg sigma_init: initial guess for the Hessian
-        :return: converged scalar potential and Hessian
+    :arg mesh: the physical mesh
+    :arg monitor_function: a Python function which takes a mesh as input
+    :kwarg method: choose from 'relaxation' and 'quasi_newton'
+    :kwarg phi_init: initial guess for the scalar potential
+    :kwarg sigma_init: initial guess for the Hessian
+    :return: converged scalar potential and Hessian
     """
     if method == "relaxation":
         return MongeAmpereMover_Relaxation(mesh, monitor_function, **kwargs)
@@ -99,7 +99,7 @@ class MongeAmpereMover_Base(PrimeMover):
         self._grad_phi = firedrake.Function(self.P1_vec)
         self.grad_phi = firedrake.Function(self.mesh.coordinates)
 
-    @PETSc.Log.EventDecorator("MongeAmpereBase.apply_initial_guess")
+    @PETSc.Log.EventDecorator()
     def apply_initial_guess(self, phi_init=None, sigma_init=None, **kwargs):
         """
         Initialise the approximations to the scalar potential
@@ -148,7 +148,7 @@ class MongeAmpereMover_Base(PrimeMover):
         return minmax, residual_l2_rel, cv
 
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereBase.update_coordinates")
+    @PETSc.Log.EventDecorator()
     def x(self):
         """
         Update the coordinate :class:`Function` using
@@ -162,7 +162,7 @@ class MongeAmpereMover_Base(PrimeMover):
         return self._x
 
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereBase.create_l2_projector")
+    @PETSc.Log.EventDecorator()
     def l2_projector(self):
         """
         Create a linear solver for obtaining the gradient
@@ -238,25 +238,17 @@ class MongeAmpereMover_Base(PrimeMover):
 
 class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     r"""
-        The elliptic Monge-Ampere equation is solved in a parabolised
-        form using a pseudo-time relaxation,
+    The elliptic Monge-Ampere equation is solved in a parabolised form using a
+    pseudo-time relaxation,
 
-    ..  math::
-            -\frac\partial{\partial\tau}\Delta\phi = m(x)\det(I + H(\phi)) - \theta,
+    .. math::
+        -\frac\partial{\partial\tau}\Delta\phi = m(x)\det(I + H(\phi)) - \theta,
 
-        where :math:`\tau` is the pseudo-time variable. Forward Euler is
-        used for the pseudo-time integration (see McRae et al. 2018 for
-        details).
-
-        References
-        ==========
-        A. T. T. McRae, C. J. Cotter, C. J. Budd, Optimal-transport-based
-        mesh adaptivity on the plane and sphere using finite elements, SIAM
-        Journal on Scientific Computing 40 (2) (2018) 1121–1148.
-        doi:10.1137/16M1109515.
+    where :math:`\tau` is the pseudo-time variable. Forward Euler is used for the
+    pseudo-time integration (see :cite:`MCB:18` for details).
     """
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.__init__")
+    @PETSc.Log.EventDecorator()
     def __init__(self, mesh, monitor_function, **kwargs):
         """
         :arg mesh: the physical mesh
@@ -289,7 +281,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         self._norm_l2_form = psi * self.theta * self.dx
 
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereMover.create_pseudotimestepper")
+    @PETSc.Log.EventDecorator()
     def pseudotimestepper(self):
         """
         Setup the pseudo-timestepper for the relaxation method.
@@ -320,7 +312,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         return self._pseudotimestepper
 
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereMover.create_equidistributor")
+    @PETSc.Log.EventDecorator()
     def equidistributor(self):
         """
         Setup the equidistributor for the relaxation method.
@@ -348,7 +340,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         )
         return self._equidistributor
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.move")
+    @PETSc.Log.EventDecorator()
     def move(self):
         """
         Run the relaxation method to convergence and update the mesh.
@@ -404,18 +396,11 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
 
 class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     r"""
-    The elliptic Monge-Ampere equation is solved using a quasi-Newton
-    method (see McRae et al. 2018 for details).
-
-    References
-    ==========
-    A. T. T. McRae, C. J. Cotter, C. J. Budd, Optimal-transport-based
-    mesh adaptivity on the plane and sphere using finite elements, SIAM
-    Journal on Scientific Computing 40 (2) (2018) 1121–1148.
-    doi:10.1137/16M1109515.
+    The elliptic Monge-Ampere equation is solved using a quasi-Newton method (see
+    :cite:`MCB:18` for details).
     """
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.__init__")
+    @PETSc.Log.EventDecorator()
     def __init__(self, mesh, monitor_function, **kwargs):
         """
         :arg mesh: the physical mesh
@@ -445,7 +430,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self._norm_l2_form = psi * self.theta * self.dx
 
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereMover.create_equidistributor")
+    @PETSc.Log.EventDecorator()
     def equidistributor(self):
         """
         Setup the equidistributor for the quasi-newton method.
@@ -535,7 +520,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self.snes.setMonitor(monitor)
         return self._equidistributor
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.move")
+    @PETSc.Log.EventDecorator()
     def move(self):
         """
         Run the quasi-Newton method to convergence and update the mesh.
@@ -553,28 +538,28 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
 
 def monge_ampere(mesh, monitor_function, method="relaxation", **kwargs):
     r"""
-        Movement of a `mesh` is determined by a `monitor_function`
-        :math:`m` and the Monge-Ampère type equation
+    Movement of a `mesh` is determined by a `monitor_function`
+    :math:`m` and the Monge-Ampère type equation
 
-    ..  math::
-            m(x)\det(I + H(\phi)) = \theta,
+    .. math::
+        m(x)\det(I + H(\phi)) = \theta,
 
-        for a scalar potential :math:`\phi`, where :math:`I` is the
-        identity matrix, :math:`\theta` is a normalisation coefficient
-        and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
-        respect to the coordinates :math:`\xi` of the computational mesh.
+    for a scalar potential :math:`\phi`, where :math:`I` is the
+    identity matrix, :math:`\theta` is a normalisation coefficient
+    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
+    respect to the coordinates :math:`\xi` of the computational mesh.
 
-        The physical mesh coordinates :math:`x` are updated according to
+    The physical mesh coordinates :math:`x` are updated according to
 
-    ..  math::
-            x = \xi + \nabla\phi.
+    .. math::
+        x = \xi + \nabla\phi.
 
-        :arg mesh: the physical mesh
-        :arg monitor_function: a Python function which takes a mesh as input
-        :kwarg method: choose from 'relaxation' and 'quasi_newton'
-        :kwarg phi_init: initial guess for the scalar potential
-        :kwarg sigma_init: initial guess for the Hessian
-        :return: converged scalar potential and Hessian
+    :arg mesh: the physical mesh
+    :arg monitor_function: a Python function which takes a mesh as input
+    :kwarg method: choose from 'relaxation' and 'quasi_newton'
+    :kwarg phi_init: initial guess for the scalar potential
+    :kwarg sigma_init: initial guess for the Hessian
+    :return: converged scalar potential and Hessian
     """
     if method == "relaxation":
         mover = MongeAmpereMover_Relaxation(mesh, monitor_function, **kwargs)
