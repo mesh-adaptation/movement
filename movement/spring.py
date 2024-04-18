@@ -197,8 +197,8 @@ class SpringMover_Base(PrimeMover):
         for boundary_condition in boundary_conditions:
             if boundary_condition.function_space() != self.coord_space:
                 raise ValueError(
-                    f"Boundary conditions must have {type(self)}.coord_space as their"
-                    " function space"
+                    f"Boundary conditions must have {type(self).__name__}.coord_space"
+                    " as their function space."
                 )
 
             # Determine boundary subsets for the associated tags

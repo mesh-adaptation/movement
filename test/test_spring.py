@@ -24,6 +24,17 @@ class TestSetup(unittest.TestCase):
             SpringMover(self.mesh, 1.0, method="torsional")
         self.assertEqual(str(cm.exception), "Torsional springs not yet implemented.")
 
+    def test_invalid_bc_space_valueerror(self):
+        mover = SpringMover(self.mesh, 1.0)
+        bc = DirichletBC(VectorFunctionSpace(self.mesh, "CG", 2), 0, "on_boundary")
+        with self.assertRaises(ValueError) as cm:
+            mover.assemble_stiffness_matrix(bc)
+        msg = (
+            "Boundary conditions must have SpringMover_Lineal.coord_space as their"
+            " function space."
+        )
+        self.assertEqual(str(cm.exception), msg)
+
 
 class TestQuantities(unittest.TestCase):
     """
