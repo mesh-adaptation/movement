@@ -157,3 +157,13 @@ class TestMongeAmpere(unittest.TestCase):
         with self.assertRaises(ConvergenceError) as cm:
             mover.move()
         self.assertEqual(str(cm.exception), "Failed to converge in 1 iteration.")
+
+    def test_divergence_convergenceerror(self):
+        """
+        Test that the mesh mover raises a :class:`~.ConvergenceError` if it diverges.
+        """
+        mesh = self.mesh(2, n=4)
+        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor, dtol=1.0e-08)
+        with self.assertRaises(ConvergenceError) as cm:
+            mover.move()
+        self.assertEqual(str(cm.exception), "Diverged after 1 iteration.")
