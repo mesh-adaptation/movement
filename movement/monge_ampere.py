@@ -211,9 +211,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             _n = [firedrake.assemble(abs(n[j]) * self.ds(tag)) for j in range(self.dim)]
             iszero = [np.allclose(ni, 0.0) for ni in _n]
             nzero = sum(iszero)
-            if nzero == self.dim:
-                raise ValueError(f"Invalid normal vector {_n}")
-            elif nzero == self.dim - 1:
+            assert nzero < self.dim
+            if nzero == self.dim - 1:
                 idx = iszero.index(False)
                 bcs.append(firedrake.DirichletBC(self.P1_vec.sub(idx), 0, tag))
                 continue
