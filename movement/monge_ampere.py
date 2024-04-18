@@ -224,13 +224,8 @@ class MongeAmpereMover_Base(PrimeMover):
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
-        sp = {
-            "ksp_type": "cg",
-            "pc_type": "bjacobi",
-            "sub_pc_type": "ilu",
-        }
         self._l2_projector = firedrake.LinearVariationalSolver(
-            problem, solver_parameters=sp
+            problem, solver_parameters=solver_parameters.cg_ilu
         )
         return self._l2_projector
 
@@ -297,14 +292,10 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             + self.pseudo_dt * psi * self.residual * self.dx
         )
         problem = firedrake.LinearVariationalProblem(a, L, self.phi)
-        sp = {
-            "ksp_type": "cg",
-            "pc_type": "gamg",
-        }
         nullspace = firedrake.VectorSpaceBasis(constant=True)
         self._pseudotimestepper = firedrake.LinearVariationalSolver(
             problem,
-            solver_parameters=sp,
+            solver_parameters=solver_parameters.cg_gamg,
             nullspace=nullspace,
             transpose_nullspace=nullspace,
         )
@@ -329,13 +320,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             + ufl.dot(ufl.dot(tangential(ufl.grad(self.phi), n), tau), n) * self.ds
         )
         problem = firedrake.LinearVariationalProblem(a, L, self.sigma)
-        sp = {
-            "ksp_type": "cg",
-            "pc_type": "bjacobi",
-            "sub_pc_type": "ilu",
-        }
         self._equidistributor = firedrake.LinearVariationalSolver(
-            problem, solver_parameters=sp
+            problem, solver_parameters=solver_parameters.cg_ilu
         )
         return self._equidistributor
 

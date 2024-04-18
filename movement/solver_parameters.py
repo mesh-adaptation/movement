@@ -59,10 +59,15 @@ jacobi = {
     "pc_type": "jacobi",
 }
 
-cg = {
+cg_ilu = {
     "ksp_type": "cg",
     "pc_type": "bjacobi",
     "pc_sub_type": "ilu",
+}
+
+cg_gamg = {
+    "ksp_type": "cg",
+    "pc_type": "gamg",
 }
 
 lu = {

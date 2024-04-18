@@ -58,7 +58,7 @@ class LaplacianSmoother(PrimeMover):
             )
             self._solver = firedrake.LinearVariationalSolver(
                 problem,
-                solver_parameters=solver_parameters.cg,
+                solver_parameters=solver_parameters.cg_ilu,
             )
         self._solver.solve()
 
