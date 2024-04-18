@@ -138,7 +138,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             self.phi_old.project(phi_init)
             self.sigma_old.project(sigma_init)
         elif phi_init is not None or sigma_init is not None:
-            raise ValueError("Need to initialise both phi *and* sigma")
+            raise ValueError("Need to initialise both phi *and* sigma.")
 
     @property
     @PETSc.Log.EventDecorator()

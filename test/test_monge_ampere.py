@@ -177,6 +177,13 @@ class TestMongeAmpere(unittest.TestCase):
             mover.move()
         self.assertEqual(str(cm.exception), "Diverged after 1 iteration.")
 
+    def test_initial_guess_valueerror(self):
+        mesh = self.mesh(2, n=2)
+        phi_init = Function(FunctionSpace(mesh, "CG", 1))
+        with self.assertRaises(ValueError) as cm:
+            MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
+        self.assertEqual(str(cm.exception), "Need to initialise both phi *and* sigma.")
+
     def test_coordinate_update(self):
         mesh = self.mesh(2, n=2)
         dg_coords = Function(VectorFunctionSpace(mesh, "DG", 1))
