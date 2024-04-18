@@ -71,7 +71,7 @@ class MongeAmpereMover_Base(PrimeMover):
         :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
         """
         if monitor_function is None:
-            raise ValueError("Please supply a monitor function")
+            raise ValueError("Please supply a monitor function.")
 
         # Collect parameters before calling super
         self.pseudo_dt = firedrake.Constant(kwargs.pop("pseudo_timestep", 0.1))

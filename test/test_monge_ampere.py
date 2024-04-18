@@ -30,6 +30,11 @@ class TestMongeAmpere(unittest.TestCase):
             MongeAmpereMover(self.dummy_mesh, self.dummy_monitor, method="method")
         self.assertEqual(str(cm.exception), "Method 'method' not recognised.")
 
+    def test_no_monitor_valueerror(self):
+        with self.assertRaises(ValueError) as cm:
+            MongeAmpereMover(self.dummy_mesh, None)
+        self.assertEqual(str(cm.exception), "Please supply a monitor function.")
+
     @parameterized.expand(
         [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
     )
