@@ -11,7 +11,6 @@ __all__ = [
     "MongeAmpereMover_Relaxation",
     "MongeAmpereMover_QuasiNewton",
     "MongeAmpereMover",
-    "monge_ampere",
 ]
 
 
@@ -534,38 +533,3 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             raise firedrake.ConvergenceError(f"Failed to converge in {i} iterations.")
         self.mesh.coordinates.assign(self.x)
         return i
-
-
-def monge_ampere(mesh, monitor_function, method="relaxation", **kwargs):
-    r"""
-    Movement of a `mesh` is determined by a `monitor_function`
-    :math:`m` and the Monge-Ampère type equation
-
-    .. math::
-        m(x)\det(I + H(\phi)) = \theta,
-
-    for a scalar potential :math:`\phi`, where :math:`I` is the
-    identity matrix, :math:`\theta` is a normalisation coefficient
-    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
-    respect to the coordinates :math:`\xi` of the computational mesh.
-
-    The physical mesh coordinates :math:`x` are updated according to
-
-    .. math::
-        x = \xi + \nabla\phi.
-
-    :arg mesh: the physical mesh
-    :arg monitor_function: a Python function which takes a mesh as input
-    :kwarg method: choose from 'relaxation' and 'quasi_newton'
-    :kwarg phi_init: initial guess for the scalar potential
-    :kwarg sigma_init: initial guess for the Hessian
-    :return: converged scalar potential and Hessian
-    """
-    if method == "relaxation":
-        mover = MongeAmpereMover_Relaxation(mesh, monitor_function, **kwargs)
-    elif method == "quasi_newton":
-        mover = MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
-    else:
-        raise ValueError(f"Monge-Ampere solver {method} not recognised.")
-    mover.adapt()
-    return mover.phi, mover.sigma
