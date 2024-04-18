@@ -44,6 +44,18 @@ class TestSetup(unittest.TestCase):
         self.assertEqual(str(cm.exception), msg)
 
 
+class TestStiffness(unittest.TestCase):
+    """
+    Unit tests for the stiffness matrices used by the spring-based Movers.
+    """
+
+    def test_boundary_conditions_triangle_all_boundary(self):
+        mesh = UnitTriangleMesh()
+        mover = SpringMover(mesh, 1.0, method="lineal")
+        self.assertTrue(np.allclose(mover._stiffness_matrix(), 2 * np.eye(6)))
+        self.assertTrue(np.allclose(mover.assemble_stiffness_matrix(), np.eye(6)))
+
+
 class TestQuantities(unittest.TestCase):
     """
     Unit tests for the element quantity utilities underlying the :class:`~.SpringMover`
