@@ -23,7 +23,8 @@ test: lint
 coverage:
 	@echo "Generating coverage report..."
 	@python3 -m coverage erase
-	@python3 -m coverage run --source=movement -m pytest -v test
+	@python3 -m coverage run --source=movement -m pytest -v test \
+		--durations=20
 	@python3 -m coverage html
 	@echo "Done."
 
