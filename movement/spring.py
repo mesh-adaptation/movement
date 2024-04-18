@@ -30,7 +30,7 @@ def SpringMover(*args, method="lineal", **kwargs):
     elif method == "torsional":
         return SpringMover_Torsional(*args, **kwargs)
     else:
-        raise ValueError(f"Method {method} not recognised.")
+        raise ValueError(f"Method '{method}' not recognised.")
 
 
 class SpringMover_Base(PrimeMover):

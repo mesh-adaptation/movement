@@ -1,9 +1,25 @@
 import unittest
+from unittest.mock import MagicMock
 
-import firedrake
 import numpy as np
+from firedrake import *
 
 from movement import SpringMover
+
+
+class TestSetup(unittest.TestCase):
+    """
+    Unit tests for setting up spring-based Movers.
+    """
+
+    @property
+    def dummy_mesh(self):
+        return MagicMock(UnitSquareMesh)
+
+    def test_method_valueerror(self):
+        with self.assertRaises(ValueError) as cm:
+            SpringMover(self.dummy_mesh, 1.0, method="method")
+        self.assertEqual(str(cm.exception), "Method 'method' not recognised.")
 
 
 class TestQuantities(unittest.TestCase):
@@ -13,7 +29,7 @@ class TestQuantities(unittest.TestCase):
     """
 
     def setUp(self):
-        self.mover = SpringMover(firedrake.UnitTriangleMesh(), 1.0)
+        self.mover = SpringMover(UnitTriangleMesh(), 1.0)
 
     @staticmethod
     def rad2deg(radians):
