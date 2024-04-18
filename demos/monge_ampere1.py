@@ -39,13 +39,17 @@
 #
 # We begin the example by importing from the namespaces of Firedrake and Movement.
 
+# To start with a simple example, consider a uniform mesh of the unit square. Feel free
+# to ignore the `"MOVEMENT_REGRESSION_TEST"`, as it is only used when this demo is run
+# in the test suite (to reduce its runtime). ::
+import os
+
 from firedrake import *
 
 from movement import *
 
-# To start with a simple example, consider a uniform mesh of the unit square.
-
-n = 20
+test = os.environ.get("MOVEMENT_REGRESSION_TEST")
+n = 10 if test else 20
 mesh = UnitSquareMesh(n, n)
 
 # We can plot the initial mesh using Matplotlib as follows.
@@ -90,12 +94,9 @@ def ring_monitor(mesh):
 # :class:`~.MongeAmpereMover` instance and adapt the mesh. By default, the Monge-Ampère
 # equation is solved to a relative tolerance of :math:`10^{-8}`. However, for the
 # purposes of continuous integration testing, a tolerance of :math:`10^{-3}` is used
-# instead to reduce the runtime. Feel free to ignore the `"MOVEMENT_REGRESSION_TEST"`,
-# as it is only used when this demo is run in the test suite. ::
+# instead to further reduce the runtime. ::
 
-import os
-
-rtol = 1.0e-03 if os.environ.get("MOVEMENT_REGRESSION_TEST") else 1.0e-08
+rtol = 1.0e-03 if test else 1.0e-08
 mover = MongeAmpereMover(mesh, ring_monitor, method="quasi_newton", rtol=rtol)
 mover.move()
 

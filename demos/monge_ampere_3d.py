@@ -74,8 +74,9 @@ def monitor(mesh):
 
 import os
 
-rtol = 1.0e-03 if os.environ.get("MOVEMENT_REGRESSION_TEST") else 1.0e-08
-n = 20
+test = os.environ.get("MOVEMENT_REGRESSION_TEST")
+rtol = 1.0e-03 if test else 1.0e-08
+n = 10 if test else 20
 mesh = UnitCubeMesh(n, n, n)
 mover = movement.MongeAmpereMover(mesh, monitor, method="relaxation", rtol=rtol)
 mover.move()
