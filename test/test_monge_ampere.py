@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock
 
 import numpy as np
 from monitors import *
@@ -15,6 +16,19 @@ class TestMongeAmpere(unittest.TestCase):
     def mesh(self, dim, n=10):
         self.assertTrue(dim in (2, 3))
         return UnitSquareMesh(n, n) if dim == 2 else UnitCubeMesh(n, n, n)
+
+    @property
+    def dummy_mesh(self):
+        return MagicMock(UnitSquareMesh)
+
+    @property
+    def dummy_monitor(self):
+        return lambda *args: MagicMock(Function)
+
+    def test_method_valueerror(self):
+        with self.assertRaises(ValueError) as cm:
+            MongeAmpereMover(self.dummy_mesh, self.dummy_monitor, method="method")
+        self.assertEqual(str(cm.exception), "Method 'method' not recognised.")
 
     @parameterized.expand(
         [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]

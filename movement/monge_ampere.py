@@ -50,7 +50,7 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     elif method == "quasi_newton":
         return MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
     else:
-        raise ValueError(f"Method {method} not recognised.")
+        raise ValueError(f"Method '{method}' not recognised.")
 
 
 class MongeAmpereMover_Base(PrimeMover):
