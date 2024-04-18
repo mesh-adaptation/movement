@@ -203,6 +203,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         n = ufl.FacetNormal(self.mesh)
         bcs = []
         for tag in self.mesh.exterior_facets.unique_markers:
+            # TODO: Write tests for the boundary conditions block below (#79)
             if self.fix_boundary_nodes:
                 bcs.append(firedrake.DirichletBC(self.P1_vec, 0, tag))
                 continue
