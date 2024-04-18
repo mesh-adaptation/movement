@@ -63,6 +63,18 @@ class TestStiffness(unittest.TestCase):
         expected = np.diag([2, 2, 1, 1, 1, 1])
         self.assertTrue(np.allclose(mover.assemble_stiffness_matrix(bc), expected))
 
+    def test_square(self):
+        mesh = UnitSquareMesh(2, 2)
+        mover = SpringMover(mesh, 1.0, method="lineal")
+        K = mover._stiffness_matrix()
+        block_K = [
+            K[2 * i : 2 * (i + 1)][2 * i : 2 * (i + 1)] for i in range(len(K) // 2)
+        ]
+        print(block_K)
+        print(K)
+        print(mover.assemble_stiffness_matrix())
+        raise NotImplementedError  # TODO
+
 
 class TestQuantities(unittest.TestCase):
     """
