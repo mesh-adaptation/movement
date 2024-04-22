@@ -4,6 +4,7 @@
 __pycache__/
 build/
 movement.egg-info/
+test/demos
 
 # Specific files
 .coverage
