@@ -31,6 +31,7 @@ test: lint convert_demos
 	@echo "Running test suite..."
 	@python3 -m pytest -v -n auto --durations=20 test
 	@cd test && make clean
+	@make clean
 	@echo "PASS"
 
 coverage: convert_demos
@@ -40,7 +41,12 @@ coverage: convert_demos
 		--durations=20
 	@python3 -m coverage html
 	@cd test && make clean
+	@make clean
 	@echo "Done."
 
 tree:
 	@tree -d .
+
+clean:
+	@rm -f *.jpg *.pvd *.vtu
+	@rm -rf test/demos
