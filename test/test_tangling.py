@@ -1,8 +1,8 @@
 import unittest
 
-from firedrake import *
+from firedrake import UnitSquareMesh
 
-from movement import *
+from movement import MeshTanglingChecker
 
 
 class TestTangling(unittest.TestCase):
