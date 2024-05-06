@@ -36,7 +36,7 @@ class PrimeMover(object):
     def _get_coordinate_section(self):
         entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
         entity_dofs[0] = self.gdim
-        self._coordinate_section = create_section(self.mesh, entity_dofs)
+        self._coordinate_section = create_section(self.mesh, entity_dofs)[0]
         dm_coords = self.plex.getCoordinateDM()
         dm_coords.setDefaultSection(self._coordinate_section)
         self._coords_local_vec = dm_coords.createLocalVec()
@@ -54,7 +54,7 @@ class PrimeMover(object):
     def _get_edge_vector_section(self):
         entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
         entity_dofs[1] = 1
-        self._edge_vector_section = create_section(self.mesh, entity_dofs)
+        self._edge_vector_section = create_section(self.mesh, entity_dofs)[0]
 
     def coordinate_offset(self, index):
         """
