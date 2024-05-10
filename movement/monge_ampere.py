@@ -1,3 +1,6 @@
+import abc
+from warnings import warn
+
 import firedrake
 import numpy as np
 import ufl
@@ -11,7 +14,6 @@ __all__ = [
     "MongeAmpereMover_Relaxation",
     "MongeAmpereMover_QuasiNewton",
     "MongeAmpereMover",
-    "monge_ampere",
 ]
 
 
@@ -22,38 +24,45 @@ def tangential(v, n):
 
 def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     r"""
-        Movement of a `mesh` is determined by a `monitor_function`
-        :math:`m` and the Monge-Ampère type equation
+    Movement of a `mesh` is determined by a `monitor_function`
+    :math:`m` and the Monge-Ampère type equation
 
-    ..  math::
-            m(x)\det(I + H(\phi)) = \theta,
+    .. math::
+        m(x)\det(I + H(\phi)) = \theta,
 
-        for a scalar potential :math:`\phi`, where :math:`I` is the
-        identity matrix, :math:`\theta` is a normalisation coefficient
-        and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
-        respect to the coordinates :math:`\xi` of the computational mesh.
+    for a scalar potential :math:`\phi`, where :math:`I` is the
+    identity matrix, :math:`\theta` is a normalisation coefficient
+    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
+    respect to the coordinates :math:`\xi` of the computational mesh.
 
-        The physical mesh coordinates :math:`x` are updated according to
+    The physical mesh coordinates :math:`x` are updated according to
 
-    ..  math::
-            x = \xi + \nabla\phi.
+    .. math::
+        x = \xi + \nabla\phi.
 
-        :arg mesh: the physical mesh
-        :arg monitor_function: a Python function which takes a mesh as input
-        :kwarg method: choose from 'relaxation' and 'quasi_newton'
-        :kwarg phi_init: initial guess for the scalar potential
-        :kwarg sigma_init: initial guess for the Hessian
-        :return: converged scalar potential and Hessian
+    :arg mesh: the physical mesh
+    :type mesh: :class:`firedrake.mesh.MeshGeometry`
+    :arg monitor_function: a Python function which takes a mesh as input
+    :type monitor_function: :class:`~.Callable`
+    :kwarg method: choose from 'relaxation' and 'quasi_newton'
+    :type method: :class:`str`
+    :kwarg phi_init: initial guess for the scalar potential
+    :type phi_init: :class:`firedrake.function.Function`
+    :kwarg sigma_init: initial guess for the Hessian
+    :type sigma_init: :class:`firedrake.function.Function`
+    :return: the Monge-Ampere Mover object
+    :rtype: :class:`MongeAmpereMover_Relaxation` or
+        :class:`MongeAmpereMover_QuasiNewton`
     """
     if method == "relaxation":
         return MongeAmpereMover_Relaxation(mesh, monitor_function, **kwargs)
     elif method == "quasi_newton":
         return MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
     else:
-        raise ValueError(f"Method {method} not recognised.")
+        raise ValueError(f"Method '{method}' not recognised.")
 
 
-class MongeAmpereMover_Base(PrimeMover):
+class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
     """
     Base class for mesh movers based on the solution
     of Monge-Ampere type equations.
@@ -62,19 +71,26 @@ class MongeAmpereMover_Base(PrimeMover):
     def __init__(self, mesh, monitor_function, **kwargs):
         """
         :arg mesh: the physical mesh
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
         :arg monitor_function: a Python function which takes a mesh as input
+        :type monitor_function: :class:`~.Callable`
         :kwarg phi_init: initial guess for the scalar potential
+        :type phi_init: :class:`firedrake.function.Function`
         :kwarg sigma_init: initial guess for the Hessian
+        :type sigma_init: :class:`firedrake.function.Function`
         :kwarg maxiter: maximum number of iterations for the relaxation
+        :type maxiter: :class:`int`
         :kwarg rtol: relative tolerance for the residual
+        :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
+        :type dtol: :class:`float`
         :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
+        :type fix_boundary_nodes: :class:`bool`
         """
         if monitor_function is None:
-            raise ValueError("Please supply a monitor function")
+            raise ValueError("Please supply a monitor function.")
 
         # Collect parameters before calling super
-        self.pseudo_dt = firedrake.Constant(kwargs.pop("pseudo_timestep", 0.1))
         self.maxiter = kwargs.pop("maxiter", 1000)
         self.rtol = kwargs.pop("rtol", 1.0e-08)
         self.dtol = kwargs.pop("dtol", 2.0)
@@ -88,41 +104,42 @@ class MongeAmpereMover_Base(PrimeMover):
         self.P1_ten = firedrake.TensorFunctionSpace(self.mesh, "CG", 1)
 
         # Create objects used during the mesh movement
+        self._create_functions()
         self.theta = firedrake.Constant(0.0)
-        self.monitor = firedrake.Function(self.P1, name="Monitor function")
         self.monitor.interpolate(self.monitor_function(self.mesh))
-        self.volume = firedrake.Function(self.P0, name="Mesh volume")
         self.volume.interpolate(ufl.CellVolume(self.mesh))
         self.original_volume = firedrake.Function(self.volume)
         self.total_volume = firedrake.assemble(firedrake.Constant(1.0) * self.dx)
         self.L_P0 = firedrake.TestFunction(self.P0) * self.monitor * self.dx
+
+    @abc.abstractmethod
+    def _create_functions(self):
+        self.monitor = firedrake.Function(self.P1, name="Monitor function")
+        self.volume = firedrake.Function(self.P0, name="Mesh volume")
         self._grad_phi = firedrake.Function(self.P1_vec)
         self.grad_phi = firedrake.Function(self.mesh.coordinates)
 
-    @PETSc.Log.EventDecorator("MongeAmpereBase.apply_initial_guess")
-    def apply_initial_guess(self, phi_init=None, sigma_init=None, **kwargs):
+    @PETSc.Log.EventDecorator()
+    def apply_initial_guess(self, phi_init, sigma_init):
         """
-        Initialise the approximations to the scalar potential
-        and its hessian with an initial guess.
+        Initialise the approximations to the scalar potential and its Hessian with an
+        initial guess.
 
-        By default, both are initialised to zero, which corresponds
-        to the case where the computational and physical meshes
-        coincide.
+        By default, both are initialised to zero, which corresponds to the case where
+        the computational and physical meshes coincide.
 
-        :kwarg phi_init: initial guess for the scalar potential
-        :kwarg sigma_init: initial guess for the Hessian
+        :arg phi_init: initial guess for the scalar potential
+        :type phi_init: :class:`firedrake.function.Function`
+        :arg sigma_init: initial guess for the Hessian
+        :type sigma_init: :class:`firedrake.function.Function`
         """
         if phi_init is not None and sigma_init is not None:
-            assert hasattr(self, "phi")
-            assert hasattr(self, "sigma")
-            assert hasattr(self, "phi_old")
-            assert hasattr(self, "sigma_old")
-            self.phi.assign(phi_init)
-            self.sigma.assign(sigma_init)
-            self.phi_old.assign(phi_init)
-            self.sigma_old.assign(sigma_init)
+            self.phi.project(phi_init)
+            self.sigma.project(sigma_init)
+            self.phi_old.project(phi_init)
+            self.sigma_old.project(sigma_init)
         elif phi_init is not None or sigma_init is not None:
-            raise ValueError("Need to initialise both phi *and* sigma")
+            raise ValueError("Need to initialise both phi *and* sigma.")
 
     @property
     @PETSc.Log.EventDecorator()
@@ -147,32 +164,34 @@ class MongeAmpereMover_Base(PrimeMover):
         residual_l2_rel = residual_l2 / norm_l2
         return minmax, residual_l2_rel, cv
 
-    @property
-    @PETSc.Log.EventDecorator("MongeAmpereBase.update_coordinates")
-    def x(self):
-        """
-        Update the coordinate :class:`Function` using
-        the recovered gradient.
+    @PETSc.Log.EventDecorator()
+    def _update_coordinates(self):
+        r"""
+        Update the physical coordinates :math:`\mathbf{x}` using the recovered gradient:
+        .. math::
+            \mathbf{x} = \boldsymbol{\xi} + \nabla_{\boldsymbol{\xi}}\phi.
         """
         try:
             self.grad_phi.assign(self._grad_phi)
         except Exception:
             self.grad_phi.interpolate(self._grad_phi)
-        self._x.assign(self.xi + self.grad_phi)  # x = ξ + grad(φ)
-        return self._x
+        self.x.assign(self.xi + self.grad_phi)
+        self.mesh.coordinates.assign(self.x)
 
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereBase.create_l2_projector")
+    @PETSc.Log.EventDecorator()
     def l2_projector(self):
         """
-        Create a linear solver for obtaining the gradient
-        of the potential using an L2 projection.
+        Create a linear solver for obtaining the gradient of the potential using an
+        :math:`L^2` projection.
 
         Boundary conditions are imposed as a post-processing step.
+
+        :return: the linear solver
+        :rtype: :class:`~.LinearVariationalSolver`
         """
         if hasattr(self, "_l2_projector"):
             return self._l2_projector
-        assert hasattr(self, "phi_old")
         u_cts = firedrake.TrialFunction(self.P1_vec)
         v_cts = firedrake.TestFunction(self.P1_vec)
 
@@ -183,26 +202,26 @@ class MongeAmpereMover_Base(PrimeMover):
         # Enforce no movement normal to boundary
         n = ufl.FacetNormal(self.mesh)
         bcs = []
-        for i in self.mesh.exterior_facets.unique_markers:
+        for tag in self.mesh.exterior_facets.unique_markers:
+            # TODO: Write tests for the boundary conditions block below (#79)
             if self.fix_boundary_nodes:
-                bcs.append(firedrake.DirichletBC(self.P1_vec, 0, i))
+                bcs.append(firedrake.DirichletBC(self.P1_vec, 0, tag))
                 continue
 
             # Check for axis-aligned boundaries
-            _n = [firedrake.assemble(abs(n[j]) * self.ds(i)) for j in range(self.dim)]
+            _n = [firedrake.assemble(abs(n[j]) * self.ds(tag)) for j in range(self.dim)]
             iszero = [np.allclose(ni, 0.0) for ni in _n]
             nzero = sum(iszero)
-            if nzero == self.dim:
-                raise ValueError(f"Invalid normal vector {_n}")
-            elif nzero == self.dim - 1:
+            assert nzero < self.dim
+            if nzero == self.dim - 1:
                 idx = iszero.index(False)
-                bcs.append(firedrake.DirichletBC(self.P1_vec.sub(idx), 0, i))
+                bcs.append(firedrake.DirichletBC(self.P1_vec.sub(idx), 0, tag))
                 continue
 
             # Enforce no mesh movement normal to boundaries
             a_bc = ufl.dot(v_cts, n) * ufl.dot(u_cts, n) * self.ds
             L_bc = ufl.dot(v_cts, n) * firedrake.Constant(0.0) * self.ds
-            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, i))
+            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, tag))
 
             # Allow tangential movement, but only up until the end of boundary segments
             a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * self.ds
@@ -214,71 +233,61 @@ class MongeAmpereMover_Base(PrimeMover):
             if len(edges) == 0:
                 bbc = None  # Periodic case
             else:
-                from warnings import warn
-
                 warn(
                     "Have you checked that all straight line segments are uniquely tagged?"
                 )
                 corners = [(i, j) for i in edges for j in edges.difference([i])]
                 bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
-            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, i, bcs=bbc))
+            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, tag, bcs=bbc))
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
-        sp = {
-            "ksp_type": "cg",
-            "pc_type": "bjacobi",
-            "sub_pc_type": "ilu",
-        }
         self._l2_projector = firedrake.LinearVariationalSolver(
-            problem, solver_parameters=sp
+            problem, solver_parameters=solver_parameters.cg_ilu
         )
         return self._l2_projector
 
 
 class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     r"""
-        The elliptic Monge-Ampere equation is solved in a parabolised
-        form using a pseudo-time relaxation,
+    The elliptic Monge-Ampere equation is solved in a parabolised form using a
+    pseudo-time relaxation,
 
-    ..  math::
-            -\frac\partial{\partial\tau}\Delta\phi = m(x)\det(I + H(\phi)) - \theta,
+    .. math::
+        -\frac\partial{\partial\tau}\Delta\phi = m(x)\det(I + H(\phi)) - \theta,
 
-        where :math:`\tau` is the pseudo-time variable. Forward Euler is
-        used for the pseudo-time integration (see McRae et al. 2018 for
-        details).
-
-        References
-        ==========
-        A. T. T. McRae, C. J. Cotter, C. J. Budd, Optimal-transport-based
-        mesh adaptivity on the plane and sphere using finite elements, SIAM
-        Journal on Scientific Computing 40 (2) (2018) 1121–1148.
-        doi:10.1137/16M1109515.
+    where :math:`\tau` is the pseudo-time variable. Forward Euler is used for the
+    pseudo-time integration (see :cite:`MCB:18` for details).
     """
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.__init__")
-    def __init__(self, mesh, monitor_function, **kwargs):
+    @PETSc.Log.EventDecorator()
+    def __init__(
+        self, mesh, monitor_function, phi_init=None, sigma_init=None, **kwargs
+    ):
         """
         :arg mesh: the physical mesh
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
         :arg monitor_function: a Python function which takes a mesh as input
+        :type monitor_function: :class:`~.Callable`
         :kwarg phi_init: initial guess for the scalar potential
+        :type phi_init: :class:`firedrake.function.Function`
         :kwarg sigma_init: initial guess for the Hessian
+        :type sigma_init: :class:`firedrake.function.Function`
         :kwarg pseudo_timestep: pseudo-timestep to use for the relaxation
+        :type pseudo_timestep: :class:`float`
         :kwarg maxiter: maximum number of iterations for the relaxation
+        :type maxiter: :class:`int`
         :kwarg rtol: relative tolerance for the residual
+        :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
+        :type dtol: :class:`float`
         """
         self.pseudo_dt = firedrake.Constant(kwargs.pop("pseudo_timestep", 0.1))
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
 
-        # Create functions to hold solution data
-        self.phi = firedrake.Function(self.P1)
-        self.sigma = firedrake.Function(self.P1_ten)
-        self.phi_old = firedrake.Function(self.P1)
-        self.sigma_old = firedrake.Function(self.P1_ten)
-
         # Initialise phi and sigma
-        self.apply_initial_guess(**kwargs)
+        if phi_init or sigma_init:
+            self.apply_initial_guess(phi_init, sigma_init)
 
         # Setup residuals
         I = ufl.Identity(self.dim)
@@ -288,16 +297,24 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         self._residual_l2_form = psi * self.residual * self.dx
         self._norm_l2_form = psi * self.theta * self.dx
 
+    def _create_functions(self):
+        super()._create_functions()
+        self.phi = firedrake.Function(self.P1)
+        self.sigma = firedrake.Function(self.P1_ten)
+        self.phi_old = firedrake.Function(self.P1)
+        self.sigma_old = firedrake.Function(self.P1_ten)
+
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereMover.create_pseudotimestepper")
+    @PETSc.Log.EventDecorator()
     def pseudotimestepper(self):
         """
         Setup the pseudo-timestepper for the relaxation method.
+
+        :return: the pseudo-timestepper
+        :rtype: :class:`~.LinearVariationalSolver`
         """
         if hasattr(self, "_pseudotimestepper"):
             return self._pseudotimestepper
-        assert hasattr(self, "phi")
-        assert hasattr(self, "phi_old")
         phi = firedrake.TrialFunction(self.P1)
         psi = firedrake.TestFunction(self.P1)
         a = ufl.inner(ufl.grad(psi), ufl.grad(phi)) * self.dx
@@ -306,29 +323,26 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             + self.pseudo_dt * psi * self.residual * self.dx
         )
         problem = firedrake.LinearVariationalProblem(a, L, self.phi)
-        sp = {
-            "ksp_type": "cg",
-            "pc_type": "gamg",
-        }
         nullspace = firedrake.VectorSpaceBasis(constant=True)
         self._pseudotimestepper = firedrake.LinearVariationalSolver(
             problem,
-            solver_parameters=sp,
+            solver_parameters=solver_parameters.cg_gamg,
             nullspace=nullspace,
             transpose_nullspace=nullspace,
         )
         return self._pseudotimestepper
 
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereMover.create_equidistributor")
+    @PETSc.Log.EventDecorator()
     def equidistributor(self):
         """
         Setup the equidistributor for the relaxation method.
+
+        :return: the equidistributor
+        :rtype: :class:`~.LinearVariationalSolver`
         """
         if hasattr(self, "_equidistributor"):
             return self._equidistributor
-        assert hasattr(self, "phi")
-        assert hasattr(self, "sigma")
         n = ufl.FacetNormal(self.mesh)
         sigma = firedrake.TrialFunction(self.P1_ten)
         tau = firedrake.TestFunction(self.P1_ten)
@@ -338,31 +352,22 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             + ufl.dot(ufl.dot(tangential(ufl.grad(self.phi), n), tau), n) * self.ds
         )
         problem = firedrake.LinearVariationalProblem(a, L, self.sigma)
-        sp = {
-            "ksp_type": "cg",
-            "pc_type": "bjacobi",
-            "sub_pc_type": "ilu",
-        }
         self._equidistributor = firedrake.LinearVariationalSolver(
-            problem, solver_parameters=sp
+            problem, solver_parameters=solver_parameters.cg_ilu
         )
         return self._equidistributor
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.move")
+    @PETSc.Log.EventDecorator()
     def move(self):
         """
         Run the relaxation method to convergence and update the mesh.
-        """
-        assert hasattr(self, "phi")
-        assert hasattr(self, "sigma")
-        assert hasattr(self, "phi_old")
-        assert hasattr(self, "sigma_old")
-        for i in range(self.maxiter):
-            # L2 project
-            self.l2_projector.solve()
 
-            # Update mesh coordinates
-            self.mesh.coordinates.assign(self.x)
+        :return: the iteration count
+        :rtype: :class:`int`
+        """
+        for i in range(self.maxiter):
+            self.l2_projector.solve()
+            self._update_coordinates()
 
             # Update monitor function
             self.monitor.interpolate(self.monitor_function(self.mesh))
@@ -383,14 +388,17 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
                 f"   Residual {residual:10.4e}"
                 f"   Variation (σ/μ) {cv:10.4e}"
             )
+            plural = "s" if i != 0 else ""
             if residual < self.rtol:
-                PETSc.Sys.Print(f"Converged in {i+1} iterations.")
+                PETSc.Sys.Print(f"Converged in {i+1} iteration{plural}.")
                 break
             if residual > self.dtol * initial_norm:
-                raise firedrake.ConvergenceError(f"Diverged after {i+1} iterations.")
+                raise firedrake.ConvergenceError(
+                    f"Diverged after {i+1} iteration{plural}."
+                )
             if i == self.maxiter - 1:
                 raise firedrake.ConvergenceError(
-                    f"Failed to converge in {i+1} iterations."
+                    f"Failed to converge in {i+1} iteration{plural}."
                 )
 
             # Apply pseudotimestepper and equidistributor
@@ -398,43 +406,41 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.equidistributor.solve()
             self.phi_old.assign(self.phi)
             self.sigma_old.assign(self.sigma)
-        self.mesh.coordinates.assign(self.x)
+        self._update_coordinates()
         return i
 
 
 class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     r"""
-    The elliptic Monge-Ampere equation is solved using a quasi-Newton
-    method (see McRae et al. 2018 for details).
-
-    References
-    ==========
-    A. T. T. McRae, C. J. Cotter, C. J. Budd, Optimal-transport-based
-    mesh adaptivity on the plane and sphere using finite elements, SIAM
-    Journal on Scientific Computing 40 (2) (2018) 1121–1148.
-    doi:10.1137/16M1109515.
+    The elliptic Monge-Ampere equation is solved using a quasi-Newton method (see
+    :cite:`MCB:18` for details).
     """
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.__init__")
-    def __init__(self, mesh, monitor_function, **kwargs):
+    @PETSc.Log.EventDecorator()
+    def __init__(
+        self, mesh, monitor_function, phi_init=None, sigma_init=None, **kwargs
+    ):
         """
         :arg mesh: the physical mesh
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
         :arg monitor_function: a Python function which takes a mesh as input
-        :kwarg maxiter: maximum number of iterations for the relaxation
+        :type monitor_function: :class:`~.Callable`
+        :kwarg phi_init: initial guess for the scalar potential
+        :type phi_init: :class:`firedrake.function.Function`
+        :kwarg sigma_init: initial guess for the Hessian
+        :type sigma_init: :class:`firedrake.function.Function`
+        :kwarg maxiter: maximum number of iterations for the Quasi-Newton solver
+        :type maxiter: :class:`int`
         :kwarg rtol: relative tolerance for the residual
+        :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
+        :type dtol: :class:`float`
         """
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
 
-        # Create functions to hold solution data
-        self.V = self.P1 * self.P1_ten
-        self.phisigma = firedrake.Function(self.V)
-        self.phi, self.sigma = self.phisigma.subfunctions
-        self.phisigma_old = firedrake.Function(self.V)
-        self.phi_old, self.sigma_old = self.phisigma_old.subfunctions
-
         # Initialise phi and sigma
-        self.apply_initial_guess(**kwargs)
+        if phi_init or sigma_init:
+            self.apply_initial_guess(phi_init, sigma_init)
 
         # Setup residuals
         I = ufl.Identity(self.dim)
@@ -444,15 +450,25 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self._residual_l2_form = psi * self.residual * self.dx
         self._norm_l2_form = psi * self.theta * self.dx
 
+    def _create_functions(self):
+        super()._create_functions()
+        self.V = self.P1 * self.P1_ten
+        self.phisigma = firedrake.Function(self.V)
+        self.phi, self.sigma = self.phisigma.subfunctions
+        self.phisigma_old = firedrake.Function(self.V)
+        self.phi_old, self.sigma_old = self.phisigma_old.subfunctions
+
     @property
-    @PETSc.Log.EventDecorator("MongeAmpereMover.create_equidistributor")
+    @PETSc.Log.EventDecorator()
     def equidistributor(self):
         """
         Setup the equidistributor for the quasi-newton method.
+
+        :return: the equidistributor
+        :rtype: :class:`~.NonlinearVariationalSolver`
         """
         if hasattr(self, "_equidistributor"):
             return self._equidistributor
-        assert hasattr(self, "phisigma")
         n = ufl.FacetNormal(self.mesh)
         I = ufl.Identity(self.dim)
         phi, sigma = firedrake.split(self.phisigma)
@@ -470,11 +486,10 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             """
             Callback for updating the monitor function.
             """
-            assert hasattr(self, "phisigma_old")
             with self.phisigma_old.dat.vec as v:
                 cursol.copy(v)
             self.l2_projector.solve()
-            self.mesh.coordinates.assign(self.x)
+            self._update_coordinates()
             self.monitor.interpolate(self.monitor_function(self.mesh))
             self.mesh.coordinates.assign(self.xi)
             self.theta.assign(
@@ -519,7 +534,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             """
             cursol = snes.getSolution()
             update_monitor(cursol)
-            self.mesh.coordinates.assign(self.x)
+            self._update_coordinates()
             firedrake.assemble(self.L_P0, tensor=self.volume)
             self.volume.interpolate(self.volume / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
@@ -535,52 +550,24 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         self.snes.setMonitor(monitor)
         return self._equidistributor
 
-    @PETSc.Log.EventDecorator("MongeAmpereMover.move")
+    @PETSc.Log.EventDecorator()
     def move(self):
         """
         Run the quasi-Newton method to convergence and update the mesh.
+
+        :return: the iteration count
+        :rtype: :class:`int`
         """
         try:
             self.equidistributor.solve()
             i = self.snes.getIterationNumber()
-            PETSc.Sys.Print(f"Converged in {i} iterations.")
+            plural = "s" if i != 1 else ""
+            PETSc.Sys.Print(f"Converged in {i} iteration{plural}.")
         except firedrake.ConvergenceError:
             i = self.snes.getIterationNumber()
-            raise firedrake.ConvergenceError(f"Failed to converge in {i} iterations.")
-        self.mesh.coordinates.assign(self.x)
+            plural = "s" if i != 1 else ""
+            raise firedrake.ConvergenceError(
+                f"Failed to converge in {i} iteration{plural}."
+            )
+        self._update_coordinates()
         return i
-
-
-def monge_ampere(mesh, monitor_function, method="relaxation", **kwargs):
-    r"""
-        Movement of a `mesh` is determined by a `monitor_function`
-        :math:`m` and the Monge-Ampère type equation
-
-    ..  math::
-            m(x)\det(I + H(\phi)) = \theta,
-
-        for a scalar potential :math:`\phi`, where :math:`I` is the
-        identity matrix, :math:`\theta` is a normalisation coefficient
-        and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
-        respect to the coordinates :math:`\xi` of the computational mesh.
-
-        The physical mesh coordinates :math:`x` are updated according to
-
-    ..  math::
-            x = \xi + \nabla\phi.
-
-        :arg mesh: the physical mesh
-        :arg monitor_function: a Python function which takes a mesh as input
-        :kwarg method: choose from 'relaxation' and 'quasi_newton'
-        :kwarg phi_init: initial guess for the scalar potential
-        :kwarg sigma_init: initial guess for the Hessian
-        :return: converged scalar potential and Hessian
-    """
-    if method == "relaxation":
-        mover = MongeAmpereMover_Relaxation(mesh, monitor_function, **kwargs)
-    elif method == "quasi_newton":
-        mover = MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
-    else:
-        raise ValueError(f"Monge-Ampere solver {method} not recognised.")
-    mover.adapt()
-    return mover.phi, mover.sigma

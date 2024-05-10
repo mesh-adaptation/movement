@@ -41,11 +41,16 @@
 # Because our chosen solution does not satisfy homogeneous Neumann boundary conditions,
 # we instead apply Dirichlet boundary conditions based on the chosen analytical solution.
 
+import os
+
 from firedrake import *
 
 from movement import MongeAmpereMover
 
-mesh = UnitSquareMesh(20, 20)  # initial mesh
+test = os.environ.get("MOVEMENT_REGRESSION_TEST")
+n = 10 if test else 20
+
+mesh = UnitSquareMesh(n, n)  # initial mesh
 
 
 def u_exact(mesh):
@@ -132,7 +137,8 @@ fig, axes = plt.subplots()
 #    :figwidth: 60%
 #    :align: center
 
-mover = MongeAmpereMover(mesh, monitor, method="quasi_newton")
+rtol = 1.0e-03 if test else 1.0e-08
+mover = MongeAmpereMover(mesh, monitor, method="quasi_newton", rtol=rtol)
 mover.move()
 
 # For every iteration the MongeAmpereMover prints the minimum to maximum ratio of
@@ -219,7 +225,7 @@ def monitor2(mesh):
     return m
 
 
-mover = MongeAmpereMover(mesh, monitor2, method="quasi_newton")
+mover = MongeAmpereMover(mesh, monitor2, method="quasi_newton", rtol=rtol)
 mover.move()
 
 u_h = solve_helmholtz(mover.mesh)

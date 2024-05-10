@@ -2,7 +2,7 @@ serial_qn = {
     "ksp_type": "gmres",
     "pc_type": "fieldsplit",
     "pc_fieldsplit_type": "multiplicative",
-    "pc_fieldsplit_off_diag_use_amat": True,
+    "pc_fieldsplit_off_diag_use_amat": None,
     "fieldsplit_0_pc_type": "gamg",
     "fieldsplit_0_ksp_type": "preonly",
     "fieldsplit_0_mg_levels_ksp_max_it": 5,
@@ -24,7 +24,7 @@ parallel_qn = {
     "ksp_type": "gmres",
     "pc_type": "fieldsplit",
     "pc_fieldsplit_type": "multiplicative",
-    "pc_fieldsplit_off_diag_use_amat": True,
+    "pc_fieldsplit_off_diag_use_amat": None,
     "fieldsplit_0_pc_type": "gamg",
     "fieldsplit_0_ksp_type": "preonly",
     "fieldsplit_0_mg_levels_ksp_max_it": 5,
@@ -59,10 +59,15 @@ jacobi = {
     "pc_type": "jacobi",
 }
 
-cg = {
+cg_ilu = {
     "ksp_type": "cg",
     "pc_type": "bjacobi",
     "pc_sub_type": "ilu",
+}
+
+cg_gamg = {
+    "ksp_type": "cg",
+    "pc_type": "gamg",
 }
 
 lu = {
