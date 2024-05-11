@@ -1,20 +1,23 @@
 import unittest
 from unittest.mock import MagicMock
 
+import firedrake.function as ffunc
+import firedrake.functionspace as ffs
 import numpy as np
-from parameterized import parameterized
-import pytest
+import ufl
 from firedrake import (
     Constant,
+    ConvergenceError,
     DirichletBC,
-    File,
+    Mesh,
     SpatialCoordinate,
     UnitCubeMesh,
     UnitSquareMesh,
     assemble,
     ds,
+    errornorm,
 )
-from ufl import as_vector, cosh, dot
+from parameterized import parameterized
 
 from movement import MongeAmpereMover
 
@@ -28,9 +31,9 @@ def ring_monitor(mesh):
     beta = Constant(200.0)  # width
     gamma = Constant(0.15)  # radius
     dim = mesh.geometric_dimension()
-    xyz = SpatialCoordinate(mesh) - as_vector([0.5] * dim)
-    r = dot(xyz, xyz)
-    return Constant(1.0) + alpha / cosh(beta * (r - gamma)) ** 2
+    xyz = SpatialCoordinate(mesh) - ufl.as_vector([0.5] * dim)
+    r = ufl.dot(xyz, xyz)
+    return Constant(1.0) + alpha / ufl.cosh(beta * (r - gamma)) ** 2
 
 
 class TestMongeAmpere(unittest.TestCase):
@@ -48,7 +51,7 @@ class TestMongeAmpere(unittest.TestCase):
 
     @property
     def dummy_monitor(self):
-        return lambda *args: MagicMock(Function)
+        return lambda *args: MagicMock(ffunc.Function)
 
     def test_method_valueerror(self):
         with self.assertRaises(ValueError) as cm:
@@ -70,15 +73,15 @@ class TestMongeAmpere(unittest.TestCase):
         """
         mesh = self.mesh(dim)
         coords = mesh.coordinates.dat.data.copy()
-        P1 = FunctionSpace(mesh, "CG", 1)
-        P1_ten = TensorFunctionSpace(mesh, "CG", 1)
+        P1 = ffs.FunctionSpace(mesh, "CG", 1)
+        P1_ten = ffs.TensorFunctionSpace(mesh, "CG", 1)
 
         mover = MongeAmpereMover(
             mesh,
             const_monitor,
             method=method,
-            phi_init=Function(P1),
-            sigma_init=Function(P1_ten),
+            phi_init=ffunc.Function(P1),
+            sigma_init=ffunc.Function(P1_ten),
             rtol=1e-3,
         )
         num_iterations = mover.move()
@@ -197,21 +200,21 @@ class TestMongeAmpere(unittest.TestCase):
         Test that the mesh mover raises a :class:`~.ConvergenceError` if it diverges.
         """
         mesh = self.mesh(2, n=4)
-        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor, dtol=1.0e-08)
+        mover = MongeAmpereMover(mesh, ring_monitor, dtol=1.0e-08, method="relaxation")
         with self.assertRaises(ConvergenceError) as cm:
             mover.move()
         self.assertEqual(str(cm.exception), "Diverged after 1 iteration.")
 
     def test_initial_guess_valueerror(self):
         mesh = self.mesh(2, n=2)
-        phi_init = Function(FunctionSpace(mesh, "CG", 1))
+        phi_init = ffunc.Function(ffs.FunctionSpace(mesh, "CG", 1))
         with self.assertRaises(ValueError) as cm:
-            MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
+            MongeAmpereMover(mesh, ring_monitor, phi_init=phi_init, method="relaxation")
         self.assertEqual(str(cm.exception), "Need to initialise both phi *and* sigma.")
 
     def test_coordinate_update(self):
         mesh = self.mesh(2, n=2)
-        dg_coords = Function(VectorFunctionSpace(mesh, "DG", 1))
+        dg_coords = ffunc.Function(ffs.VectorFunctionSpace(mesh, "DG", 1))
         dg_coords.project(mesh.coordinates)
         mover = MongeAmpereMover(Mesh(dg_coords), const_monitor)
         mover._grad_phi.assign(2.0)
