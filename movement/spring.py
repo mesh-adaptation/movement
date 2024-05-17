@@ -282,4 +282,4 @@ class SpringMover_Torsional(SpringMover_Lineal):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        raise NotImplementedError("Torsional springs not yet implemented")  # TODO
+        raise NotImplementedError("Torsional springs not yet implemented")  # TODO (#36)
