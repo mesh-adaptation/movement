@@ -39,7 +39,7 @@ jobs:
       - name: 'Install Movement'
         run: |
           . /home/firedrake/firedrake/bin/activate
-          make install
+          python -m pip install -e .
 
       - name: 'Check citation'
         run: |
