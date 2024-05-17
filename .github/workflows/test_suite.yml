@@ -41,6 +41,11 @@ jobs:
           . /home/firedrake/firedrake/bin/activate
           python -m pip install -e .
 
+      - name: 'Check citation'
+        run: |
+          . /home/firedrake/firedrake/bin/activate
+          cffconvert --validate
+
       - name: 'Lint'
         if: ${{ always() }}
         run: |
