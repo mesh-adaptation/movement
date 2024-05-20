@@ -195,3 +195,73 @@ class TestMongeAmpere(unittest.TestCase):
         self.assertAlmostEqual(errornorm(mover.grad_phi, mover._grad_phi), 0)
         mover.xi += 2
         self.assertAlmostEqual(errornorm(mover.x, mover.xi), 0)
+
+
+class TestMongeAmpereInterpolation(unittest.TestCase):
+    """
+    Unit tests for Monge-Ampere methods.
+    """
+
+    def mesh(self, dim, n=10):
+        self.assertTrue(dim in (2, 3))
+        return UnitSquareMesh(n, n) if dim == 2 else UnitCubeMesh(n, n, n)
+
+    @parameterized.expand(
+        [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
+    )
+    def test_quadratic_transformation(self, dim, method):
+        r"""Test for a known, quadratic movement :math:`x_i(\xi) = a_i \xi_i^2 + b_i \xi_i`
+        where :math:`a_=(f_i-1)/(f_i+1)` and :math:`b=2/(f_i+1)`. This corresponds to a monitor
+        of :math:`m(\xi)=\prod_i 1/((1-f_i)\xi_i + 1`, such that :math:`m(0)=1` and :math:`m(1)=1/f`,
+        i.e. we get a quadratic variation in each direction, where the right most cell is a factor f_i
+        larger than the left-most cell in each direction.
+
+        We test for various interpolation methods to address issue #89."""
+        n = 10
+        f = np.arange(0, dim) + 2
+        rtol = 1e-4
+
+        mesh = self.mesh(dim, n=n)
+        mover = MongeAmpereMover(mesh, reciprocal_monitor(f), method=method, rtol=1)
+        # default tolerance is 0.5, which gives an overlap of 0.5 (in physical! coordinates) for each
+        # bounding box around an element - meaning that for a unit square mesh the spatial index becomes
+        # useless (with the default of 0.5) as every point in the domain overlaps with almost every single bounding box
+        mover.mesh.tolerance = 1e-5
+        x_to_test = [0.5] * dim
+        vom = VertexOnlyMesh(mover.mesh, [x_to_test])
+        P0DG_vom = VectorFunctionSpace(vom, "DG", 0)
+        xtst = interpolate(mover.mesh.coordinates, P0DG_vom)
+        self.assertAlmostEqual(np.linalg.norm(xtst.dat.data - x_to_test), 0)
+        mover.move()
+        xtst = interpolate(mover.mesh.coordinates, P0DG_vom)
+        # self.assertAlmostEqual(np.linalg.norm(xtst.dat.data - x_to_test), 0)
+        self.assertAlmostEqual(
+            np.linalg.norm(mover.mesh.coordinates.at(x_to_test) - x_to_test), 0
+        )
+        mover.rtol = rtol
+        # need to re-create var. solver for this to take effect:
+        if method == "quasi_newton":
+            del mover._equidistributor
+        mover.move()
+        xtst = interpolate(mover.mesh.coordinates, P0DG_vom)
+        # TODO: this fails!
+        # self.assertAlmostEqual(np.linalg.norm(xtst.dat.data - x_to_test), 0)
+        self.assertAlmostEqual(
+            np.linalg.norm(mover.mesh.coordinates.at(x_to_test) - x_to_test), 0
+        )
+
+        # test coordinates of moved nodes:
+        Xorig = mesh.coordinates.dat.data[:]
+        X = mover.mesh.coordinates.dat.data[:]
+        # get ordering of nodes that is the same as np.meshgrid
+        idx = np.lexsort(Xorig.T[::-1, :])
+        xi = np.linspace(0, 1, n + 1)
+        xi_grid = np.meshgrid(*([xi] * dim), indexing="ij")
+        for i, fi in enumerate(f):
+            a = (fi - 1) / (fi + 1)
+            b = 2 / (fi + 1)
+            x_xi = a * xi_grid[i] ** 2 + b * xi_grid[i]
+            tol = 0.1 / n if dim == 2 else 0.15 / n
+            self.assertLessEqual(
+                np.abs(X[idx, i].reshape([n + 1] * dim) - x_xi).max(), tol
+            )

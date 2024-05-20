@@ -177,6 +177,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             self.grad_phi.interpolate(self._grad_phi)
         self.x.assign(self.xi + self.grad_phi)
         self.mesh.coordinates.assign(self.x)
+        self.mesh.clear_spatial_index()
 
     @property
     @PETSc.Log.EventDecorator()
