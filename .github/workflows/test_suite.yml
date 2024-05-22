@@ -39,7 +39,13 @@ jobs:
       - name: 'Install Movement'
         run: |
           . /home/firedrake/firedrake/bin/activate
+          python -m pip uninstall -y movement
           python -m pip install -e .
+
+      - name: 'Check citation'
+        run: |
+          . /home/firedrake/firedrake/bin/activate
+          make check_citation
 
       - name: 'Lint'
         if: ${{ always() }}
