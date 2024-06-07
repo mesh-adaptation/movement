@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import MagicMock
 
 import numpy as np
 from firedrake import *
@@ -12,14 +11,18 @@ class TestSetup(unittest.TestCase):
     Unit tests for setting up spring-based Movers.
     """
 
-    @property
-    def dummy_mesh(self):
-        return MagicMock(UnitSquareMesh)
+    def setUp(self):
+        self.mesh = UnitTriangleMesh()
 
     def test_method_valueerror(self):
         with self.assertRaises(ValueError) as cm:
-            SpringMover(self.dummy_mesh, 1.0, method="method")
+            SpringMover(self.mesh, 1.0, method="method")
         self.assertEqual(str(cm.exception), "Method 'method' not recognised.")
+
+    def test_torsional_notimplementederror(self):  # TODO: (#36)
+        with self.assertRaises(NotImplementedError) as cm:
+            SpringMover(self.mesh, 1.0, method="torsional")
+        self.assertEqual(str(cm.exception), "Torsional springs not yet implemented.")
 
 
 class TestQuantities(unittest.TestCase):
