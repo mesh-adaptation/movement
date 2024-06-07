@@ -167,14 +167,16 @@ class TestMongeAmpere(unittest.TestCase):
             mover.move()
         self.assertEqual(str(cm.exception), "Failed to converge in 1 iteration.")
 
-    def test_divergence_convergenceerror(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_divergence_convergenceerror(self, raise_errors):
         """
-        Test that the mesh mover raises a :class:`~.ConvergenceError` if it diverges.
+        Test that divergence of the mesh mover raises a :class:`~.ConvergenceError` if
+        `raise_errors=True` and a :class:`~.Warning` otherwise.
         """
         mesh = self.mesh(2, n=4)
         mover = MongeAmpereMover_Relaxation(mesh, ring_monitor, dtol=1.0e-08)
-        with self.assertRaises(ConvergenceError) as cm:
-            mover.move()
+        with self.assertRaises(ConvergenceError if raise_errors else Warning) as cm:
+            mover.move(raise_errors=raise_errors)
         self.assertEqual(str(cm.exception), "Diverged after 1 iteration.")
 
     def test_initial_guess_valueerror(self):
