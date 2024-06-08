@@ -148,27 +148,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     Unit tests for boundary conditions of Monge-Ampere movers.
     """
 
-    @parameterized.expand(
-        [
-            (1, "relaxation", True),
-            (1, "relaxation", False),
-            (1, "quasi_newton", True),
-            (1, "quasi_newton", False),
-            (2, "relaxation", True),
-            (2, "relaxation", False),
-            (2, "quasi_newton", True),
-            (2, "quasi_newton", False),
-            (3, "relaxation", True),
-            (3, "relaxation", False),
-            (3, "quasi_newton", True),
-            (3, "quasi_newton", False),
-        ]
-    )
-    def test_boundary_lengths(self, dim, method, fix_boundary):
-        """
-        Test that boundary lengths are preserved by the Monge-Ampere movers.
-        """
-        mesh = self.mesh(dim=dim)
+    def _boundary_length_test(self, mesh, method, fix_boundary):
         bnd = assemble(Constant(1.0) * ds(domain=mesh))
         bnodes = DirichletBC(mesh.coordinates.function_space(), 0, "on_boundary").nodes
         bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
@@ -191,6 +171,28 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         if fix_boundary:
             bnd_coords_new = mover.mesh.coordinates.dat.data[bnodes]
             self.assertTrue(np.allclose(bnd_coords, bnd_coords_new))
+
+    @parameterized.expand(
+        [
+            (1, "relaxation", True),
+            (1, "relaxation", False),
+            (1, "quasi_newton", True),
+            (1, "quasi_newton", False),
+            (2, "relaxation", True),
+            (2, "relaxation", False),
+            (2, "quasi_newton", True),
+            (2, "quasi_newton", False),
+            (3, "relaxation", True),
+            (3, "relaxation", False),
+            (3, "quasi_newton", True),
+            (3, "quasi_newton", False),
+        ]
+    )
+    def test_boundary_lengths(self, dim, method, fix_boundary):
+        """
+        Test that boundary lengths are preserved by the Monge-Ampere movers.
+        """
+        self._boundary_length_test(self.mesh(dim=dim), method, fix_boundary)
 
 
 class TestMisc(BaseClasses.TestMongeAmpere):
