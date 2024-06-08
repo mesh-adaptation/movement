@@ -231,7 +231,7 @@ class TestMisc(BaseClasses.TestMongeAmpere):
         self.assertLessEqual(num_it_continue, num_it_naive)
         self.assertLessEqual(num_it_init + num_it_continue, num_it_naive)
         # FIXME: Looks like the mesh is tangled or close to tangling
-        #        for the relaxation method, which is concerning.
+        #        for the relaxation method, which is concerning. (#4)
 
     @parameterized.expand(
         [
