@@ -2,6 +2,7 @@ import abc
 from warnings import warn
 
 import firedrake
+import firedrake.exceptions as fexc
 import numpy as np
 import ufl
 from firedrake.petsc import PETSc
@@ -95,7 +96,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.rtol = kwargs.pop("rtol", 1.0e-08)
         self.dtol = kwargs.pop("dtol", 2.0)
         self.fix_boundary_nodes = kwargs.pop("fix_boundary_nodes", False)
-        super().__init__(mesh, monitor_function=monitor_function)
+        super().__init__(mesh, monitor_function=monitor_function, **kwargs)
 
         # Create function spaces
         self.P0 = firedrake.FunctionSpace(self.mesh, "DG", 0)
@@ -359,29 +360,13 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         return self._equidistributor
 
     @PETSc.Log.EventDecorator()
-    def move(self, raise_errors=True):
+    def move(self):
         r"""
         Run the relaxation method to convergence and update the mesh.
 
-        :kwarg raise_errors: convergence error handling behaviour: if `True` then
-            :class:`~.ConvergenceError`\s are raised, else warnings are raised and the
-            program is allowed to continue
-        :kwarg raise_errors: :class:`bool`
         :return: the iteration count
         :rtype: :class:`int`
         """
-        if not raise_errors:
-            warn(
-                f"{type(self)}.move called with raise_errors=False. Beware: this option"
-                " can produce poor quality meshes!"
-            )
-
-        def report_conv_err(msg):
-            if raise_errors:
-                raise firedrake.ConvergenceError(msg)
-            else:
-                raise Warning(msg)
-
         # Take iterations of the relaxed system until reaching convergence
         for i in range(self.maxiter):
             self.l2_projector.solve()
@@ -406,14 +391,13 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
                 f"   Residual {residual:10.4e}"
                 f"   Variation (σ/μ) {cv:10.4e}"
             )
-            plural = "s" if i != 0 else ""
             if residual < self.rtol:
-                PETSc.Sys.Print(f"Converged in {i+1} iteration{plural}.")
+                self._convergence_message(i + 1)
                 break
             if residual > self.dtol * initial_norm:
-                report_conv_err(f"Diverged after {i+1} iteration{plural}.")
+                self._divergence_error(i + 1)
             if i == self.maxiter - 1:
-                report_conv_err(f"Failed to converge in {i+1} iteration{plural}.")
+                self._convergence_error(i + 1)
 
             # Apply pseudotimestepper and equidistributor
             self.pseudotimestepper.solve()
@@ -567,39 +551,20 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         return self._equidistributor
 
     @PETSc.Log.EventDecorator()
-    def move(self, raise_errors=True):
+    def move(self):
         r"""
         Run the quasi-Newton method to convergence and update the mesh.
 
-        :kwarg raise_errors: convergence error handling behaviour: if `True` then
-            :class:`~.ConvergenceError`\s are raised, else warnings are raised and the
-            program is allowed to continue
-        :kwarg raise_errors: :class:`bool`
         :return: the iteration count
         :rtype: :class:`int`
         """
-        if not raise_errors:
-            warn(
-                f"{type(self)}.move called with raise_errors=False. Beware: this option"
-                " can produce poor quality meshes!"
-            )
-
-        def count_iterations():
-            i = self.snes.getIterationNumber()
-            return f"{i} iteration{'s' if i != 1 else ''}"
-
         # Solve equidistribution problem, handling convergence errors according to
         # desired behaviour
         try:
             self.equidistributor.solve()
-            PETSc.Sys.Print(f"Converged in {count_iterations()}.")
-        except firedrake.ConvergenceError as conv_err:
-            if raise_errors:
-                raise firedrake.ConvergenceError(
-                    f"Failed to converge in {count_iterations()}."
-                ) from conv_err
-            else:
-                warn(f"Failed to converge in {count_iterations()}.")
+            self._convergence_message(self.snes.getIterationNumber())
+        except fexc.ConvergenceError as conv_err:
+            self._convergence_error(self.snes.getIterationNumber(), exception=conv_err)
 
         # Update mesh coordinates accordingly
         self._update_coordinates()
