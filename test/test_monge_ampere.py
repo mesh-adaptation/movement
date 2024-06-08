@@ -14,9 +14,13 @@ class BaseClasses:
         Base class for Monge-ampere unit tests.
         """
 
-        def mesh(self, dim, n=10):
-            self.assertTrue(dim in (2, 3))
-            return UnitSquareMesh(n, n) if dim == 2 else UnitCubeMesh(n, n, n)
+        def mesh(self, dim=1, n=10):
+            self.assertTrue(dim in (1, 2, 3))
+            return {
+                1: UnitIntervalMesh(n),
+                2: UnitSquareMesh(n, n),
+                3: UnitCubeMesh(n, n, n),
+            }[dim]
 
         @property
         def dummy_mesh(self):
@@ -48,7 +52,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         Test that the mesh mover raises a :class:`~.ConvergenceError` if it reaches the
         maximum number of iterations.
         """
-        mesh = self.mesh(2, n=4)
+        mesh = self.mesh(dim=2, n=4)
         mover = MongeAmpereMover(mesh, ring_monitor, method=method, maxiter=1)
         with self.assertRaises(ConvergenceError) as cm:
             mover.move()
@@ -69,7 +73,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         self.assertEqual(str(cm.exception), "Solver diverged after 1 iteration.")
 
     def test_initial_guess_valueerror(self):
-        mesh = self.mesh(2, n=2)
+        mesh = self.mesh(n=2)
         phi_init = Function(FunctionSpace(mesh, "CG", 1))
         with self.assertRaises(ValueError) as cm:
             MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
@@ -82,24 +86,29 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
     """
 
     @parameterized.expand(
-        [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
+        [
+            (1, "relaxation"),
+            (1, "quasi_newton"),
+            (2, "relaxation"),
+            (2, "quasi_newton"),
+            (3, "relaxation"),
+            (3, "quasi_newton"),
+        ]
     )
     def test_uniform_monitor(self, dim, method):
         """
         Test that the mesh mover converges in one iteration for a constant monitor
         function.
         """
-        mesh = self.mesh(dim)
+        mesh = self.mesh(dim=dim)
         coords = mesh.coordinates.dat.data.copy()
-        P1 = FunctionSpace(mesh, "CG", 1)
-        P1_ten = TensorFunctionSpace(mesh, "CG", 1)
 
         mover = MongeAmpereMover(
             mesh,
             const_monitor,
             method=method,
-            phi_init=Function(P1),
-            sigma_init=Function(P1_ten),
+            phi_init=Function(FunctionSpace(mesh, "CG", 1)),
+            sigma_init=Function(TensorFunctionSpace(mesh, "CG", 1)),
             rtol=1e-3,
         )
         num_iterations = mover.move()
@@ -115,7 +124,7 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
         Test that the mover can handle changes to the monitor function, such as would
         happen during timestepping.
         """
-        mesh = self.mesh(dim)
+        mesh = self.mesh(dim=dim)
         gdim = mesh.geometric_dimension()
         coords = mesh.coordinates.dat.data.copy()
         atol = 1.0e-03
@@ -141,6 +150,10 @@ class TestBCs(BaseClasses.TestMongeAmpere):
 
     @parameterized.expand(
         [
+            (1, "relaxation", True),
+            (1, "relaxation", False),
+            (1, "quasi_newton", True),
+            (1, "quasi_newton", False),
             (2, "relaxation", True),
             (2, "relaxation", False),
             (2, "quasi_newton", True),
@@ -155,7 +168,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         """
         Test that boundary lengths are preserved by the Monge-Ampere movers.
         """
-        mesh = self.mesh(dim)
+        mesh = self.mesh(dim=dim)
         bnd = assemble(Constant(1.0) * ds(domain=mesh))
         bnodes = DirichletBC(mesh.coordinates.function_space(), 0, "on_boundary").nodes
         bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
@@ -186,13 +199,20 @@ class TestMisc(BaseClasses.TestMongeAmpere):
     """
 
     @parameterized.expand(
-        [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
+        [
+            (1, "relaxation"),
+            (1, "quasi_newton"),
+            (2, "relaxation"),
+            (2, "quasi_newton"),
+            (3, "relaxation"),
+            (3, "quasi_newton"),
+        ]
     )
     def test_continue(self, dim, method):
         """
         Test that providing a good initial guess benefits the solver.
         """
-        mesh = self.mesh(dim)
+        mesh = self.mesh(dim=dim)
         rtol = 1.0e-03
 
         # Solve the problem to a weak tolerance
@@ -213,11 +233,21 @@ class TestMisc(BaseClasses.TestMongeAmpere):
         # FIXME: Looks like the mesh is tangled or close to tangling
         #        for the relaxation method, which is concerning.
 
-    def test_coordinate_update(self):
-        mesh = self.mesh(2, n=2)
+    @parameterized.expand(
+        [
+            (1, "relaxation"),
+            (1, "quasi_newton"),
+            (2, "relaxation"),
+            (2, "quasi_newton"),
+            (3, "relaxation"),
+            (3, "quasi_newton"),
+        ]
+    )
+    def test_coordinate_update(self, dim, method):
+        mesh = self.mesh(dim=dim, n=2)
         dg_coords = Function(VectorFunctionSpace(mesh, "DG", 1))
         dg_coords.project(mesh.coordinates)
-        mover = MongeAmpereMover(Mesh(dg_coords), const_monitor)
+        mover = MongeAmpereMover(Mesh(dg_coords), const_monitor, method=method)
         mover._grad_phi.assign(2.0)
         mover._update_coordinates()
         self.assertNotEqual(mover.grad_phi.dof_dset.size, mover._grad_phi.dof_dset.size)
