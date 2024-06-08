@@ -172,6 +172,9 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             bnd_coords_new = mover.mesh.coordinates.dat.data[bnodes]
             self.assertTrue(np.allclose(bnd_coords, bnd_coords_new))
 
+        # Return the boundary conditions so they can be interrogated
+        return mover._l2_projector._problem.dirichlet_bcs()
+
     @parameterized.expand(
         [
             (1, "relaxation", True),
@@ -188,11 +191,35 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton", False),
         ]
     )
-    def test_boundary_lengths(self, dim, method, fix_boundary):
+    def test_boundary_lengths_axis_aligned(self, dim, method, fix_boundary):
         """
-        Test that boundary lengths are preserved by the Monge-Ampere movers.
+        Test that boundary lengths of unit domains are preserved by the Monge-Ampere
+        movers.
         """
-        self._boundary_length_test(self.mesh(dim=dim), method, fix_boundary)
+        bcs = self._boundary_length_test(self.mesh(dim=dim), method, fix_boundary)
+        self.assertTrue(len(tuple(bcs)) == 2 * dim)
+
+    # @parameterized.expand(
+    #     [
+    #         (2, "relaxation", True),
+    #         (2, "relaxation", False),
+    #         (2, "quasi_newton", True),
+    #         (2, "quasi_newton", False),
+    #         (3, "relaxation", True),
+    #         (3, "relaxation", False),
+    #         (3, "quasi_newton", True),
+    #         (3, "quasi_newton", False),
+    #     ]
+    # )
+    # def test_boundary_lengths_non_axis_aligned(self, dim, method, fix_boundary):
+    #     """
+    #     Test that boundary lengths of rotated unit domains are preserved by the
+    #     Monge-Ampere movers.
+    #     """
+    #     mesh = self.mesh(dim=dim)
+    #     # TODO: rotate mesh 45 degrees
+    #     bcs = self._boundary_length_test(mesh, method, fix_boundary)
+    #     self.assertTrue(len(tuple(bcs)) == 4 * dim)
 
 
 class TestMisc(BaseClasses.TestMongeAmpere):
