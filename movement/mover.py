@@ -1,18 +1,40 @@
+from warnings import warn
+
 import firedrake
+import firedrake.exceptions as fexc
 import numpy as np
 from firedrake.cython.dmcommon import create_section
+from firedrake.petsc import PETSc
 
 __all__ = ["PrimeMover"]
 
 
-class PrimeMover(object):
+class PrimeMover:
     """
     Base class for all mesh movers.
     """
 
-    def __init__(self, mesh, monitor_function=None, **kwargs):
+    def __init__(
+        self, mesh, monitor_function=None, raise_convergence_errors=True, **kwargs
+    ):
+        r"""
+        :arg mesh: the physical mesh
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :arg monitor_function: a Python function which takes a mesh as input
+        :type monitor_function: :class:`~.Callable`
+        :kwarg raise_convergence_errors: convergence error handling behaviour: if `True`
+            then :class:`~.ConvergenceError`\s are raised, else warnings are raised and
+            the program is allowed to continue
+        :kwarg raise_convergence_errors: :class:`bool`
+        """
         self.mesh = firedrake.Mesh(mesh.coordinates.copy(deepcopy=True))
         self.monitor_function = monitor_function
+        if not raise_convergence_errors:
+            warn(
+                f"{type(self)}.move called with raise_convergence_errors=False."
+                " Beware: this option can produce poor quality meshes!"
+            )
+        self.raise_convergence_errors = raise_convergence_errors
         self.dim = self.mesh.topological_dimension()
         self.gdim = self.mesh.geometric_dimension()
         self.plex = self.mesh.topology_dm
@@ -32,6 +54,66 @@ class PrimeMover(object):
             self.mesh.coordinates, name="Computational coordinates"
         )
         self.v = firedrake.Function(self.coord_space, name="Mesh velocity")
+
+    def _convergence_message(self, iterations=None):
+        """
+        Report solver convergence.
+
+        :kwarg iterations: number of iterations before reaching convergence
+        :type iterations: :class:`int`
+        """
+        msg = "Solver converged"
+        if iterations:
+            msg += f" in {iterations} iteration{plural(iterations)}"
+        PETSc.Sys.Print(f"{msg}.")
+
+    def _exception(self, msg, exception=None, error_type=fexc.ConvergenceError):
+        """
+        Raise an error or warning as indicated by the :attr:`raise_convergence_error`
+        option.
+
+        :arg msg: message for the error/warning report
+        :type msg: :class:`str`
+        :kwarg exception: original exception that was triggered
+        :type exception: :class:`~.Exception` object
+        :kwarg error_type: error class to use
+        :type error_type: :class:`~.Exception` class
+        """
+        exc_type = error_type if self.raise_convergence_errors else Warning
+        if exception:
+            raise exc_type(msg) from exception
+        else:
+            raise exc_type(msg)
+
+    def _convergence_error(self, iterations=None, exception=None):
+        """
+        Raise an error or warning for a solver fail as indicated by the
+        :attr:`raise_convergence_error` option.
+
+        :kwarg iterations: number of iterations before failure
+        :type iterations: :class:`int`
+        :kwarg exception: original exception that was triggered
+        :type exception: :class:`~.Exception`
+        """
+        msg = "Solver failed to converge"
+        if iterations:
+            msg += f" in {iterations} iteration{plural(iterations)}"
+        self._exception(f"{msg}.", exception=exception)
+
+    def _divergence_error(self, iterations=None, exception=None):
+        """
+        Raise an error or warning for a solver divergence as indicated by the
+        :attr:`raise_convergence_error` option.
+
+        :kwarg iterations: number of iterations before failure
+        :type iterations: :class:`int`
+        :kwarg exception: original exception that was triggered
+        :type exception: :class:`~.Exception`
+        """
+        msg = "Solver diverged"
+        if iterations:
+            msg += f" after {iterations} iteration{plural(iterations)}"
+        self._exception(f"{msg}.", exception=exception)
 
     def _get_coordinate_section(self):
         entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
@@ -91,11 +173,13 @@ class PrimeMover(object):
         """
         Alias of `move`.
         """
-        from warnings import warn
-
         warn(
             "`adapt` is deprecated (use `move` instead)",
             DeprecationWarning,
             stacklevel=2,
         )
         return self.move()
+
+
+def plural(iterations):
+    return "s" if iterations != 1 else ""
