@@ -1,5 +1,4 @@
 import abc
-from warnings import warn
 
 import firedrake
 import firedrake.exceptions as fexc
@@ -190,6 +189,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         Determine boundary conditions to apply for the :math:`L^2` projection step for
         a given boundary segment.
 
+        Note that the boundary segment *must* be a straight line or plane.
+
         :arg boundary_tag: tag for the boundary segment in consideration
         :type boundary_tag: :class:`str`
         :returns: tuple of boundary conditions
@@ -215,14 +216,38 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         L_bc = ufl.dot(v_cts, n) * firedrake.Constant(0.0) * ds
         bc1 = firedrake.EquationBC(a_bc == L_bc, self._grad_phi, boundary_tag)
 
+        # Check the current boundary segment is straight
+        edge_indices = set(self.mesh.exterior_facets.unique_markers)
+        corner_indices = [
+            (i, j) for i in edge_indices for j in edge_indices.difference([i])
+        ]
+        corner_bc = firedrake.DirichletBC(self.P1_vec, 0, corner_indices)
+        corners = list(self.mesh.coordinates.dat.data_with_halos[corner_bc.nodes])
+        if self.dim == 2:
+            assert len(corners) == 2
+            (x0, y0), (x1, y1) = corners
+
+            def f(x):
+                m = (y1 - y0) / (x1 - x0)
+                c = y0 - m * x0
+                return m * x + c
+
+            assert np.isclose(f(x0), y0)
+            assert np.isclose(f(x1), y1)
+            for x, y in self.mesh.coordinates.dat.data_with_halos[bc1.nodes]:
+                if not np.isclose(f(x), y):
+                    raise ValueError(
+                        f"Boundary segment {boundary_tag} is not a straight line."
+                    )
+        elif self.dim == 3:
+            raise NotImplementedError  # TODO: Implement as above for a plane
+
         # Allow tangential movement, but only up until the end of boundary segments
         a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * ds
         L_bc = ufl.dot(tangential(v_cts, n), tangential(ufl.grad(self.phi_old), n)) * ds
-        edges = set(self.mesh.exterior_facets.unique_markers)
-        warn("Have you checked that all straight line segments are uniquely tagged?")
-        corners = [(i, j) for i in edges for j in edges.difference([i])]
-        bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
-        bc2 = firedrake.EquationBC(a_bc == L_bc, self._grad_phi, boundary_tag, bcs=bbc)
+        bc2 = firedrake.EquationBC(
+            a_bc == L_bc, self._grad_phi, boundary_tag, bcs=corner_bc
+        )
         return bc1, bc2
 
     @property
