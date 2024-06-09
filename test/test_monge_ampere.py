@@ -149,7 +149,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     Unit tests for boundary conditions of Monge-Ampere movers.
     """
 
-    def _boundary_length_test(self, mesh, method, fix_boundary):
+    def _boundary_preservation_test(self, mesh, method, fix_boundary):
         bnd = assemble(Constant(1.0) * ds(domain=mesh))
         bnodes = DirichletBC(mesh.coordinates.function_space(), 0, "on_boundary").nodes
         bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
@@ -172,9 +172,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         if fix_boundary:
             bnd_coords_new = mover.mesh.coordinates.dat.data[bnodes]
             self.assertTrue(np.allclose(bnd_coords, bnd_coords_new))
-
-        # Return the boundary conditions so they can be interrogated
-        return mover._l2_projector._problem.bcs
+        return mover
 
     @parameterized.expand(
         [
@@ -192,12 +190,19 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton", False),
         ]
     )
-    def test_boundary_lengths_axis_aligned(self, dim, method, fix_boundary):
+    def test_boundary_preservation_axis_aligned(self, dim, method, fix_boundary):
         """
-        Test that boundary lengths of unit domains are preserved by the Monge-Ampere
-        movers.
+        Test that boundaries of unit domains are preserved by the Monge-Ampere movers.
         """
-        bcs = self._boundary_length_test(self.mesh(dim=dim), method, fix_boundary)
+        mesh = self.mesh(dim=dim)
+        volume = assemble(Constant(1.0) * dx(domain=mesh))
+        mover = self._boundary_preservation_test(mesh, method, fix_boundary)
+
+        # Check the volume of the domain is conserved
+        self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
+
+        # Check that the variational problem has one DirichletBC per boundary segment
+        bcs = mover._l2_projector._problem.bcs
         self.assertTrue(len(bcs) == 2 * dim)
         self.assertTrue(all(isinstance(bc, DirichletBC) for bc in bcs))
 
@@ -213,12 +218,15 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton", False),
         ]
     )
-    def test_boundary_lengths_non_axis_aligned(self, dim, method, fix_boundary):
+    def test_boundary_preservation_non_axis_aligned(self, dim, method, fix_boundary):
         """
-        Test that boundary lengths of rotated unit domains are preserved by the
+        Test that boundaries of rotated unit domains are preserved by the
         Monge-Ampere movers.
         """
         mesh = self.mesh(dim=dim)
+        volume = assemble(Constant(1.0) * dx(domain=mesh))
+
+        # Construct a new mesh by rotating by 45 degrees in the xy-plane
         cs = ufl.cos(ufl.pi / 4)
         sn = ufl.sin(ufl.pi / 4)
         if dim == 2:
@@ -229,7 +237,14 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             raise ValueError(f"Dimension {dim} not supported.")
         coords = Function(mesh.coordinates.function_space())
         coords.interpolate(ufl.dot(rotation_matrix, mesh.coordinates))
-        bcs = self._boundary_length_test(Mesh(coords), method, fix_boundary)
+        mover = self._boundary_preservation_test(Mesh(coords), method, fix_boundary)
+
+        # Check the volume of the domain is conserved
+        self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
+
+        # If boundaries are not fixed then EquationBCs should be used for boundaries of
+        # the xy-plane
+        bcs = mover._l2_projector._problem.bcs
         if fix_boundary:
             self.assertTrue(len(bcs) == 2 * dim)
             self.assertTrue(all(isinstance(bc, DirichletBC) for bc in bcs))
