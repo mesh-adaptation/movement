@@ -15,12 +15,12 @@ class BaseClasses:
         Base class for Monge-ampere unit tests.
         """
 
-        def mesh(self, dim=1, n=10):
+        def mesh(self, dim=1, n=10, periodic=False):
             self.assertTrue(dim in (1, 2, 3))
             return {
-                1: UnitIntervalMesh(n),
-                2: UnitSquareMesh(n, n),
-                3: UnitCubeMesh(n, n, n),
+                1: (PeriodicUnitIntervalMesh if periodic else UnitIntervalMesh)(n),
+                2: (PeriodicUnitSquareMesh if periodic else UnitSquareMesh)(n, n),
+                3: (PeriodicUnitCubeMesh if periodic else UnitCubeMesh)(n, n, n),
             }[dim]
 
         @property
@@ -65,7 +65,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         Test that divergence of the mesh mover raises a :class:`~.ConvergenceError` if
         `raise_errors=True` and a :class:`~.Warning` otherwise.
         """
-        mesh = self.mesh(2, n=4)
+        mesh = self.mesh(dim=2, n=4)
         mover = MongeAmpereMover_Relaxation(
             mesh, ring_monitor, dtol=1.0e-08, raise_convergence_errors=raise_errors
         )
@@ -79,6 +79,14 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         with self.assertRaises(ValueError) as cm:
             MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
         self.assertEqual(str(cm.exception), "Need to initialise both phi *and* sigma.")
+
+    def test_fix_boundary_periodic_valueerror(self):
+        mesh = self.mesh(dim=1, n=4, periodic=True)
+        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor, fix_boundary_nodes=True)
+        with self.assertRaises(ValueError) as cm:
+            mover.move()
+        msg = "Cannot fix boundary nodes for periodic meshes."
+        self.assertEqual(str(cm.exception), msg)
 
 
 class TestMonitor(BaseClasses.TestMongeAmpere):
@@ -173,6 +181,31 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             bnd_coords_new = mover.mesh.coordinates.dat.data[bnodes]
             self.assertTrue(np.allclose(bnd_coords, bnd_coords_new))
         return mover
+
+    @parameterized.expand(
+        [
+            (1, "relaxation"),
+            (1, "quasi_newton"),
+            (2, "relaxation"),
+            (2, "quasi_newton"),
+            (3, "relaxation"),
+            (3, "quasi_newton"),
+        ]
+    )
+    def test_periodic(self, dim, method):
+        """
+        Test that periodic unit domains are not given boundary conditions by the
+        Monge-Ampere movers.
+        """
+        mesh = self.mesh(dim=dim, periodic=True)
+        volume = assemble(Constant(1.0) * dx(domain=mesh))
+        mover = self._boundary_preservation_test(mesh, method, False)
+
+        # Check the volume of the domain is conserved
+        self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
+
+        # Check that the variational problem does not have boundary conditions
+        self.assertTrue(len(mover._l2_projector._problem.bcs) == 0)
 
     @parameterized.expand(
         [

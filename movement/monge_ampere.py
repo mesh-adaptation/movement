@@ -219,14 +219,9 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * ds
         L_bc = ufl.dot(tangential(v_cts, n), tangential(ufl.grad(self.phi_old), n)) * ds
         edges = set(self.mesh.exterior_facets.unique_markers)
-        if len(edges) == 0:
-            bbc = None  # Periodic case
-        else:
-            warn(
-                "Have you checked that all straight line segments are uniquely tagged?"
-            )
-            corners = [(i, j) for i in edges for j in edges.difference([i])]
-            bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
+        warn("Have you checked that all straight line segments are uniquely tagged?")
+        corners = [(i, j) for i in edges for j in edges.difference([i])]
+        bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
         bc2 = firedrake.EquationBC(a_bc == L_bc, self._grad_phi, boundary_tag, bcs=bbc)
         return bc1, bc2
 
@@ -255,6 +250,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             for boundary_tag in self.mesh.exterior_facets.unique_markers
             for dirichlet_bc in self._l2_projector_bcs(boundary_tag)
         ]
+        if not bcs and self.fix_boundary_nodes:
+            raise ValueError("Cannot fix boundary nodes for periodic meshes.")
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
