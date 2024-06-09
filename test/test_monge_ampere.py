@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
+import ufl
 from monitors import *
 from parameterized import parameterized
 
@@ -173,7 +174,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             self.assertTrue(np.allclose(bnd_coords, bnd_coords_new))
 
         # Return the boundary conditions so they can be interrogated
-        return mover._l2_projector._problem.dirichlet_bcs()
+        return mover._l2_projector._problem.bcs
 
     @parameterized.expand(
         [
@@ -197,29 +198,48 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         movers.
         """
         bcs = self._boundary_length_test(self.mesh(dim=dim), method, fix_boundary)
-        self.assertTrue(len(tuple(bcs)) == 2 * dim)
+        self.assertTrue(len(bcs) == 2 * dim)
+        self.assertTrue(all(isinstance(bc, DirichletBC) for bc in bcs))
 
-    # @parameterized.expand(
-    #     [
-    #         (2, "relaxation", True),
-    #         (2, "relaxation", False),
-    #         (2, "quasi_newton", True),
-    #         (2, "quasi_newton", False),
-    #         (3, "relaxation", True),
-    #         (3, "relaxation", False),
-    #         (3, "quasi_newton", True),
-    #         (3, "quasi_newton", False),
-    #     ]
-    # )
-    # def test_boundary_lengths_non_axis_aligned(self, dim, method, fix_boundary):
-    #     """
-    #     Test that boundary lengths of rotated unit domains are preserved by the
-    #     Monge-Ampere movers.
-    #     """
-    #     mesh = self.mesh(dim=dim)
-    #     # TODO: rotate mesh 45 degrees
-    #     bcs = self._boundary_length_test(mesh, method, fix_boundary)
-    #     self.assertTrue(len(tuple(bcs)) == 4 * dim)
+    @parameterized.expand(
+        [
+            (2, "relaxation", True),
+            (2, "relaxation", False),
+            (2, "quasi_newton", True),
+            (2, "quasi_newton", False),
+            (3, "relaxation", True),
+            (3, "relaxation", False),
+            (3, "quasi_newton", True),
+            (3, "quasi_newton", False),
+        ]
+    )
+    def test_boundary_lengths_non_axis_aligned(self, dim, method, fix_boundary):
+        """
+        Test that boundary lengths of rotated unit domains are preserved by the
+        Monge-Ampere movers.
+        """
+        mesh = self.mesh(dim=dim)
+        cs = ufl.cos(ufl.pi / 4)
+        sn = ufl.sin(ufl.pi / 4)
+        if dim == 2:
+            rotation_matrix = ufl.as_matrix([[cs, sn], [-sn, cs]])
+        elif dim == 3:
+            rotation_matrix = ufl.as_matrix([[cs, sn, 0], [-sn, cs, 0], [0, 0, 1]])
+        else:
+            raise ValueError(f"Dimension {dim} not supported.")
+        coords = Function(mesh.coordinates.function_space())
+        coords.interpolate(ufl.dot(rotation_matrix, mesh.coordinates))
+        bcs = self._boundary_length_test(Mesh(coords), method, fix_boundary)
+        if fix_boundary:
+            self.assertTrue(len(bcs) == 2 * dim)
+            self.assertTrue(all(isinstance(bc, DirichletBC) for bc in bcs))
+        elif dim == 2:
+            self.assertTrue(len(bcs) == 8)
+            self.assertTrue(all(isinstance(bc, EquationBC) for bc in bcs))
+        else:
+            self.assertTrue(len(bcs) == 10)
+            self.assertEqual(sum(isinstance(bc, EquationBC) for bc in bcs), 8)
+            self.assertEqual(sum(isinstance(bc, DirichletBC) for bc in bcs), 2)
 
 
 class TestMisc(BaseClasses.TestMongeAmpere):

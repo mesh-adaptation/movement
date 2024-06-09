@@ -208,8 +208,6 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             idx = iszero.index(False)
             return (firedrake.DirichletBC(self.P1_vec.sub(idx), 0, boundary_tag),)
 
-        # TODO: Write tests for the following code (#79)
-
         # Enforce no mesh movement normal to boundaries
         u_cts = firedrake.TrialFunction(self.P1_vec)
         v_cts = firedrake.TestFunction(self.P1_vec)
