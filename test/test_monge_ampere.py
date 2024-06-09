@@ -80,12 +80,13 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
             MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
         self.assertEqual(str(cm.exception), "Need to initialise both phi *and* sigma.")
 
-    def test_fix_boundary_periodic_valueerror(self):
-        mesh = self.mesh(dim=1, n=4, periodic=True)
-        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor, fix_boundary_nodes=True)
+    def test_non_straight_boundary_valueerror(self):
+        mesh = self.mesh(dim=2, n=3)
+        mesh.coordinates.dat.data_with_halos[1][0] -= 0.25
+        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor)
         with self.assertRaises(ValueError) as cm:
             mover.move()
-        msg = "Cannot fix boundary nodes for periodic meshes."
+        msg = "Boundary segment 1 is not a straight line."
         self.assertEqual(str(cm.exception), msg)
 
 
