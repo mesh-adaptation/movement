@@ -8,6 +8,7 @@ from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
 
 import movement.solver_parameters as solver_parameters
+from movement.math import equation_of_line
 from movement.mover import PrimeMover
 
 __all__ = [
@@ -196,8 +197,9 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :returns: tuple of boundary conditions
         :rtype: :class:`tuple` of :class:`~.DirichletBC`\s
         """
+        zero_bc = firedrake.DirichletBC(self.P1_vec, 0, boundary_tag)
         if self.fix_boundary_nodes:
-            return (firedrake.DirichletBC(self.P1_vec, 0, boundary_tag),)
+            return (zero_bc,)
         ds = self.ds(boundary_tag)
 
         # Check for axis-aligned boundaries
@@ -219,23 +221,15 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         # Check the current boundary segment is straight
         edge_indices = set(self.mesh.exterior_facets.unique_markers)
         corner_indices = [
-            (i, j) for i in edge_indices for j in edge_indices.difference([i])
+            (tag, boundary_tag) for tag in edge_indices.difference([boundary_tag])
         ]
         corner_bc = firedrake.DirichletBC(self.P1_vec, 0, corner_indices)
         corners = list(self.mesh.coordinates.dat.data_with_halos[corner_bc.nodes])
         if self.dim == 2:
             assert len(corners) == 2
-            (x0, y0), (x1, y1) = corners
-
-            def f(x):
-                m = (y1 - y0) / (x1 - x0)
-                c = y0 - m * x0
-                return m * x + c
-
-            assert np.isclose(f(x0), y0)
-            assert np.isclose(f(x1), y1)
-            for x, y in self.mesh.coordinates.dat.data_with_halos[bc1.nodes]:
-                if not np.isclose(f(x), y):
+            f = equation_of_line(*corners)
+            for x, y in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
+                if not np.isclose(f(x, y), 0):
                     raise ValueError(
                         f"Boundary segment {boundary_tag} is not a straight line."
                     )
