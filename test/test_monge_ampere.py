@@ -86,7 +86,16 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         mover = MongeAmpereMover_Relaxation(mesh, ring_monitor)
         with self.assertRaises(ValueError) as cm:
             mover.move()
-        msg = "Boundary segment 1 is not a straight line."
+        msg = "Boundary segment '1' is not linear."
+        self.assertEqual(str(cm.exception), msg)
+
+    def test_non_flat_plane_valueerror(self):
+        mesh = self.mesh(dim=3, n=3)
+        mesh.coordinates.dat.data_with_halos[1][0] -= 0.25
+        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor)
+        with self.assertRaises(ValueError) as cm:
+            mover.move()
+        msg = "Boundary segment '1' is not planar."
         self.assertEqual(str(cm.exception), msg)
 
 
