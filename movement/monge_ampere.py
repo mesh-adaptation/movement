@@ -225,6 +225,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         ]
         ffacet_bc = firedrake.DirichletBC(self.P1_vec, 0, ffacet_indices)
         ffacets = list(self.mesh.coordinates.dat.data_with_halos[ffacet_bc.nodes])
+        # TODO: Only do the following check in debugging mode (#94)
         if self.dim == 2:
             f = equation_of_line(*ffacets)
         elif self.dim == 3:
