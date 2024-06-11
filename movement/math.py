@@ -37,7 +37,7 @@ def equation_of_line(a, b):
     return f
 
 
-def equation_of_plane(a, b, c):
+def _equation_of_plane(a, b, c):
     """
     Deduce an expression for the equation of a plane passing through three points.
 
@@ -71,3 +71,25 @@ def equation_of_plane(a, b, c):
     assert np.isclose(f(*b), 0)
     assert np.isclose(f(*c), 0)
     return f
+
+
+def equation_of_plane(*points):
+    r"""
+    Deduce an expression for the equation of a plane passing through a set of points.
+
+    :arg points: the first point the line passes through
+    :type points: :class:`tuple` of :class:`tuple`\s
+    :returns: a function of three variables representing the plane
+    :rtype: :class:`~.Callable`
+    """
+    assert len(points) >= 3
+    points = list(points)
+    indices = np.arange(len(points), dtype=int)
+    while len(indices) >= 3:
+        np.random.shuffle(indices)
+        i, j, k = indices[:3]
+        f = _equation_of_plane(points[i], points[j], points[k])
+        if f is not None:
+            return f
+        points.pop(0)
+    raise ValueError("Could not determine a plane for provided points.")

@@ -226,22 +226,14 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         corner_bc = firedrake.DirichletBC(self.P1_vec, 0, corner_indices)
         corners = list(self.mesh.coordinates.dat.data_with_halos[corner_bc.nodes])
         if self.dim == 2:
-            assert len(corners) == 2
             f = equation_of_line(*corners)
         elif self.dim == 3:
-            assert len(corners) >= 3
-            indices = np.arange(len(corners), dtype=int)
-            while len(indices) >= 3:
-                np.random.shuffle(indices)
-                i, j, k = indices[:3]
-                f = equation_of_plane(corners[i], corners[j], corners[k])
-                if f is not None:
-                    break
-                corners.pop(0)
-            else:
+            try:
+                f = equation_of_plane(*corners)
+            except (AssertionError, ValueError) as exc:
                 raise ValueError(
                     f"Could not determine a plane for boundary segment '{boundary_tag}'."
-                )
+                ) from exc
         for x in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
             if not np.isclose(f(*x), 0):
                 raise ValueError(
