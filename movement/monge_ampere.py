@@ -219,17 +219,17 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         bc1 = firedrake.EquationBC(a_bc == L_bc, self._grad_phi, boundary_tag)
 
         # Check the current boundary segment is a straight line or plane
-        edge_indices = set(self.mesh.exterior_facets.unique_markers)
-        corner_indices = [
-            (tag, boundary_tag) for tag in edge_indices.difference([boundary_tag])
+        facet_indices = set(self.mesh.exterior_facets.unique_markers)
+        ffacet_indices = [
+            (tag, boundary_tag) for tag in facet_indices.difference([boundary_tag])
         ]
-        corner_bc = firedrake.DirichletBC(self.P1_vec, 0, corner_indices)
-        corners = list(self.mesh.coordinates.dat.data_with_halos[corner_bc.nodes])
+        ffacet_bc = firedrake.DirichletBC(self.P1_vec, 0, ffacet_indices)
+        ffacets = list(self.mesh.coordinates.dat.data_with_halos[ffacet_bc.nodes])
         if self.dim == 2:
-            f = equation_of_line(*corners)
+            f = equation_of_line(*ffacets)
         elif self.dim == 3:
             try:
-                f = equation_of_plane(*corners)
+                f = equation_of_plane(*ffacets)
             except (AssertionError, ValueError) as exc:
                 raise ValueError(
                     f"Could not determine a plane for boundary segment '{boundary_tag}'."
@@ -245,7 +245,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * ds
         L_bc = ufl.dot(tangential(v_cts, n), tangential(ufl.grad(self.phi_old), n)) * ds
         bc2 = firedrake.EquationBC(
-            a_bc == L_bc, self._grad_phi, boundary_tag, bcs=corner_bc
+            a_bc == L_bc, self._grad_phi, boundary_tag, bcs=ffacet_bc
         )
         return bc1, bc2
 
