@@ -35,3 +35,39 @@ def equation_of_line(a, b):
     assert np.isclose(f(x0, y0), 0)
     assert np.isclose(f(x1, y1), 0)
     return f
+
+
+def equation_of_plane(a, b, c):
+    """
+    Deduce an expression for the equation of a plane passing through three points.
+
+    Returns `None` if the points are colinear.
+
+    :arg a: the first point the line passes through
+    :type a: :class:`tuple`
+    :arg b: the second point the line passes through
+    :type b: :class:`tuple`
+    :arg c: the third point the line passes through
+    :type c: :class:`tuple`
+    :returns: a function of three variables representing the plane
+    :rtype: :class:`~.Callable`
+    """
+    assert len(a) == 3
+    assert len(b) == 3
+    assert len(c) == 3
+    a = np.array(a)
+    b = np.array(b)
+    c = np.array(c)
+    n = np.cross(b - a, c - a)
+
+    # Colinear case
+    if np.allclose(n, 0):
+        return None
+
+    def f(x, y, z):
+        return x * n[0] + y * n[1] + z * n[2] - np.dot(n, a)
+
+    assert np.isclose(f(*a), 0)
+    assert np.isclose(f(*b), 0)
+    assert np.isclose(f(*c), 0)
+    return f
