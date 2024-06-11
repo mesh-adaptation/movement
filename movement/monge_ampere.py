@@ -8,7 +8,7 @@ from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
 
 import movement.solver_parameters as solver_parameters
-from movement.math import equation_of_line
+from movement.math import equation_of_line, equation_of_plane
 from movement.mover import PrimeMover
 
 __all__ = [
@@ -198,7 +198,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :rtype: :class:`tuple` of :class:`~.DirichletBC`\s
         """
         zero_bc = firedrake.DirichletBC(self.P1_vec, 0, boundary_tag)
-        if self.fix_boundary_nodes:
+        if self.fix_boundary_nodes or self.dim == 1:
             return (zero_bc,)
         ds = self.ds(boundary_tag)
 
@@ -218,7 +218,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         L_bc = ufl.dot(v_cts, n) * firedrake.Constant(0.0) * ds
         bc1 = firedrake.EquationBC(a_bc == L_bc, self._grad_phi, boundary_tag)
 
-        # Check the current boundary segment is straight
+        # Check the current boundary segment is a straight line or plane
         edge_indices = set(self.mesh.exterior_facets.unique_markers)
         corner_indices = [
             (tag, boundary_tag) for tag in edge_indices.difference([boundary_tag])
@@ -228,13 +228,26 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         if self.dim == 2:
             assert len(corners) == 2
             f = equation_of_line(*corners)
-            for x, y in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
-                if not np.isclose(f(x, y), 0):
-                    raise ValueError(
-                        f"Boundary segment {boundary_tag} is not a straight line."
-                    )
         elif self.dim == 3:
-            raise NotImplementedError  # TODO: Implement as above for a plane
+            assert len(corners) >= 3
+            indices = np.arange(len(corners), dtype=int)
+            while len(indices) >= 3:
+                np.random.shuffle(indices)
+                i, j, k = indices[:3]
+                f = equation_of_plane(corners[i], corners[j], corners[k])
+                if f is not None:
+                    break
+                corners.pop(0)
+            else:
+                raise ValueError(
+                    f"Could not determine a plane for boundary segment '{boundary_tag}'."
+                )
+        for x in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
+            if not np.isclose(f(*x), 0):
+                raise ValueError(
+                    f"Boundary segment '{boundary_tag}' is not"
+                    f" {'linear' if self.dim == 2 else 'planar'}."
+                )
 
         # Allow tangential movement, but only up until the end of boundary segments
         a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * ds
