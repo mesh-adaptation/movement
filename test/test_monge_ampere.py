@@ -98,6 +98,14 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Boundary segment '1' is not planar."
         self.assertEqual(str(cm.exception), msg)
 
+    def test_periodic_fix_boundary_valueerror(self):
+        mesh = self.mesh(n=3, periodic=True)
+        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor, fix_boundary_nodes=True)
+        with self.assertRaises(ValueError) as cm:
+            mover.move()
+        msg = "Cannot fix boundary nodes for periodic meshes."
+        self.assertEqual(str(cm.exception), msg)
+
 
 class TestMonitor(BaseClasses.TestMongeAmpere):
     """
