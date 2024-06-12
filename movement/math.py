@@ -83,13 +83,12 @@ def equation_of_plane(*points):
     :rtype: :class:`~.Callable`
     """
     assert len(points) >= 3
-    points = list(points)
-    indices = np.arange(len(points), dtype=int)
+    indices = list(range(len(points)))
     while len(indices) >= 3:
         np.random.shuffle(indices)
         i, j, k = indices[:3]
         f = _equation_of_plane(points[i], points[j], points[k])
         if f is not None:
             return f
-        points.pop(0)
-    raise ValueError("Could not determine a plane for provided points.")
+        indices.pop(0)
+    raise ValueError("Could not determine a plane for the provided points.")
