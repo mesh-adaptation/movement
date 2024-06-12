@@ -184,7 +184,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     Unit tests for boundary conditions of Monge-Ampere movers.
     """
 
-    def _boundary_preservation_test(self, mesh, method, fix_boundary):
+    def _test_boundary_preservation(self, mesh, method, fix_boundary):
         bnd = assemble(Constant(1.0) * ds(domain=mesh))
         bnodes = DirichletBC(mesh.coordinates.function_space(), 0, "on_boundary").nodes
         bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
@@ -226,7 +226,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         """
         mesh = self.mesh(dim=dim, periodic=True)
         volume = assemble(Constant(1.0) * dx(domain=mesh))
-        mover = self._boundary_preservation_test(mesh, method, False)
+        mover = self._test_boundary_preservation(mesh, method, False)
 
         # Check the volume of the domain is conserved
         self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
@@ -256,7 +256,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         """
         mesh = self.mesh(dim=dim)
         volume = assemble(Constant(1.0) * dx(domain=mesh))
-        mover = self._boundary_preservation_test(mesh, method, fix_boundary)
+        mover = self._test_boundary_preservation(mesh, method, fix_boundary)
 
         # Check the volume of the domain is conserved
         self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
@@ -297,7 +297,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             raise ValueError(f"Dimension {dim} not supported.")
         coords = Function(mesh.coordinates.function_space())
         coords.interpolate(ufl.dot(rotation_matrix, mesh.coordinates))
-        mover = self._boundary_preservation_test(Mesh(coords), method, fix_boundary)
+        mover = self._test_boundary_preservation(Mesh(coords), method, fix_boundary)
 
         # Check the volume of the domain is conserved
         self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
