@@ -98,6 +98,15 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Boundary segment '1' is not planar."
         self.assertEqual(str(cm.exception), msg)
 
+    def test_invalid_plane_valuerror(self):
+        mesh = self.mesh(dim=3, n=1)
+        mesh.coordinates.dat.data_with_halos[:][:] = 0.0
+        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor)
+        with self.assertRaises(ValueError) as cm:
+            mover.move()
+        msg = "Could not determine a plane for boundary segment '1'."
+        self.assertEqual(str(cm.exception), msg)
+
     def test_periodic_fix_boundary_valueerror(self):
         mesh = self.mesh(n=3, periodic=True)
         mover = MongeAmpereMover_Relaxation(mesh, ring_monitor, fix_boundary_nodes=True)
