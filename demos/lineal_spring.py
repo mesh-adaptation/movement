@@ -122,8 +122,9 @@ plt.savefig("lineal_spring-boundary_displacement.jpg")
 #    :figwidth: 60%
 #    :align: center
 #
-# To apply this boundary displacement, we need to create a :class:`~.SpringMover`
-# instance and define a function for updating the boundary conditions. ::
+# To apply this boundary displacement, we need to create a
+# :class:`~movement.spring.SpringMover` instance and define a function for updating the
+# boundary conditions. ::
 
 mover = SpringMover(mesh, timestep, method="lineal")
 top = Function(mover.coord_space)

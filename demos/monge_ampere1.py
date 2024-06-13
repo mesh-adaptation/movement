@@ -93,7 +93,7 @@ def ring_monitor(mesh):
 
 
 # With an initial mesh and a monitor function, we are able to construct a
-# :class:`~.MongeAmpereMover` instance and adapt the mesh. By default, the Monge-Ampère
+# :class:`~movement.monge_ampere.MongeAmpereMover` instance and adapt the mesh. By default, the Monge-Ampère
 # equation is solved to a relative tolerance of :math:`10^{-8}`. However, for the
 # purposes of continuous integration testing, a tolerance of :math:`10^{-3}` is used
 # instead to further reduce the runtime. ::

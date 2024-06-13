@@ -33,7 +33,8 @@ def sinatan3(mesh):
 # moved mesh as :math:`1+\alpha`.
 #
 # As in the `previous Monge-Ampère demo <./monge_ampere1.py.html>`__, we use the
-# :class:`~.MongeAmpereMover` to perform the mesh movement based on this monitor. We need
+# :class:`~movement.monge_ampere.MongeAmpereMover` to perform the mesh movement based on
+# this monitor. We need
 # to provide the monitor as a callback function that takes the mesh as its
 # input. During the iterations of the mesh movement process the monitor will then
 # be re-evaluated in the (iteratively)
