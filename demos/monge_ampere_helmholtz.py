@@ -1,8 +1,8 @@
-# Using mesh movement to optimize the mesh for PDE solution
+# Using mesh movement to optimise the mesh for PDE solution
 # =========================================================
 #
-# In this demo will demonstrate how we might use mesh movement to obtain a mesh
-# that is optimized for solving a particular PDE. The general idea is that we
+# In this demo we will demonstrate how we might use mesh movement to obtain a mesh
+# that is optimised for solving a particular PDE. The general idea is that we
 # want to reduce numerical error by increasing resolution where the local error
 # is (expected to be) high and decrease it elsewhere.
 #
@@ -27,12 +27,12 @@
 #    f(x, y) &= -\nabla^2 u(x, y) + u(x, y)
 #        = \left[ -\frac{4(x-x_0)^2 + 4(y-y_0)^2}{w^4}
 #                + \frac{4}{w^2} + 1 \right]
-#          \exp\left(-\frac{(x-x_0)^2 +  (y-y_0)^2}{w^2}\right)
+#          \exp\left(-\frac{(x-x_0)^2 +  (y-y_0)^2}{w^2}\right),
 #
 # where :math:`(x_0, y_0)` is the centre of the Gaussian with width :math:`w`.
 # Note that here we *first* choose the solution :math:`u` after which we can
 # compute what rhs :math:`f` should be, by substitution in the PDE, in order
-# for :math:`u` to be the analytical solution. This so called Method of
+# for :math:`u` to be the analytical solution. This so-called Method of
 # Manufactured Solutions approach is an easy way to construct PDE
 # configurations for which we know the analytical solution, e.g. for testing
 # purposes.
@@ -101,7 +101,7 @@ print("L2-norm error on initial mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 #    L2-norm error on initial mesh: 0.010233816824277465
 #
-# We will now try to use mesh movement to optimize the mesh to reduce
+# We will now try to use mesh movement to optimise the mesh to reduce
 # this numerical error. We use the same monitor function as
 # in the `previous Monge-Ampère demo <./monge_ampere_3d.py.html>`__
 # based on the norm of the Hessian of the solution.
@@ -167,7 +167,7 @@ mover.move()
 #   17   Min/Max 8.6775e-01   Residual 5.8585e-08   Variation (σ/μ) 9.9835e-01
 #   Converged in 17 iterations.
 #
-# Plotting the resulting mesh
+# Plotting the resulting mesh:
 
 from firedrake.pyplot import triplot
 
@@ -193,7 +193,7 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 # Of course, in many practical problems we do not actually have access
 # to the exact solution. We can then use the Hessian of the numerical
-# solution in the monitor function. Calculating the Hessian we have to
+# solution in the monitor function. When calculating the Hessian we have to
 # be a bit careful however: since our numerical FEM solution :math:`u_h`
 # is a piecewise linear function, its first gradient results in a
 # piecewise *constant* function, a vector-valued constant

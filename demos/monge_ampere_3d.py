@@ -15,7 +15,7 @@ def sinatan3(mesh):
     return 0.1 * sin(50 * x * z) + atan2(0.1, sin(5 * y) - 2 * x * z)
 
 
-# We will now try to use mesh movement to optimize the mesh such that it can
+# We will now try to use mesh movement to optimise the mesh such that it can
 # most accurately represent this function with limited resolution.
 # A good indicator for where resolution is required
 # is to look at the curvature of the function which can be expressed
@@ -27,13 +27,14 @@ def sinatan3(mesh):
 #    m = 1 + \alpha \frac{H(u_h):H(u_h)}{\max_{{\bf x}\in\Omega} H(u_h):H(u_h)}
 #
 # where :math:`:` indicates the inner product, i.e. :math:`\sqrt{H:H}` is the Frobenius norm
-# of :math:`H`. We have normalized such that the minimum of the monitor function is one (where
+# of :math:`H`. We have normalised such that the minimum of the monitor function is one (where
 # the error is zero), and its maximum is :math:`1 + \alpha` (where the curvature is maximal). This
-# means we can select the ratio between the largest and smallest cell volume  in the
+# means that we can select the ratio between the largest and smallest cell volume in the
 # moved mesh as :math:`1+\alpha`.
 #
 # As in the `previous Monge-Ampère demo <./monge_ampere1.py.html>`__, we use the
-# :class:`~.MongeAmpereMover` to perform the mesh movement based on this monitor. We need
+# :class:`~movement.monge_ampere.MongeAmpereMover` to perform the mesh movement based on
+# this monitor. We need
 # to provide the monitor as a callback function that takes the mesh as its
 # input. During the iterations of the mesh movement process the monitor will then
 # be re-evaluated in the (iteratively)
@@ -92,8 +93,8 @@ mover.move()
 #    :align: center
 #
 # In the `next demo <./monge_ampere_helmholtz.py.html>`__, we will demonstrate
-# how to optimize the mesh for the discretisation of a PDE with the aim to
-# minimize its discretisation error.
+# how to optimise the mesh for the discretisation of a PDE with the aim to
+# minimise its discretisation error.
 #
 # This tutorial can be dowloaded as a `Python script <monge_ampere_3d.py>`__.
 #

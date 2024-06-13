@@ -32,7 +32,7 @@
 # i.e.,
 #
 # .. math::
-#    \frac1{h^2}(-v_{i-1} + 2v_i - v_{i+1})) = 0,
+#    \frac1{h^2}(-v_{i-1} + 2v_i - v_{i+1}) = 0,
 #
 # the left-hand side of which you might recognise as a finite difference approximation
 # of the second derivative, i.e., the Laplace operator.
@@ -61,13 +61,13 @@ plt.savefig("laplacian_smoothing-initial_mesh.jpg")
 #    :align: center
 #
 # Suppose we wish to enforce a time-dependent velocity :math:`\mathbf{v}_f`
-# on the top boundary :math and see how the mesh responds. Consider the velocity
+# on the top boundary and see how the mesh responds. Consider the velocity
 #
 # .. math::
 #     \mathbf{v}_f(x,y,t) = \left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right]
 #
 # acting only in the vertical direction, where :math:`A` is the amplitude and :math:`T`
-# is the time period. The displacement following a sinusoidal pattern along that
+# is the time period. The displacement follows a sinusoidal pattern along that
 # boundary. The boundary movement is also sinusoidal in time, such that it ramps up and
 # then reverses, with the analytical solution being that the final mesh coincides with
 # the initial mesh.
@@ -103,8 +103,8 @@ plt.savefig("laplacian_smoothing-boundary_velocity.jpg")
 #
 # To enforce this boundary velocity, we need to create a :class:`~.LaplacianSmoother`
 # instance and define a function for updating the boundary conditions. Since we are
-# going to enforce the velocity on the top boundary, we create a :class:`~.Function` to
-# represent the boundary condition values and pass this to a :class:`~.DirichletBC`
+# going to enforce the velocity on the top boundary, we create a :class:`~firedrake.function.Function` to
+# represent the boundary condition values and pass this to a :class:`~firedrake.bcs.DirichletBC`
 # object. We then define a function which updates it as time progresses. ::
 
 mover = LaplacianSmoother(mesh, timestep)
@@ -166,4 +166,8 @@ linf_error = np.max(np.abs(coord_data - coord_data_init))
 print(f"l_infinity error: {linf_error:.3f} m")
 assert np.isclose(linf_error, 0.0)
 
+# .. code-block:: console
+#
+#    l_infinity error: 0.000 m
+#
 # This tutorial can be downloaded as a `Python script <laplacian_smoothing.py>`__.
