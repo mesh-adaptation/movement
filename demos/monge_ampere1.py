@@ -19,14 +19,15 @@
 # and physical meshes.
 #
 # Let :math:`\boldsymbol{\xi}` and :math:`\mathbf{x}` denote the coordinate fields in
-# the computational and physical domains. Skipping some of the details that can be
-# found in :cite:`McRae:2018`, of the possible mappings we choose one that takes the form
+# the computational and physical domains, respectively. Skipping some of the details
+# that can be found in :cite:`McRae:2018`, of the possible mappings we choose one that
+# takes the form
 #
 # .. math::
 #     \mathbf{x} = \boldsymbol{\xi}+\nabla_{\boldsymbol{\xi}}\phi,
 #
 # where :math:`\phi` is a convex potential function. Further, we choose the potential
-# such that is the solution of the Monge-Ampère type equation,
+# such that it is the solution of the Monge-Ampère type equation,
 #
 # .. math::
 #     m(\mathbf{x}) \det(\underline{\mathbf{I}}+\nabla_{\boldsymbol{\xi}}\nabla_{\boldsymbol{\xi}}\phi) = \theta,
@@ -34,19 +35,20 @@
 # where :math:`m(\mathbf{x})` is a so-called *monitor function* and :math:`\theta` is a
 # strictly positive normalisation function. The monitor function is of key importance
 # because it specifies the desired *density* of the adapted mesh across the domain,
-# i.e., where resolution is focused. (Note that density is the reciprocal of area in 2D
-# or of volume in 3D.)
+# i.e., where resolution is focused. Note that density is the reciprocal of area in 2D
+# or of volume in 3D.
 #
-# We begin the example by importing from the namespaces of Firedrake and Movement.
+# We begin the example by importing from the namespaces of Firedrake and Movement. ::
 
-# To start with a simple example, consider a uniform mesh of the unit square. Feel free
-# to ignore the `"MOVEMENT_REGRESSION_TEST"`, as it is only used when this demo is run
-# in the test suite (to reduce its runtime). ::
 import os
 
 from firedrake import *
 
 from movement import *
+
+# To start with a simple example, consider a uniform mesh of the unit square. Feel free
+# to ignore the `"MOVEMENT_REGRESSION_TEST"`, as it is only used when this demo is run
+# in the test suite (to reduce its runtime). ::
 
 test = os.environ.get("MOVEMENT_REGRESSION_TEST")
 n = 10 if test else 20
@@ -134,7 +136,7 @@ plt.savefig("monge_ampere1-adapted_mesh_zoom.jpg")
 # applied.
 #
 # In the `next demo <./monge_ampere_3d.py.html>`__, we will demonstrate
-# that the Monge Ampère method can also be applied in three dimensions.
+# that the Monge-Ampère method can also be applied in three dimensions.
 #
 # This tutorial can be dowloaded as a `Python script <monge_ampere1.py>`__.
 #

@@ -182,6 +182,10 @@ linf_error = np.max(np.abs(coord_data - coord_data_init))
 print(f"l_infinity error: {linf_error:.3f} m")
 assert linf_error < 0.002
 
+# .. code-block:: console
+#
+#    l_infinity error: 0.001 m
+#
 # Note that the mesh doesn't return to its original state quite as neatly with the lineal
 # spring method as it does with the Laplacian smoothing method. However, the result is
 # still very good (as can be seen from the plots above).
@@ -191,6 +195,12 @@ assert linf_error < 0.002
 K = mover.assemble_stiffness_matrix(boundary_conditions=boundary_conditions)
 print(f"Stiffness matrix shape: {K.shape}")
 print(f"Number of mesh vertices: {mesh.num_vertices()}")
+
+# .. code-block:: console
+#
+#    Stiffness matrix shape: (242, 242)
+#    Number of mesh vertices: 121
+#
 
 fig, axes = plt.subplots()
 axes.spy(K)
