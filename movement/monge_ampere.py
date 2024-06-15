@@ -236,7 +236,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
                     f"Could not determine a plane for boundary segment '{boundary_tag}'."
                 ) from exc
         for x in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
-            if not np.isclose(f(*x), 0):
+            if not np.isclose(float(f(*x)), 0):
                 raise ValueError(
                     f"Boundary segment '{boundary_tag}' is not"
                     f" {'linear' if self.dim == 2 else 'planar'}."
