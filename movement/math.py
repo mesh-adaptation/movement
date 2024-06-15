@@ -1,4 +1,5 @@
 import numpy as np
+import sympy
 
 __all__ = []
 
@@ -52,25 +53,12 @@ def _equation_of_plane(a, b, c):
     :returns: a function of three variables representing the plane
     :rtype: :class:`~.Callable`
     """
-    assert len(a) == 3
-    assert len(b) == 3
-    assert len(c) == 3
-    a = np.array(a)
-    b = np.array(b)
-    c = np.array(c)
-    n = np.cross(b - a, c - a)
+    plane = sympy.Plane(sympy.Point3D(a), sympy.Point3D(b), sympy.Point3D(c))
 
-    # Colinear case
-    if np.allclose(n, 0):
-        return None
+    def equation(x, y, z):
+        return plane.distance(sympy.Point3D((x, y, z)))
 
-    def f(x, y, z):
-        return x * n[0] + y * n[1] + z * n[2] - np.dot(n, a)
-
-    assert np.isclose(f(*a), 0)
-    assert np.isclose(f(*b), 0)
-    assert np.isclose(f(*c), 0)
-    return f
+    return equation
 
 
 def equation_of_plane(*points):
@@ -87,8 +75,8 @@ def equation_of_plane(*points):
     while len(indices) >= 3:
         np.random.shuffle(indices)
         i, j, k = indices[:3]
-        f = _equation_of_plane(points[i], points[j], points[k])
-        if f is not None:
-            return f
-        indices.pop(0)
+        try:
+            return _equation_of_plane(points[i], points[j], points[k])
+        except ValueError:
+            indices.pop(0)
     raise ValueError("Could not determine a plane for the provided points.")
