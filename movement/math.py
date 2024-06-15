@@ -15,27 +15,12 @@ def equation_of_line(a, b):
     :returns: a function of two variables representing the line
     :rtype: :class:`~.Callable`
     """
-    assert len(a) == 2
-    x0, y0 = a
-    assert len(b) == 2
-    x1, y1 = b
+    line = sympy.Line(sympy.Point2D(a), sympy.Point2D(b))
 
-    if np.isclose(x0, x1):
-        # Special case of a vertical line
+    def equation(x, y):
+        return line.distance(sympy.Point2D((x, y)))
 
-        def f(x, y):
-            return x - x0
-
-    else:
-
-        def f(x, y):
-            m = (y1 - y0) / (x1 - x0)
-            c = y0 - m * x0
-            return y - m * x - c
-
-    assert np.isclose(f(x0, y0), 0)
-    assert np.isclose(f(x1, y1), 0)
-    return f
+    return equation
 
 
 def _equation_of_plane(a, b, c):
