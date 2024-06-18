@@ -259,7 +259,10 @@ class SpringMover_Lineal(SpringMover_Base):
 
         # Assemble and solve the linear system
         K = self.assemble_stiffness_matrix(boundary_conditions=boundary_conditions)
-        self.displacement = np.linalg.solve(K, self._forcing.flatten()) * self.dt
+        try:
+            self.displacement = np.linalg.solve(K, self._forcing.flatten()) * self.dt
+        except Exception as conv_err:
+            self._convergence_error(exception=conv_err)
 
         # Update mesh coordinates
         shape = self.mesh.coordinates.dat.data_with_halos.shape

@@ -2,6 +2,7 @@ import abc
 from warnings import warn
 
 import firedrake
+import firedrake.exceptions as fexc
 import numpy as np
 import ufl
 from firedrake.petsc import PETSc
@@ -95,7 +96,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.rtol = kwargs.pop("rtol", 1.0e-08)
         self.dtol = kwargs.pop("dtol", 2.0)
         self.fix_boundary_nodes = kwargs.pop("fix_boundary_nodes", False)
-        super().__init__(mesh, monitor_function=monitor_function)
+        super().__init__(mesh, monitor_function=monitor_function, **kwargs)
 
         # Create function spaces
         self.P0 = firedrake.FunctionSpace(self.mesh, "DG", 0)
@@ -234,7 +235,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
                 bbc = None  # Periodic case
             else:
                 warn(
-                    "Have you checked that all straight line segments are uniquely tagged?"
+                    "Have you checked that all straight line segments are uniquely"
+                    " tagged?"
                 )
                 corners = [(i, j) for i in edges for j in edges.difference([i])]
                 bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
@@ -359,12 +361,13 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
 
     @PETSc.Log.EventDecorator()
     def move(self):
-        """
+        r"""
         Run the relaxation method to convergence and update the mesh.
 
         :return: the iteration count
         :rtype: :class:`int`
         """
+        # Take iterations of the relaxed system until reaching convergence
         for i in range(self.maxiter):
             self.l2_projector.solve()
             self._update_coordinates()
@@ -388,24 +391,21 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
                 f"   Residual {residual:10.4e}"
                 f"   Variation (σ/μ) {cv:10.4e}"
             )
-            plural = "s" if i != 0 else ""
             if residual < self.rtol:
-                PETSc.Sys.Print(f"Converged in {i+1} iteration{plural}.")
+                self._convergence_message(i + 1)
                 break
             if residual > self.dtol * initial_norm:
-                raise firedrake.ConvergenceError(
-                    f"Diverged after {i+1} iteration{plural}."
-                )
+                self._divergence_error(i + 1)
             if i == self.maxiter - 1:
-                raise firedrake.ConvergenceError(
-                    f"Failed to converge in {i+1} iteration{plural}."
-                )
+                self._convergence_error(i + 1)
 
             # Apply pseudotimestepper and equidistributor
             self.pseudotimestepper.solve()
             self.equidistributor.solve()
             self.phi_old.assign(self.phi)
             self.sigma_old.assign(self.sigma)
+
+        # Update mesh coordinates accordingly
         self._update_coordinates()
         return i
 
@@ -552,22 +552,20 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
 
     @PETSc.Log.EventDecorator()
     def move(self):
-        """
+        r"""
         Run the quasi-Newton method to convergence and update the mesh.
 
         :return: the iteration count
         :rtype: :class:`int`
         """
+        # Solve equidistribution problem, handling convergence errors according to
+        # desired behaviour
         try:
             self.equidistributor.solve()
-            i = self.snes.getIterationNumber()
-            plural = "s" if i != 1 else ""
-            PETSc.Sys.Print(f"Converged in {i} iteration{plural}.")
-        except firedrake.ConvergenceError:
-            i = self.snes.getIterationNumber()
-            plural = "s" if i != 1 else ""
-            raise firedrake.ConvergenceError(
-                f"Failed to converge in {i} iteration{plural}."
-            )
+            self._convergence_message(self.snes.getIterationNumber())
+        except fexc.ConvergenceError as conv_err:
+            self._convergence_error(self.snes.getIterationNumber(), exception=conv_err)
+
+        # Update mesh coordinates accordingly
         self._update_coordinates()
-        return i
+        return self.snes.getIterationNumber()

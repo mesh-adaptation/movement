@@ -1,4 +1,5 @@
 import firedrake
+import firedrake.exceptions as fexc
 import numpy as np
 import ufl
 from firedrake.petsc import PETSc
@@ -86,7 +87,10 @@ class LaplacianSmoother(PrimeMover):
 
         # Solve on computational mesh
         self.mesh.coordinates.assign(self.xi)
-        self._solver.solve()
+        try:
+            self._solver.solve()
+        except fexc.ConvergenceError as conv_err:
+            self._convergence_error(exception=conv_err)
 
         # Update mesh coordinates
         self.displacement[:] = self.v.dat.data_with_halos * self.dt
