@@ -139,39 +139,35 @@ class SpringMover_Base(PrimeMover):
     def _stiffness_matrix(self):
         angles = self.angles
         edge_lengths = self.facet_areas
-        bnd = self.mesh.exterior_facets
-        N = self.mesh.num_vertices()
+        Nv = self.mesh.num_vertices()
 
-        K = np.zeros((2 * N, 2 * N))
+        K = np.zeros((2 * Nv, 2 * Nv))
         for e in range(*self.edge_indices):
             off = self.edge_vector_offset(e)
             i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
-            if bnd.point2facetnumber[e] != -1:
-                K[2 * i][2 * i] += 1.0
-                K[2 * i + 1][2 * i + 1] += 1.0
-                K[2 * j][2 * j] += 1.0
-                K[2 * j + 1][2 * j + 1] += 1.0
-            else:
-                l = edge_lengths.dat.data_with_halos[off]
-                angle = angles.dat.data_with_halos[off]
-                c = np.cos(angle)
-                s = np.sin(angle)
-                K[2 * i][2 * i] += c * c / l
-                K[2 * i][2 * i + 1] += s * c / l
-                K[2 * i][2 * j] += -c * c / l
-                K[2 * i][2 * j + 1] += -s * c / l
-                K[2 * i + 1][2 * i] += s * c / l
-                K[2 * i + 1][2 * i + 1] += s * s / l
-                K[2 * i + 1][2 * j] += -s * c / l
-                K[2 * i + 1][2 * j + 1] += -s * s / l
-                K[2 * j][2 * i] += -c * c / l
-                K[2 * j][2 * i + 1] += -s * c / l
-                K[2 * j][2 * j] += c * c / l
-                K[2 * j][2 * j + 1] += s * c / l
-                K[2 * j + 1][2 * i] += -s * c / l
-                K[2 * j + 1][2 * i + 1] += -s * s / l
-                K[2 * j + 1][2 * j] += s * c / l
-                K[2 * j + 1][2 * j + 1] += s * s / l
+            l = edge_lengths.dat.data_with_halos[off]
+            angle = angles.dat.data_with_halos[off]
+            c = np.cos(angle)
+            s = np.sin(angle)
+            c2 = c * c / l
+            sc = s * c / l
+            s2 = s * s / l
+            K[2 * i][2 * i] += c2
+            K[2 * i][2 * i + 1] += sc
+            K[2 * i][2 * j] += -c2
+            K[2 * i][2 * j + 1] += -sc
+            K[2 * i + 1][2 * i] += sc
+            K[2 * i + 1][2 * i + 1] += s2
+            K[2 * i + 1][2 * j] += -sc
+            K[2 * i + 1][2 * j + 1] += -s2
+            K[2 * j][2 * i] += -c2
+            K[2 * j][2 * i + 1] += -sc
+            K[2 * j][2 * j] += c2
+            K[2 * j][2 * j + 1] += sc
+            K[2 * j + 1][2 * i] += -sc
+            K[2 * j + 1][2 * i + 1] += -s2
+            K[2 * j + 1][2 * j] += sc
+            K[2 * j + 1][2 * j + 1] += s2
         return K
 
     @PETSc.Log.EventDecorator()
@@ -280,4 +276,6 @@ class SpringMover_Torsional(SpringMover_Lineal):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        raise NotImplementedError("Torsional springs not yet implemented")  # TODO (#36)
+        raise NotImplementedError(
+            "Torsional springs not yet implemented."
+        )  # TODO (#36)
