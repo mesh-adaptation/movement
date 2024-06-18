@@ -15,7 +15,10 @@ def equation_of_line(a, b):
     :returns: a function of two variables representing the line
     :rtype: :class:`~.Callable`
     """
-    line = sympy.Line(sympy.Point2D(a), sympy.Point2D(b))
+    try:
+        line = sympy.Line(sympy.Point2D(a), sympy.Point2D(b))
+    except ValueError as exc:
+        raise ValueError("Could not determine a line for the provided points.") from exc
 
     def equation(x, y):
         return line.distance(sympy.Point2D((x, y)))

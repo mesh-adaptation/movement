@@ -16,6 +16,12 @@ class TestLine(unittest.TestCase):
                 else:
                     self.assertNotEqual(f(i, j), 0)
 
+    def test_duplicate_valueerror(self):
+        with self.assertRaises(ValueError) as cm:
+            equation_of_line((0, 0), (0, 0))
+        msg = "Could not determine a line for the provided points."
+        self.assertEqual(str(cm.exception), msg)
+
     def test_x_equals_y(self):
         f = equation_of_line((0, 0), (1, 1))
 
@@ -54,6 +60,18 @@ class TestPlane(unittest.TestCase):
                         self.assertAlmostEqual(f(i, j, k), 0)
                     else:
                         self.assertNotEqual(f(i, j, k), 0)
+
+    def test_2duplicates_valueerror(self):
+        with self.assertRaises(ValueError) as cm:
+            equation_of_plane((0, 0, 0), (1, 1, 1), (1, 1, 1))
+        msg = "Could not determine a plane for the provided points."
+        self.assertEqual(str(cm.exception), msg)
+
+    def test_3duplicates_valueerror(self):
+        with self.assertRaises(ValueError) as cm:
+            equation_of_plane((0, 0, 0), (0, 0, 0), (0, 0, 0))
+        msg = "Could not determine a plane for the provided points."
+        self.assertEqual(str(cm.exception), msg)
 
     def test_colinear_valueerror(self):
         with self.assertRaises(ValueError) as cm:
