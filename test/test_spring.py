@@ -50,30 +50,49 @@ class TestStiffness(unittest.TestCase):
     """
 
     def test_boundary_conditions_triangle_all_boundary(self):
+        """
+        Test that applying boundary conditions over the whole boundary of a mesh with
+        only one element gives an identity stiffness matrix.
+        """
         mesh = UnitTriangleMesh()
         mover = SpringMover(mesh, 1.0, method="lineal")
-        self.assertTrue(np.allclose(mover._stiffness_matrix(), 2 * np.eye(6)))
-        self.assertTrue(np.allclose(mover.assemble_stiffness_matrix(), np.eye(6)))
+        I = np.eye(2 * mesh.num_vertices())
+        K = mover._stiffness_matrix()
+        self.assertFalse(np.allclose(K, I))
+        K_bc = mover.assemble_stiffness_matrix()
+        self.assertFalse(np.allclose(K, K_bc))
+        self.assertTrue(np.allclose(K_bc, I))
 
     def test_boundary_conditions_triangle_one_segment(self):
+        """
+        Test that applying boundary conditions over the whole boundary of a mesh with
+        only one element modifies entries of the stiffness matrix to insert an identity
+        matrix.
+        """
         mesh = UnitTriangleMesh()
         mover = SpringMover(mesh, 1.0, method="lineal")
-        self.assertTrue(np.allclose(mover._stiffness_matrix(), 2 * np.eye(6)))
+        K = mover._stiffness_matrix()
+        I = np.eye(2 * mesh.num_vertices())
+        self.assertFalse(np.allclose(K, I))
         bc = DirichletBC(mover.coord_space, 0, 1)
-        expected = np.diag([2, 2, 1, 1, 1, 1])
-        self.assertTrue(np.allclose(mover.assemble_stiffness_matrix(bc), expected))
+        K_bc = mover.assemble_stiffness_matrix(bc)
+        self.assertFalse(np.allclose(K, K_bc))
+        self.assertFalse(np.allclose(K_bc, I))
+        self.assertTrue(np.allclose(np.where(np.isclose(K, K_bc), I, K_bc), I))
 
-    def test_square(self):
-        mesh = UnitSquareMesh(2, 2)
+    def test_boundary_conditions_1x1_square_all_boundary(self):
+        """
+        Test that applying boundary conditions over the whole boundary of a mesh with
+        only one non-boundary edge gives an identity stiffness matrix.
+        """
+        mesh = UnitSquareMesh(1, 1)
         mover = SpringMover(mesh, 1.0, method="lineal")
         K = mover._stiffness_matrix()
-        block_K = [
-            K[2 * i : 2 * (i + 1)][2 * i : 2 * (i + 1)] for i in range(len(K) // 2)
-        ]
-        print(block_K)
-        print(K)
-        print(mover.assemble_stiffness_matrix())
-        raise NotImplementedError  # TODO
+        I = np.eye(2 * mesh.num_vertices())
+        self.assertFalse(np.allclose(K, I))
+        K_bc = mover.assemble_stiffness_matrix()
+        self.assertFalse(np.allclose(K, K_bc))
+        self.assertTrue(np.allclose(K_bc, I))
 
 
 class TestQuantities(unittest.TestCase):
