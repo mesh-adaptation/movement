@@ -130,3 +130,57 @@ class TestQuantities(unittest.TestCase):
         """
         angles = self.rad2deg(self.mover.angles.dat.data)
         self.assertTrue(np.allclose(angles, [0, 135, 90]))
+
+
+class TestMovement(unittest.TestCase):
+    """
+    Unit tests for movement under spring-based methods.
+    """
+
+    def test_fixed_triangle(self):
+        mesh = UnitTriangleMesh()
+        coords = mesh.coordinates.dat.data
+        mover = SpringMover(mesh, 1.0)
+        mover.move(0.0)
+        self.assertTrue(np.allclose(coords, mover.mesh.coordinates.dat.data))
+
+    def test_fixed_square(self):
+        mesh = UnitSquareMesh(1, 1)
+        coords = mesh.coordinates.dat.data
+        mover = SpringMover(mesh, 1.0)
+        mover.move(0.0)
+        self.assertTrue(np.allclose(coords, mover.mesh.coordinates.dat.data))
+
+    def test_force_right_free(self):
+        mesh = UnitSquareMesh(10, 10)
+        coord_array = mesh.coordinates.dat.data
+        mover = SpringMover(mesh, 1.0)
+        right = interpolate(as_vector([1, 0]), mover.coord_space)
+        mover.move(0, boundary_conditions=DirichletBC(mover.coord_space, right, 2))
+        new_coord_array = mover.mesh.coordinates.dat.data
+        self.assertFalse(np.allclose(coord_array, new_coord_array))
+
+        original_mesh = UnitSquareMesh(10, 10)
+        x, y = SpatialCoordinate(original_mesh)
+        shifted_coords = Function(original_mesh.coordinates)
+        shifted_coords.interpolate(as_vector([x + 1, y]))
+        shifted_mesh = Mesh(shifted_coords)
+        shifted_coord_array = shifted_mesh.coordinates.dat.data
+        self.assertTrue(np.allclose(shifted_coord_array, new_coord_array))
+
+    def test_force_right_fixed(self):
+        mesh = UnitSquareMesh(10, 10)
+        coord_array = mesh.coordinates.dat.data
+        mover = SpringMover(mesh, 1.0)
+        right = interpolate(as_vector([1, 0]), mover.coord_space)
+        moving_bc = DirichletBC(mover.coord_space, right, 2)
+        fixed_bc = DirichletBC(mover.coord_space, 0, 1)
+        mover.move(0, boundary_conditions=[fixed_bc, moving_bc])
+        new_coord_array = mover.mesh.coordinates.dat.data
+        self.assertFalse(np.allclose(coord_array, new_coord_array))
+
+        # # TODO: Implement no-slip BCs for segments 3 and 4 (#99)
+        # stretched_mesh = RectangleMesh(10, 10, 2, 1)
+        # stretched_coord_array = stretched_mesh.coordinates.dat.data
+        # plot_meshes(mover.mesh, stretched_mesh)
+        # self.assertTrue(np.allclose(stretched_coord_array, new_coord_array))
