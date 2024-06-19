@@ -198,3 +198,11 @@ class TestMovement(unittest.TestCase):
         # stretched_mesh = self.stretched_mesh(10, 10, stretch_x=2)
         # stretched_coord_array = stretched_mesh.coordinates.dat.data
         # self.assertTrue(np.allclose(stretched_coord_array, new_coord_array))
+
+    def test_force_right_left_free(self):
+        mesh = UnitSquareMesh(10, 10)
+        coord_array = mesh.coordinates.dat.data
+        mesh = self.move(mesh, moving_boundary_tags=1, vector=[1, 0])
+        self.assertFalse(np.allclose(coord_array, mesh.coordinates.dat.data))
+        mesh = self.move(mesh, moving_boundary_tags=1, vector=[-1, 0])
+        self.assertTrue(np.allclose(coord_array, mesh.coordinates.dat.data))
