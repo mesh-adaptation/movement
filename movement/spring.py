@@ -15,11 +15,8 @@ __all__ = ["SpringMover_Lineal", "SpringMover_Torsional", "SpringMover"]
 def SpringMover(*args, method="lineal", **kwargs):
     """
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
-    beams and solving an associated discrete linear elasticity problem.
-
-    See Farhat, Degand, Koobus and Lesoinne, "Torsional springs for two-dimensional
-    dynamic unstructured fluid meshes" (1998), Computer methods in applied mechanics and
-    engineering, 163:231-245.
+    beams and solving an associated discrete linear elasticity problem. (See
+    :cite:`FDK+:98` for details.)
 
     :arg mesh: the physical mesh to be moved
     :type mesh: :class:`firedrake.mesh.MeshGeometry`
@@ -33,7 +30,7 @@ def SpringMover(*args, method="lineal", **kwargs):
     elif method == "torsional":
         return SpringMover_Torsional(*args, **kwargs)
     else:
-        raise ValueError(f"Method {method} not recognised.")
+        raise ValueError(f"Method '{method}' not recognised.")
 
 
 class SpringMover_Base(PrimeMover):
@@ -142,39 +139,35 @@ class SpringMover_Base(PrimeMover):
     def _stiffness_matrix(self):
         angles = self.angles
         edge_lengths = self.facet_areas
-        bnd = self.mesh.exterior_facets
-        N = self.mesh.num_vertices()
+        Nv = self.mesh.num_vertices()
 
-        K = np.zeros((2 * N, 2 * N))
+        K = np.zeros((2 * Nv, 2 * Nv))
         for e in range(*self.edge_indices):
             off = self.edge_vector_offset(e)
             i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
-            if bnd.point2facetnumber[e] != -1:
-                K[2 * i][2 * i] += 1.0
-                K[2 * i + 1][2 * i + 1] += 1.0
-                K[2 * j][2 * j] += 1.0
-                K[2 * j + 1][2 * j + 1] += 1.0
-            else:
-                l = edge_lengths.dat.data_with_halos[off]
-                angle = angles.dat.data_with_halos[off]
-                c = np.cos(angle)
-                s = np.sin(angle)
-                K[2 * i][2 * i] += c * c / l
-                K[2 * i][2 * i + 1] += s * c / l
-                K[2 * i][2 * j] += -c * c / l
-                K[2 * i][2 * j + 1] += -s * c / l
-                K[2 * i + 1][2 * i] += s * c / l
-                K[2 * i + 1][2 * i + 1] += s * s / l
-                K[2 * i + 1][2 * j] += -s * c / l
-                K[2 * i + 1][2 * j + 1] += -s * s / l
-                K[2 * j][2 * i] += -c * c / l
-                K[2 * j][2 * i + 1] += -s * c / l
-                K[2 * j][2 * j] += c * c / l
-                K[2 * j][2 * j + 1] += s * c / l
-                K[2 * j + 1][2 * i] += -s * c / l
-                K[2 * j + 1][2 * i + 1] += -s * s / l
-                K[2 * j + 1][2 * j] += s * c / l
-                K[2 * j + 1][2 * j + 1] += s * s / l
+            l = edge_lengths.dat.data_with_halos[off]
+            angle = angles.dat.data_with_halos[off]
+            c = np.cos(angle)
+            s = np.sin(angle)
+            c2 = c * c / l
+            sc = s * c / l
+            s2 = s * s / l
+            K[2 * i][2 * i] += c2
+            K[2 * i][2 * i + 1] += sc
+            K[2 * i][2 * j] += -c2
+            K[2 * i][2 * j + 1] += -sc
+            K[2 * i + 1][2 * i] += sc
+            K[2 * i + 1][2 * i + 1] += s2
+            K[2 * i + 1][2 * j] += -sc
+            K[2 * i + 1][2 * j + 1] += -s2
+            K[2 * j][2 * i] += -c2
+            K[2 * j][2 * i + 1] += -sc
+            K[2 * j][2 * j] += c2
+            K[2 * j][2 * j + 1] += sc
+            K[2 * j + 1][2 * i] += -sc
+            K[2 * j + 1][2 * i + 1] += -s2
+            K[2 * j + 1][2 * j] += sc
+            K[2 * j + 1][2 * j + 1] += s2
         return K
 
     @PETSc.Log.EventDecorator()
@@ -200,17 +193,19 @@ class SpringMover_Base(PrimeMover):
         for boundary_condition in boundary_conditions:
             if boundary_condition.function_space() != self.coord_space:
                 raise ValueError(
-                    f"Boundary conditions must have {type(self)}.coord_space as their"
-                    " function space"
+                    f"Boundary conditions must have {type(self).__name__}.coord_space"
+                    " as their function space."
                 )
 
             # Determine boundary subsets for the associated tags
+            bnd = self.mesh.exterior_facets
             tags = boundary_condition.sub_domain
+            if tags == "on_boundary":
+                tags = bnd.unique_markers
             if not isinstance(tags, Iterable):
                 tags = [tags]
-            bnd = self.mesh.exterior_facets
             if not set(tags).issubset(set(bnd.unique_markers)):
-                raise ValueError(f"{tags} contains invalid boundary tags")
+                raise ValueError(f"{tags} contains invalid boundary tags.")
             subsets = np.array([bnd.subset(tag).indices for tag in tags]).flatten()
 
             # Get vertex-based boundary data to be enforced
@@ -238,9 +233,7 @@ class SpringMover_Lineal(SpringMover_Base):
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
     beams and solving an associated discrete linear elasticity problem.
 
-    We consider the 'lineal' case, as described in Farhat, Degand, Koobus and Lesoinne,
-    "Torsional springs for two-dimensional dynamic unstructured fluid meshes" (1998),
-    Computer methods in applied mechanics and engineering, 163:231-245.
+    We consider the 'lineal' case, as described in :cite:`FDK+:98`.
     """
 
     @PETSc.Log.EventDecorator()
@@ -252,8 +245,8 @@ class SpringMover_Lineal(SpringMover_Base):
         :type time: :class:`float`
         :kwarg update_boundary_displacement: function that updates the boundary
             conditions at the current time
-        :type update_boundary_displacement: :class:`~.Callable` with a single argument of
-            :class:`float` type
+        :type update_boundary_displacement: :class:`~.Callable` with a single argument
+            of :class:`float` type
         :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
         :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
         """
@@ -278,11 +271,11 @@ class SpringMover_Torsional(SpringMover_Lineal):
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
     beams and solving an associated discrete linear elasticity problem.
 
-    We consider the 'torsional' case, as described in Farhat, Degand, Koobus and
-    Lesoinne, "Torsional springs for two-dimensional dynamic unstructured fluid meshes"
-    (1998), Computer methods in applied mechanics and engineering, 163:231-245.
+    We consider the 'torsional' case, as described in :cite:`FDK+:98`.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        raise NotImplementedError("Torsional springs not yet implemented")  # TODO (#36)
+        raise NotImplementedError(
+            "Torsional springs not yet implemented."
+        )  # TODO (#36)
