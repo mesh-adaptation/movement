@@ -206,3 +206,18 @@ class TestMovement(unittest.TestCase):
         self.assertFalse(np.allclose(coord_array, mesh.coordinates.dat.data))
         mesh = self.move(mesh, moving_boundary_tags=1, vector=[-1, 0])
         self.assertTrue(np.allclose(coord_array, mesh.coordinates.dat.data))
+
+    def test_update_boundary_displacement(self):
+        mesh = UnitSquareMesh(10, 10)
+        coord_array = mesh.coordinates.dat.data
+        mover = SpringMover(mesh, 1.0)
+        forcing = Function(mover.coord_space)
+        bc = DirichletBC(mover.coord_space, forcing, 1)
+
+        def update_bc(time):
+            forcing.interpolate(as_vector([cos(pi * time / 2), sin(pi * time / 2)]))
+
+        mover.move(0.0, boundary_conditions=bc, update_boundary_displacement=update_bc)
+        self.assertFalse(np.allclose(coord_array, mover.mesh.coordinates.dat.data))
+        mover.move(1.0, boundary_conditions=bc, update_boundary_displacement=update_bc)
+        self.assertTrue(np.allclose(coord_array, mesh.coordinates.dat.data))
