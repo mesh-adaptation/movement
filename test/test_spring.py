@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock
 
 import numpy as np
 from firedrake import *
@@ -6,9 +7,9 @@ from firedrake import *
 from movement import SpringMover
 
 
-class TestSetup(unittest.TestCase):
+class TestExceptions(unittest.TestCase):
     """
-    Unit tests for setting up spring-based Movers.
+    Unit tests for exceptions raised by spring-based Movers.
     """
 
     def setUp(self):
@@ -42,6 +43,14 @@ class TestSetup(unittest.TestCase):
             mover.assemble_stiffness_matrix(bc)
         msg = "[4] contains invalid boundary tags."
         self.assertEqual(str(cm.exception), msg)
+
+    def test_convergence_error(self):
+        mover = SpringMover(self.mesh, 1.0)
+        N = 2 * self.mesh.num_vertices()
+        mover.assemble_stiffness_matrix = MagicMock(return_value=np.zeros((N, N)))
+        with self.assertRaises(ConvergenceError) as cm:
+            mover.move(0)
+        self.assertEqual(str(cm.exception), "Solver failed to converge.")
 
 
 class TestStiffness(unittest.TestCase):
