@@ -143,27 +143,36 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             raise ValueError("Need to initialise both phi *and* sigma.")
 
     @property
-    @PETSc.Log.EventDecorator()
-    def _diagnostics(self):
+    def volume_ratio(self):
         """
-        Compute the following diagnostics:
-          1) the ratio of the smallest and largest element volumes;
-          2) coefficient of variation (σ/μ) of element volumes;
-          3) relative L2 norm residual.
+        :return: the ratio of the smallest and largest element volumes.
+        :rtype: :class:`float`
         """
-        v = self.volume.vector().gather()
-        minmax = v.min() / v.max()
-        mean = v.sum() / v.max()
-        w = v.copy() - mean
-        w *= w
-        std = np.sqrt(w.sum() / w.size)
-        cv = std / mean
+        volume_array = self.volume.vector().gather()
+        return volume_array.min() / volume_array.max()
+
+    @property
+    def coefficient_of_variation(self):
+        """
+        :return: the coefficient of variation (σ/μ) of element volumes.
+        :rtype: :class:`float`
+        """
+        volume_array = self.volume.vector().gather()
+        mean = volume_array.sum() / volume_array.max()
+        return np.sqrt(np.sum((volume_array - mean) ** 2) / volume_array.size) / mean
+
+    @property
+    def relative_l2_residual(self):
+        """
+        :return: the relative :math:`L^2` norm residual.
+        :rtype: :class:`float`
+        """
         assert hasattr(self, "_residual_l2_form")
         assert hasattr(self, "_norm_l2_form")
-        residual_l2 = firedrake.assemble(self._residual_l2_form).dat.norm
-        norm_l2 = firedrake.assemble(self._norm_l2_form).dat.norm
-        residual_l2_rel = residual_l2 / norm_l2
-        return minmax, residual_l2_rel, cv
+        return (
+            firedrake.assemble(self._residual_l2_form).dat.norm
+            / firedrake.assemble(self._norm_l2_form).dat.norm
+        )
 
     @PETSc.Log.EventDecorator()
     def _update_coordinates(self):
@@ -382,14 +391,14 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.theta.assign(firedrake.assemble(self.theta_form) / self.total_volume)
 
             # Check convergence criteria
-            minmax, residual, cv = self._diagnostics
+            residual = self.relative_l2_residual
             if i == 0:
                 initial_norm = residual
             PETSc.Sys.Print(
                 f"{i:4d}"
-                f"   Min/Max {minmax:10.4e}"
+                f"   Min/Max {self.volume_ratio:10.4e}"
                 f"   Residual {residual:10.4e}"
-                f"   Variation (σ/μ) {cv:10.4e}"
+                f"   Variation (σ/μ) {self.coefficient_of_variation:10.4e}"
             )
             if residual < self.rtol:
                 self._convergence_message(i + 1)
@@ -538,12 +547,11 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             firedrake.assemble(self.L_P0, tensor=self.volume)
             self.volume.interpolate(self.volume / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
-            minmax, residual, cv = self._diagnostics
             PETSc.Sys.Print(
                 f"{i:4d}"
-                f"   Min/Max {minmax:10.4e}"
-                f"   Residual {residual:10.4e}"
-                f"   Variation (σ/μ) {cv:10.4e}"
+                f"   Min/Max {self.volume_ratio:10.4e}"
+                f"   Residual {self.relative_l2_residual:10.4e}"
+                f"   Variation (σ/μ) {self.coefficient_of_variation:10.4e}"
             )
 
         self.snes = self._equidistributor.snes
