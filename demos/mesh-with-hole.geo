@@ -1,0 +1,27 @@
+h = 0.02;
+Point(1) = { 0.0,  1.0, 0, h};
+Point(2) = { 3.0,  1.0, 0, h};
+Point(3) = { 3.0,  0.0, 0, h};
+Point(4) = { 0.0,  0.0, 0, h};
+Point(5) = { 1.0,  0.5, 0, h};
+Point(6) = { 1.0, 0.75, 0, h};
+Point(7) = {1.25,  0.5, 0, h};
+Point(8) = { 1.0, 0.25, 0, h};
+Point(9) = {0.75,  0.5, 0, h};
+Line(1) = {1, 2};
+Line(2) = {2, 3};
+Line(3) = {3, 4};
+Line(4) = {4, 1};
+Circle(5) = {9, 5, 6};
+Circle(6) = {6, 5, 7};
+Circle(7) = {7, 5, 8};
+Circle(8) = {8, 5, 9};
+Curve Loop(16) = {5, 6, 7, 8, -3, -2, -1, -4};
+Plane Surface(16) = {16};
+
+Physical Line(4) = {5, 6, 7, 8};
+Physical Line(3) = {1};
+Physical Line(5) = {3};
+Physical Line(1) = {4};
+Physical Line(2) = {2};
+Physical Surface(17) = {16};
