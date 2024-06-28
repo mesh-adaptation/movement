@@ -158,7 +158,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :rtype: :class:`float`
         """
         volume_array = self.volume.vector().gather()
-        mean = volume_array.sum() / volume_array.max()
+        mean = volume_array.sum() / volume_array.size
         return np.sqrt(np.sum((volume_array - mean) ** 2) / volume_array.size) / mean
 
     @property
