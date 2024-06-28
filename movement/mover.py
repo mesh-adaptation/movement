@@ -21,7 +21,7 @@ class PrimeMover:
         mesh,
         monitor_function=None,
         raise_convergence_errors=True,
-        tangling_check=False,
+        tangling_check=None,
         **kwargs,
     ):
         r"""
@@ -33,7 +33,8 @@ class PrimeMover:
             then :class:`~.ConvergenceError`\s are raised, else warnings are raised and
             the program is allowed to continue
         :type raise_convergence_errors: :class:`bool`
-        :kwarg tangling_check: check whether the mesh has tangled elements
+        :kwarg tangling_check: check whether the mesh has tangled elements (by default
+            on in the 2D case and off otherwise)
         :type tangling_check: :class:`bool`
         """
         self.mesh = firedrake.Mesh(mesh.coordinates.copy(deepcopy=True))
@@ -65,6 +66,8 @@ class PrimeMover:
         self.v = firedrake.Function(self.coord_space, name="Mesh velocity")
 
         # Utilities
+        if tangling_check is None:
+            tangling_check = self.dim == 2
         if tangling_check:
             self.tangling_checker = MeshTanglingChecker(
                 self.mesh, raise_error=raise_convergence_errors
