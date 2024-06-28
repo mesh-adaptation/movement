@@ -97,28 +97,24 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.dtol = kwargs.pop("dtol", 2.0)
         self.fix_boundary_nodes = kwargs.pop("fix_boundary_nodes", False)
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
+        self.theta = firedrake.Constant(0.0)
 
-        # Create function spaces
-        self.P0 = firedrake.FunctionSpace(self.mesh, "DG", 0)
+    def _create_function_spaces(self):
+        super()._create_function_spaces()
         self.P1 = firedrake.FunctionSpace(self.mesh, "CG", 1)
         self.P1_vec = firedrake.VectorFunctionSpace(self.mesh, "CG", 1)
         self.P1_ten = firedrake.TensorFunctionSpace(self.mesh, "CG", 1)
 
-        # Create objects used during the mesh movement
-        self._create_functions()
-        self.theta = firedrake.Constant(0.0)
+    @abc.abstractmethod
+    def _create_functions(self):
+        super()._create_functions()
+        self.monitor = firedrake.Function(self.P1, name="Monitor function")
+        self._grad_phi = firedrake.Function(self.P1_vec)
+        self.grad_phi = firedrake.Function(self.mesh.coordinates)
         self.monitor.interpolate(self.monitor_function(self.mesh))
-        self.volume.interpolate(ufl.CellVolume(self.mesh))
         self.original_volume = firedrake.Function(self.volume)
         self.total_volume = firedrake.assemble(firedrake.Constant(1.0) * self.dx)
         self.L_P0 = firedrake.TestFunction(self.P0) * self.monitor * self.dx
-
-    @abc.abstractmethod
-    def _create_functions(self):
-        self.monitor = firedrake.Function(self.P1, name="Monitor function")
-        self.volume = firedrake.Function(self.P0, name="Mesh volume")
-        self._grad_phi = firedrake.Function(self.P1_vec)
-        self.grad_phi = firedrake.Function(self.mesh.coordinates)
 
     @PETSc.Log.EventDecorator()
     def apply_initial_guess(self, phi_init, sigma_init):
@@ -383,8 +379,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
 
             # Update monitor function
             self.monitor.interpolate(self.monitor_function(self.mesh))
-            firedrake.assemble(self.L_P0, tensor=self.volume)
-            self.volume.interpolate(self.volume / self.original_volume)
+            self.volume.interpolate(self.L_P0 / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
 
             # Evaluate normalisation coefficient
@@ -544,8 +539,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             cursol = snes.getSolution()
             update_monitor(cursol)
             self._update_coordinates()
-            firedrake.assemble(self.L_P0, tensor=self.volume)
-            self.volume.interpolate(self.volume / self.original_volume)
+            self.volume.interpolate(self.L_P0 / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
             PETSc.Sys.Print(
                 f"{i:4d}"

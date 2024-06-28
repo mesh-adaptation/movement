@@ -1,8 +1,10 @@
+import abc
 from warnings import warn
 
 import firedrake
 import firedrake.exceptions as fexc
 import numpy as np
+import ufl
 from firedrake.cython.dmcommon import create_section
 from firedrake.petsc import PETSc
 
@@ -47,13 +49,23 @@ class PrimeMover:
         self.ds = firedrake.ds(domain=self.mesh, degree=degree)
         self.dS = firedrake.dS(domain=self.mesh, degree=degree)
 
-        # Mesh coordinate functions
+        self._create_function_spaces()
+        self._create_functions()
+
+    @abc.abstractmethod
+    def _create_function_spaces(self):
         self.coord_space = self.mesh.coordinates.function_space()
+        self.P0 = firedrake.FunctionSpace(self.mesh, "DG", 0)
+
+    @abc.abstractmethod
+    def _create_functions(self):
         self.x = firedrake.Function(self.mesh.coordinates, name="Physical coordinates")
         self.xi = firedrake.Function(
             self.mesh.coordinates, name="Computational coordinates"
         )
         self.v = firedrake.Function(self.coord_space, name="Mesh velocity")
+        self.volume = firedrake.Function(self.P0, name="Mesh volume")
+        self.volume.interpolate(ufl.CellVolume(self.mesh))
 
     def _convergence_message(self, iterations=None):
         """
