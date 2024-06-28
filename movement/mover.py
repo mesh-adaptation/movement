@@ -175,6 +175,25 @@ class PrimeMover:
         """
         return self.mesh.coordinates.dat.data_with_halos[self.get_offset(index)]
 
+    @property
+    def volume_ratio(self):
+        """
+        :return: the ratio of the smallest and largest element volumes.
+        :rtype: :class:`float`
+        """
+        volume_array = self.volume.vector().gather()
+        return volume_array.min() / volume_array.max()
+
+    @property
+    def coefficient_of_variation(self):
+        """
+        :return: the coefficient of variation (σ/μ) of element volumes.
+        :rtype: :class:`float`
+        """
+        volume_array = self.volume.vector().gather()
+        mean = volume_array.sum() / volume_array.size
+        return np.sqrt(np.sum((volume_array - mean) ** 2) / volume_array.size) / mean
+
     def move(self):
         """
         Move the mesh according to the method of choice.

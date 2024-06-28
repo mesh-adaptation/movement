@@ -139,25 +139,6 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             raise ValueError("Need to initialise both phi *and* sigma.")
 
     @property
-    def volume_ratio(self):
-        """
-        :return: the ratio of the smallest and largest element volumes.
-        :rtype: :class:`float`
-        """
-        volume_array = self.volume.vector().gather()
-        return volume_array.min() / volume_array.max()
-
-    @property
-    def coefficient_of_variation(self):
-        """
-        :return: the coefficient of variation (σ/μ) of element volumes.
-        :rtype: :class:`float`
-        """
-        volume_array = self.volume.vector().gather()
-        mean = volume_array.sum() / volume_array.size
-        return np.sqrt(np.sum((volume_array - mean) ** 2) / volume_array.size) / mean
-
-    @property
     def relative_l2_residual(self):
         """
         :return: the relative :math:`L^2` norm residual.
