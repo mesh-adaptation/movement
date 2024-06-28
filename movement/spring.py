@@ -271,6 +271,12 @@ class SpringMover_Lineal(SpringMover_Base):
         self.mesh.coordinates.dat.data_with_halos[:] += self.displacement.reshape(shape)
         self._update_plex_coordinates()
         self.volume.interpolate(ufl.CellVolume(self.mesh))
+        PETSc.Sys.Print(
+            f"{time:.2f}"
+            f"   Min/Max {self.volume_ratio:10.4e}"
+            f"   Variation (σ/μ) {self.coefficient_of_variation:10.4e}"
+            f"   Displacement {np.linalg.norm(self.displacement):.2f} m"
+        )
 
 
 class SpringMover_Torsional(SpringMover_Lineal):

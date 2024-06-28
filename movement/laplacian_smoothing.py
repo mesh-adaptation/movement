@@ -100,3 +100,9 @@ class LaplacianSmoother(PrimeMover):
         self.x.dat.data_with_halos[:] += self.displacement
         self.mesh.coordinates.assign(self.x)
         self.volume.interpolate(ufl.CellVolume(self.mesh))
+        PETSc.Sys.Print(
+            f"{time:.2f} s"
+            f"   Min/Max {self.volume_ratio:10.4e}"
+            f"   Variation (σ/μ) {self.coefficient_of_variation:10.4e}"
+            f"   Displacement {np.linalg.norm(self.displacement):.2f} m"
+        )
