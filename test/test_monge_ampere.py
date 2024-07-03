@@ -115,6 +115,15 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Cannot fix boundary nodes for periodic meshes."
         self.assertEqual(str(cm.exception), msg)
 
+    def test_curved_notimplementederror(self):
+        coords = Function(VectorFunctionSpace(UnitTriangleMesh(), "CG", 2))
+        coords.interpolate(coords.function_space().mesh().coordinates)
+        mover = MongeAmpereMover_Relaxation(Mesh(coords), ring_monitor)
+        with self.assertRaises(NotImplementedError) as cm:
+            mover.move()
+        msg = "MongeAmpereMover_Relaxation not implemented on curved meshes."
+        self.assertEqual(str(cm.exception), msg)
+
 
 class TestMonitor(BaseClasses.TestMongeAmpere):
     """

@@ -226,13 +226,18 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         ffacet_bc = firedrake.DirichletBC(self.P1_vec, 0, ffacet_indices)
         ffacets = list(self.mesh.coordinates.dat.data_with_halos[ffacet_bc.nodes])
         # TODO: Only do the following check in debugging mode (#94)
-        hyperplane = equation_of_hyperplane(*ffacets)
-        for x in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
-            if not np.isclose(float(hyperplane(*x)), 0):
-                raise ValueError(
-                    f"Boundary segment '{boundary_tag}' is not"
-                    f" {'linear' if self.dim == 2 else 'planar'}."
-                )
+        if self.coord_space.ufl_element().degree() == 1:
+            hyperplane = equation_of_hyperplane(*ffacets)
+            for x in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
+                if not np.isclose(float(hyperplane(*x)), 0):
+                    raise ValueError(
+                        f"Boundary segment '{boundary_tag}' is not"
+                        f" {'linear' if self.dim == 2 else 'planar'}."
+                    )
+        else:
+            raise NotImplementedError(
+                f"{type(self).__name__} not implemented on curved meshes."
+            )  # TODO: (#107)
 
         # Allow tangential movement, but only up until the end of boundary segments
         a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * ds
