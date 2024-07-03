@@ -198,7 +198,9 @@ class TestMovement(unittest.TestCase):
     def test_force_right_fixed(self):
         mesh = UnitSquareMesh(10, 10)
         coord_array = mesh.coordinates.dat.data
-        new_mesh = self.move(mesh, moving_boundary_tags=1, fixed_boundary_tags=2)
+        new_mesh = self.move(
+            mesh, moving_boundary_tags=1, fixed_boundary_tags=2, vector=[0.1, 0]
+        )
         new_coord_array = new_mesh.coordinates.dat.data
         self.assertFalse(np.allclose(coord_array, new_coord_array))
         # # TODO: Implement no-slip BCs for segments 3 and 4 (#99)
