@@ -167,6 +167,22 @@ for i, time in enumerate(times):
 axes[0, 1].axis(False)
 plt.savefig("lineal_spring-adapted_meshes.jpg")
 
+# This should give command line output similar to the following:
+#
+# .. code-block:: none
+#
+#    0.00   Volume ratio  1.00   Variation (σ/μ) 5.16e-16   Displacement 0.00 m
+#    0.10   Volume ratio  1.02   Variation (σ/μ) 4.23e-03   Displacement 0.05 m
+#    0.20   Volume ratio  1.05   Variation (σ/μ) 1.11e-02   Displacement 0.08 m
+#    0.30   Volume ratio  1.09   Variation (σ/μ) 1.82e-02   Displacement 0.08 m
+#    0.40   Volume ratio  1.11   Variation (σ/μ) 2.27e-02   Displacement 0.05 m
+#    0.50   Volume ratio  1.11   Variation (σ/μ) 2.27e-02   Displacement 0.00 m
+#    0.60   Volume ratio  1.09   Variation (σ/μ) 1.81e-02   Displacement 0.05 m
+#    0.70   Volume ratio  1.05   Variation (σ/μ) 1.08e-02   Displacement 0.08 m
+#    0.80   Volume ratio  1.02   Variation (σ/μ) 3.82e-03   Displacement 0.08 m
+#    0.90   Volume ratio  1.01   Variation (σ/μ) 1.32e-03   Displacement 0.05 m
+#    1.00   Volume ratio  1.01   Variation (σ/μ) 1.32e-03   Displacement 0.00 m
+#
 # .. figure:: lineal_spring-adapted_meshes.jpg
 #    :figwidth: 100%
 #    :align: center
