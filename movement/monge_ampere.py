@@ -373,9 +373,9 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
                 initial_norm = residual
             PETSc.Sys.Print(
                 f"{i:4d}"
-                f"   Min/Max {self.volume_ratio:10.4e}"
-                f"   Variation (σ/μ) {self.coefficient_of_variation:10.4e}"
-                f"   Residual {residual:10.4e}"
+                f"   Volume ratio {self.volume_ratio:5.2f}"
+                f"   Variation (σ/μ) {self.coefficient_of_variation:8.2e}"
+                f"   Residual {residual:8.2e}"
             )
             if residual < self.rtol:
                 self._convergence_message(i + 1)
@@ -526,9 +526,9 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             self.mesh.coordinates.assign(self.xi)
             PETSc.Sys.Print(
                 f"{i:4d}"
-                f"   Min/Max {self.volume_ratio:10.4e}"
-                f"   Variation (σ/μ) {self.coefficient_of_variation:10.4e}"
-                f"   Residual {self.relative_l2_residual:10.4e}"
+                f"   Volume ratio {self.volume_ratio:5.2f}"
+                f"   Variation (σ/μ) {self.coefficient_of_variation:8.2e}"
+                f"   Residual {self.relative_l2_residual:8.2e}"
             )
 
         self.snes = self._equidistributor.snes

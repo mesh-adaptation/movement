@@ -178,11 +178,11 @@ class PrimeMover:
     @property
     def volume_ratio(self):
         """
-        :return: the ratio of the smallest and largest element volumes.
+        :return: the ratio of the largest and smallest element volumes.
         :rtype: :class:`float`
         """
         volume_array = self.volume.vector().gather()
-        return volume_array.min() / volume_array.max()
+        return volume_array.max() / volume_array.min()
 
     @property
     def coefficient_of_variation(self):

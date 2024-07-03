@@ -102,7 +102,7 @@ class LaplacianSmoother(PrimeMover):
         self.volume.interpolate(ufl.CellVolume(self.mesh))
         PETSc.Sys.Print(
             f"{time:.2f} s"
-            f"   Min/Max {self.volume_ratio:10.4e}"
-            f"   Variation (σ/μ) {self.coefficient_of_variation:10.4e}"
+            f"   Volume ratio {self.volume_ratio:5.2f}"
+            f"   Variation (σ/μ) {self.coefficient_of_variation:8.2e}"
             f"   Displacement {np.linalg.norm(self.displacement):.2f} m"
         )
