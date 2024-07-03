@@ -4,67 +4,39 @@ import sympy
 __all__ = []
 
 
-def equation_of_line(a, b):
-    """
-    Deduce an expression for the equation of a line passing through two points.
-
-    :arg a: the first point the line passes through
-    :type a: :class:`tuple`
-    :arg b: the second point the line passes through
-    :type b: :class:`tuple`
-    :returns: a function of two variables representing the line
-    :rtype: :class:`~.Callable`
-    """
-    try:
-        line = sympy.Line(sympy.Point2D(a), sympy.Point2D(b))
-    except ValueError as exc:
-        raise ValueError("Could not determine a line for the provided points.") from exc
-
-    def equation(x, y):
-        return line.distance(sympy.Point2D((x, y)))
-
-    return equation
-
-
-def _equation_of_plane(a, b, c):
-    """
-    Deduce an expression for the equation of a plane passing through three points.
-
-    Returns `None` if the points are colinear.
-
-    :arg a: the first point the line passes through
-    :type a: :class:`tuple`
-    :arg b: the second point the line passes through
-    :type b: :class:`tuple`
-    :arg c: the third point the line passes through
-    :type c: :class:`tuple`
-    :returns: a function of three variables representing the plane
-    :rtype: :class:`~.Callable`
-    """
-    plane = sympy.Plane(sympy.Point3D(a), sympy.Point3D(b), sympy.Point3D(c))
-
-    def equation(x, y, z):
-        return plane.distance(sympy.Point3D((x, y, z)))
-
-    return equation
-
-
-def equation_of_plane(*points):
+def equation_of_hyperplane(*points):
     r"""
-    Deduce an expression for the equation of a plane passing through a set of points.
+    Deduce an expression for the equation of a hyperplane passing through a set of
+    points.
 
-    :arg points: the first point the line passes through
+    :arg points: points the hyperplane passes through
     :type points: :class:`tuple` of :class:`tuple`\s
-    :returns: a function of three variables representing the plane
+    :returns: a function representing the hyperplane
     :rtype: :class:`~.Callable`
     """
-    assert len(points) >= 3
+    dim = len(points[0])
+    assert len(points) >= dim
+    for point in points:
+        assert len(point) == dim
     indices = list(range(len(points)))
-    while len(indices) >= 3:
+    try:
+        Point, Hyperplane, name = {
+            2: (sympy.Point2D, sympy.Line, "line"),
+            3: (sympy.Point3D, sympy.Plane, "plane"),
+        }[dim]
+    except KeyError as exc:
+        raise NotImplementedError(
+            f"equation_of_hyperplane not implemented in {dim}D."
+        ) from exc
+    while len(indices) >= dim:
         np.random.shuffle(indices)
-        i, j, k = indices[:3]
         try:
-            return _equation_of_plane(points[i], points[j], points[k])
+            hyperplane = Hyperplane(*(Point(points[i]) for i in indices[:dim]))
+
+            def equation(*xyz):
+                return hyperplane.distance(Point(xyz))
+
+            return equation
         except ValueError:
             indices.pop(0)
-    raise ValueError("Could not determine a plane for the provided points.")
+    raise ValueError(f"Could not determine a {name} for the provided points.")

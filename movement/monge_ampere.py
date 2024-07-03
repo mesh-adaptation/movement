@@ -8,7 +8,7 @@ from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
 
 import movement.solver_parameters as solver_parameters
-from movement.math import equation_of_line, equation_of_plane
+from movement.math import equation_of_hyperplane
 from movement.mover import PrimeMover
 
 __all__ = [
@@ -226,17 +226,9 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         ffacet_bc = firedrake.DirichletBC(self.P1_vec, 0, ffacet_indices)
         ffacets = list(self.mesh.coordinates.dat.data_with_halos[ffacet_bc.nodes])
         # TODO: Only do the following check in debugging mode (#94)
-        if self.dim == 2:
-            f = equation_of_line(*ffacets)
-        elif self.dim == 3:
-            try:
-                f = equation_of_plane(*ffacets)
-            except (AssertionError, ValueError) as exc:
-                raise ValueError(
-                    f"Could not determine a plane for boundary segment '{boundary_tag}'."
-                ) from exc
+        hyperplane = equation_of_hyperplane(*ffacets)
         for x in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
-            if not np.isclose(float(f(*x)), 0):
+            if not np.isclose(float(hyperplane(*x)), 0):
                 raise ValueError(
                     f"Boundary segment '{boundary_tag}' is not"
                     f" {'linear' if self.dim == 2 else 'planar'}."
