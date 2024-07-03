@@ -104,7 +104,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         mover = MongeAmpereMover_Relaxation(mesh, ring_monitor)
         with self.assertRaises(ValueError) as cm:
             mover.move()
-        msg = "Could not determine a plane for boundary segment '1'."
+        msg = "Could not determine a plane for the provided points."
         self.assertEqual(str(cm.exception), msg)
 
     def test_periodic_fix_boundary_valueerror(self):
