@@ -360,7 +360,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
 
             # Update monitor function
             self.monitor.interpolate(self.monitor_function(self.mesh))
-            self.volume.interpolate(self.L_P0 / self.original_volume)
+            firedrake.assemble(self.L_P0, tensor=self.volume)
+            self.volume.interpolate(self.volume / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
 
             # Evaluate normalisation coefficient
@@ -520,7 +521,8 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             cursol = snes.getSolution()
             update_monitor(cursol)
             self._update_coordinates()
-            self.volume.interpolate(self.L_P0 / self.original_volume)
+            firedrake.assemble(self.L_P0, tensor=self.volume)
+            self.volume.interpolate(self.volume / self.original_volume)
             self.mesh.coordinates.assign(self.xi)
             PETSc.Sys.Print(
                 f"{i:4d}"
