@@ -218,17 +218,6 @@ class PrimeMover:
         """
         raise NotImplementedError("Implement `move` in the derived class.")
 
-    def adapt(self):
-        """
-        Alias of `move`.
-        """
-        warn(
-            "`adapt` is deprecated (use `move` instead)",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.move()
-
 
 def plural(iterations):
     return "s" if iterations != 1 else ""
