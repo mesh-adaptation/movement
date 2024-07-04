@@ -24,7 +24,7 @@ class PrimeMover(abc.ABC):
         monitor_function=None,
         raise_convergence_errors=True,
         tangling_check=None,
-        **kwargs,
+        quadrature_degree=None,
     ):
         r"""
         :arg mesh: the physical mesh
@@ -38,6 +38,8 @@ class PrimeMover(abc.ABC):
         :kwarg tangling_check: check whether the mesh has tangled elements (by default
             on in the 2D case and off otherwise)
         :type tangling_check: :class:`bool`
+        :kwarg quadrature_degree: quadrature degree to be passed to Firedrakes measures
+        :type quadrature_degree: :class:`int`
         """
         self.mesh = firedrake.Mesh(mesh.coordinates.copy(deepcopy=True))
         self.monitor_function = monitor_function
@@ -54,10 +56,9 @@ class PrimeMover(abc.ABC):
         self.edge_indices = self.plex.getDepthStratum(1)
 
         # Measures
-        degree = kwargs.get("quadrature_degree")
-        self.dx = firedrake.dx(domain=self.mesh, degree=degree)
-        self.ds = firedrake.ds(domain=self.mesh, degree=degree)
-        self.dS = firedrake.dS(domain=self.mesh, degree=degree)
+        self.dx = firedrake.dx(domain=self.mesh, degree=quadrature_degree)
+        self.ds = firedrake.ds(domain=self.mesh, degree=quadrature_degree)
+        self.dS = firedrake.dS(domain=self.mesh, degree=quadrature_degree)
 
         self._create_function_spaces()
         self._create_functions()
