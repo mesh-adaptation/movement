@@ -209,7 +209,7 @@ class PrimeMover(abc.ABC):
         """
         Move the mesh according to the method of choice.
         """
-        pass
+        pass  # pragma: no cover
 
 
 def plural(iterations):
