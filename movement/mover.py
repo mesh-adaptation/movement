@@ -213,4 +213,8 @@ class PrimeMover(abc.ABC):
 
 
 def plural(iterations):
+    """
+    :return: 's' if `iterations` should be referred to in the plural sense
+    :rtype: :class:`str`
+    """
     return "s" if iterations != 1 else ""
