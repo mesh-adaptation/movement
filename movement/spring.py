@@ -149,8 +149,8 @@ class SpringMover_Base(PrimeMover):
 
         K = np.zeros((2 * Nv, 2 * Nv))
         for e in range(*self.edge_indices):
-            off = self.edge_vector_offset(e)
-            i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
+            off = self._edge_offset(e)
+            i, j = (self._coordinate_offset(v) for v in self.plex.getCone(e))
             l = edge_lengths.dat.data_with_halos[off]
             angle = angles.dat.data_with_halos[off]
             c = np.cos(angle)
@@ -224,7 +224,7 @@ class SpringMover_Base(PrimeMover):
             for e in range(*self.edge_indices):
                 if bnd.point2facetnumber[e] not in subsets:
                     continue
-                i, j = (self.coordinate_offset(v) for v in self.plex.getCone(e))
+                i, j = (self._coordinate_offset(v) for v in self.plex.getCone(e))
                 self._forcing[i, :] = boundary_data[i, :]
                 self._forcing[j, :] = boundary_data[j, :]
                 for k in (2 * i, 2 * i + 1, 2 * j, 2 * j + 1):
