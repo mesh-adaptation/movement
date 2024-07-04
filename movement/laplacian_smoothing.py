@@ -51,6 +51,14 @@ class LaplacianSmoother(PrimeMover):
 
     @PETSc.Log.EventDecorator()
     def _solve(self, boundary_conditions, solver_parameters=None):
+        """
+        Solve the Laplace system.
+
+        :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
+        :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
+        :kwarg solver_parameters: solver parameters for solving the Laplace equation
+        :type solver_parameters: :class:`dict`
+        """
         if not hasattr(self, "_solver"):
             test = firedrake.TestFunction(self.coord_space)
             trial = firedrake.TrialFunction(self.coord_space)
