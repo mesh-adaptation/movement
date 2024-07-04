@@ -13,7 +13,7 @@ from movement.tangling import MeshTanglingChecker
 __all__ = ["PrimeMover"]
 
 
-class PrimeMover:
+class PrimeMover(abc.ABC):
     """
     Base class for all mesh movers.
     """
@@ -212,11 +212,12 @@ class PrimeMover:
         mean = volume_array.sum() / volume_array.size
         return np.sqrt(np.sum((volume_array - mean) ** 2) / volume_array.size) / mean
 
+    @abc.abstractmethod
     def move(self):
         """
         Move the mesh according to the method of choice.
         """
-        raise NotImplementedError("Implement `move` in the derived class.")
+        pass
 
 
 def plural(iterations):
