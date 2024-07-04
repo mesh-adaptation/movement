@@ -99,6 +99,8 @@ class LaplacianSmoother(PrimeMover):
         self.displacement[:] = self.v.dat.data_with_halos * self.dt
         self.x.dat.data_with_halos[:] += self.displacement
         self.mesh.coordinates.assign(self.x)
+        if hasattr(self, "tangling_checker"):
+            self.tangling_checker.check()
         self.volume.interpolate(ufl.CellVolume(self.mesh))
         PETSc.Sys.Print(
             f"{time:.2f} s"

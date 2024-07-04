@@ -52,6 +52,13 @@ class TestExceptions(unittest.TestCase):
             mover.move(0)
         self.assertEqual(str(cm.exception), "Solver failed to converge.")
 
+    def test_tangling_valueerror(self):
+        mover = SpringMover(UnitSquareMesh(3, 3), 1.0)
+        mover.mesh.coordinates.dat.data[3] += 0.2
+        with self.assertRaises(ValueError) as cm:
+            mover.move(0)
+        self.assertEqual(str(cm.exception), "Mesh has 1 tangled element.")
+
 
 class TestStiffness(unittest.TestCase):
     """
@@ -191,7 +198,9 @@ class TestMovement(unittest.TestCase):
     def test_force_right_fixed(self):
         mesh = UnitSquareMesh(10, 10)
         coord_array = mesh.coordinates.dat.data
-        new_mesh = self.move(mesh, moving_boundary_tags=1, fixed_boundary_tags=2)
+        new_mesh = self.move(
+            mesh, moving_boundary_tags=1, fixed_boundary_tags=2, vector=[0.1, 0]
+        )
         new_coord_array = new_mesh.coordinates.dat.data
         self.assertFalse(np.allclose(coord_array, new_coord_array))
         # # TODO: Implement no-slip BCs for segments 3 and 4 (#99)

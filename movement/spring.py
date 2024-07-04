@@ -278,6 +278,9 @@ class SpringMover_Lineal(SpringMover_Base):
             f"   Displacement {np.linalg.norm(self.displacement):.2f} m"
         )
 
+        if hasattr(self, "tangling_checker"):
+            self.tangling_checker.check()
+
 
 class SpringMover_Torsional(SpringMover_Lineal):
     """
