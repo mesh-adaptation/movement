@@ -1,8 +1,8 @@
-# Using mesh movement to optimize the mesh for PDE solution
+# Using mesh movement to optimise the mesh for PDE solution
 # =========================================================
 #
-# In this demo will demonstrate how we might use mesh movement to obtain a mesh
-# that is optimized for solving a particular PDE. The general idea is that we
+# In this demo we will demonstrate how we might use mesh movement to obtain a mesh
+# that is optimised for solving a particular PDE. The general idea is that we
 # want to reduce numerical error by increasing resolution where the local error
 # is (expected to be) high and decrease it elsewhere.
 #
@@ -27,12 +27,12 @@
 #    f(x, y) &= -\nabla^2 u(x, y) + u(x, y)
 #        = \left[ -\frac{4(x-x_0)^2 + 4(y-y_0)^2}{w^4}
 #                + \frac{4}{w^2} + 1 \right]
-#          \exp\left(-\frac{(x-x_0)^2 +  (y-y_0)^2}{w^2}\right)
+#          \exp\left(-\frac{(x-x_0)^2 +  (y-y_0)^2}{w^2}\right),
 #
 # where :math:`(x_0, y_0)` is the centre of the Gaussian with width :math:`w`.
 # Note that here we *first* choose the solution :math:`u` after which we can
 # compute what rhs :math:`f` should be, by substitution in the PDE, in order
-# for :math:`u` to be the analytical solution. This so called Method of
+# for :math:`u` to be the analytical solution. This so-called Method of
 # Manufactured Solutions approach is an easy way to construct PDE
 # configurations for which we know the analytical solution, e.g. for testing
 # purposes.
@@ -101,7 +101,7 @@ print("L2-norm error on initial mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 #    L2-norm error on initial mesh: 0.010233816824277465
 #
-# We will now try to use mesh movement to optimize the mesh to reduce
+# We will now try to use mesh movement to optimise the mesh to reduce
 # this numerical error. We use the same monitor function as
 # in the `previous Monge-Ampère demo <./monge_ampere_3d.py.html>`__
 # based on the norm of the Hessian of the solution.
@@ -142,32 +142,32 @@ mover = MongeAmpereMover(mesh, monitor, method="quasi_newton", rtol=rtol)
 mover.move()
 
 # For every iteration the MongeAmpereMover prints the minimum to maximum ratio of
-# the cell areas in the mesh, the residual in the Monge Ampere equation, and the
+# the cell areas in the mesh, the residual in the Monge-Ampère equation, and the
 # coefficient of variation of the cell areas:
 #
 # .. code-block:: none
 #
-#    0   Min/Max 2.0268e-01   Residual 4.7659e-01   Variation (σ/μ) 9.9384e-01
-#    1   Min/Max 3.7852e-01   Residual 2.4133e-01   Variation (σ/μ) 9.9659e-01
-#    2   Min/Max 5.9791e-01   Residual 1.2442e-01   Variation (σ/μ) 9.9774e-01
-#    3   Min/Max 7.1000e-01   Residual 6.5811e-02   Variation (σ/μ) 9.9804e-01
-#    4   Min/Max 7.7704e-01   Residual 3.4929e-02   Variation (σ/μ) 9.9818e-01
-#    5   Min/Max 8.3434e-01   Residual 1.7261e-02   Variation (σ/μ) 9.9829e-01
-#    6   Min/Max 8.5805e-01   Residual 7.7528e-03   Variation (σ/μ) 9.9833e-01
-#    7   Min/Max 8.6653e-01   Residual 3.1551e-03   Variation (σ/μ) 9.9835e-01
-#    8   Min/Max 8.6796e-01   Residual 1.1644e-03   Variation (σ/μ) 9.9835e-01
-#    9   Min/Max 8.6792e-01   Residual 3.8816e-04   Variation (σ/μ) 9.9835e-01
-#   10   Min/Max 8.6784e-01   Residual 1.1574e-04   Variation (σ/μ) 9.9835e-01
-#   11   Min/Max 8.6778e-01   Residual 1.5645e-05   Variation (σ/μ) 9.9835e-01
-#   12   Min/Max 8.6776e-01   Residual 7.5654e-06   Variation (σ/μ) 9.9835e-01
-#   13   Min/Max 8.6776e-01   Residual 3.5803e-06   Variation (σ/μ) 9.9835e-01
-#   14   Min/Max 8.6775e-01   Residual 1.5113e-06   Variation (σ/μ) 9.9835e-01
-#   15   Min/Max 8.6775e-01   Residual 5.7080e-07   Variation (σ/μ) 9.9835e-01
-#   16   Min/Max 8.6775e-01   Residual 1.9357e-07   Variation (σ/μ) 9.9835e-01
-#   17   Min/Max 8.6775e-01   Residual 5.8585e-08   Variation (σ/μ) 9.9835e-01
-#   Converged in 17 iterations.
+#       0   Volume ratio  4.93   Variation (σ/μ) 4.73e-01   Residual 4.77e-01
+#       1   Volume ratio  2.64   Variation (σ/μ) 2.44e-01   Residual 2.41e-01
+#       2   Volume ratio  1.67   Variation (σ/μ) 1.31e-01   Residual 1.24e-01
+#       3   Volume ratio  1.41   Variation (σ/μ) 7.57e-02   Residual 6.58e-02
+#       4   Volume ratio  1.29   Variation (σ/μ) 4.77e-02   Residual 3.49e-02
+#       5   Volume ratio  1.20   Variation (σ/μ) 3.37e-02   Residual 1.73e-02
+#       6   Volume ratio  1.17   Variation (σ/μ) 2.81e-02   Residual 7.75e-03
+#       7   Volume ratio  1.15   Variation (σ/μ) 2.64e-02   Residual 3.16e-03
+#       8   Volume ratio  1.15   Variation (σ/μ) 2.59e-02   Residual 1.16e-03
+#       9   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 3.88e-04
+#      10   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 1.16e-04
+#      11   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 1.56e-05
+#      12   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 7.57e-06
+#      13   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 3.58e-06
+#      14   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 1.51e-06
+#      15   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 5.71e-07
+#      16   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 1.94e-07
+#      17   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 5.86e-08
+#    Solver converged in 17 iterations.
 #
-# Plotting the resulting mesh
+# Plotting the resulting mesh:
 
 from firedrake.pyplot import triplot
 
@@ -193,7 +193,7 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 # Of course, in many practical problems we do not actually have access
 # to the exact solution. We can then use the Hessian of the numerical
-# solution in the monitor function. Calculating the Hessian we have to
+# solution in the monitor function. When calculating the Hessian we have to
 # be a bit careful however: since our numerical FEM solution :math:`u_h`
 # is a piecewise linear function, its first gradient results in a
 # piecewise *constant* function, a vector-valued constant

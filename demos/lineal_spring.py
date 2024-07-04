@@ -122,8 +122,9 @@ plt.savefig("lineal_spring-boundary_displacement.jpg")
 #    :figwidth: 60%
 #    :align: center
 #
-# To apply this boundary displacement, we need to create a :class:`~.SpringMover`
-# instance and define a function for updating the boundary conditions. ::
+# To apply this boundary displacement, we need to create a
+# :class:`~movement.spring.SpringMover` instance and define a function for updating the
+# boundary conditions. ::
 
 mover = SpringMover(mesh, timestep, method="lineal")
 top = Function(mover.coord_space)
@@ -157,8 +158,6 @@ for i, time in enumerate(times):
         update_boundary_displacement=update_boundary_displacement,
         boundary_conditions=boundary_conditions,
     )
-    displacement = np.linalg.norm(mover.displacement)
-    print(f"time = {time:.1f} s, displacement = {displacement:.2f} m")
 
     # Plot the current mesh, adding a time label
     ax = axes[idx // 4, idx % 4]
@@ -168,6 +167,22 @@ for i, time in enumerate(times):
 axes[0, 1].axis(False)
 plt.savefig("lineal_spring-adapted_meshes.jpg")
 
+# This should give command line output similar to the following:
+#
+# .. code-block:: none
+#
+#    0.00   Volume ratio  1.00   Variation (σ/μ) 5.16e-16   Displacement 0.00 m
+#    0.10   Volume ratio  1.02   Variation (σ/μ) 4.23e-03   Displacement 0.05 m
+#    0.20   Volume ratio  1.05   Variation (σ/μ) 1.11e-02   Displacement 0.08 m
+#    0.30   Volume ratio  1.09   Variation (σ/μ) 1.82e-02   Displacement 0.08 m
+#    0.40   Volume ratio  1.11   Variation (σ/μ) 2.27e-02   Displacement 0.05 m
+#    0.50   Volume ratio  1.11   Variation (σ/μ) 2.27e-02   Displacement 0.00 m
+#    0.60   Volume ratio  1.09   Variation (σ/μ) 1.81e-02   Displacement 0.05 m
+#    0.70   Volume ratio  1.05   Variation (σ/μ) 1.08e-02   Displacement 0.08 m
+#    0.80   Volume ratio  1.02   Variation (σ/μ) 3.82e-03   Displacement 0.08 m
+#    0.90   Volume ratio  1.01   Variation (σ/μ) 1.32e-03   Displacement 0.05 m
+#    1.00   Volume ratio  1.01   Variation (σ/μ) 1.32e-03   Displacement 0.00 m
+#
 # .. figure:: lineal_spring-adapted_meshes.jpg
 #    :figwidth: 100%
 #    :align: center
@@ -182,6 +197,10 @@ linf_error = np.max(np.abs(coord_data - coord_data_init))
 print(f"l_infinity error: {linf_error:.3f} m")
 assert linf_error < 0.002
 
+# .. code-block:: console
+#
+#    l_infinity error: 0.001 m
+#
 # Note that the mesh doesn't return to its original state quite as neatly with the lineal
 # spring method as it does with the Laplacian smoothing method. However, the result is
 # still very good (as can be seen from the plots above).
@@ -191,6 +210,12 @@ assert linf_error < 0.002
 K = mover.assemble_stiffness_matrix(boundary_conditions=boundary_conditions)
 print(f"Stiffness matrix shape: {K.shape}")
 print(f"Number of mesh vertices: {mesh.num_vertices()}")
+
+# .. code-block:: console
+#
+#    Stiffness matrix shape: (242, 242)
+#    Number of mesh vertices: 121
+#
 
 fig, axes = plt.subplots()
 axes.spy(K)
