@@ -19,13 +19,11 @@ all_demos = glob.glob(os.path.join(demo_dir, "*.py"))
 # - Each value is a dictionary where:
 # -- The key is the original string or regex pattern that we wish to replace
 # -- The value is the replacement string (use "" to remove the original code)
+changes_dict = {"rtol = 1.0e-08": "rtol = 1.0e-03", "n = 20": "n = 10"}
 modifications = {
-    "monge_ampere_3d.py": {"rtol = 1.0e-08": "rtol = 1.0e-03", "n = 20": "n = 10"},
-    "monge_ampere1.py": {"rtol = 1.0e-08": "rtol = 1.0e-03", "n = 20": "n = 10"},
-    "monge_ampere_helmholtz.py": {
-        "rtol = 1.0e-08": "rtol = 1.0e-03",
-        "n = 20": "n = 10",
-    },
+    "monge_ampere_3d.py": changes_dict,
+    "monge_ampere1.py": changes_dict,
+    "monge_ampere_helmholtz.py": changes_dict,
 }
 
 
