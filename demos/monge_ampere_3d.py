@@ -73,11 +73,8 @@ def monitor(mesh):
 # we use the `"relaxation"` method (see :cite:`McRae:2018`),
 # which gives faster convergence for this case.
 
-import os
-
-test = os.environ.get("MOVEMENT_REGRESSION_TEST")
-rtol = 1.0e-03 if test else 1.0e-08
-n = 10 if test else 20
+rtol = 1.0e-08
+n = 20
 mesh = UnitCubeMesh(n, n, n)
 mover = movement.MongeAmpereMover(mesh, monitor, method="relaxation", rtol=rtol)
 mover.move()

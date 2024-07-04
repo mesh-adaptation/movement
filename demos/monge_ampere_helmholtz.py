@@ -41,14 +41,11 @@
 # Because our chosen solution does not satisfy homogeneous Neumann boundary conditions,
 # we instead apply Dirichlet boundary conditions based on the chosen analytical solution.
 
-import os
-
 from firedrake import *
 
 from movement import MongeAmpereMover
 
-test = os.environ.get("MOVEMENT_REGRESSION_TEST")
-n = 10 if test else 20
+n = 20
 
 mesh = UnitSquareMesh(n, n)  # initial mesh
 
@@ -137,7 +134,7 @@ fig, axes = plt.subplots()
 #    :figwidth: 60%
 #    :align: center
 
-rtol = 1.0e-03 if test else 1.0e-08
+rtol = 1.0e-08
 mover = MongeAmpereMover(mesh, monitor, method="quasi_newton", rtol=rtol)
 mover.move()
 

@@ -53,7 +53,7 @@ jobs:
           . /home/firedrake/firedrake/bin/activate
           make lint
 
-      - name: 'Test Animate'
+      - name: 'Test Movement'
         run: |
           . /home/firedrake/firedrake/bin/activate
           export GITHUB_ACTIONS_TEST_RUN=1
