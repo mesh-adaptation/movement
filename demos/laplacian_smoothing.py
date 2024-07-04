@@ -141,8 +141,6 @@ for i, time in enumerate(times):
         update_boundary_velocity=update_boundary_velocity,
         boundary_conditions=boundary_conditions,
     )
-    displacement = np.linalg.norm(mover.displacement)
-    print(f"time = {time:.1f} s, displacement = {displacement:.2f} m")
 
     # Plot the current mesh, adding a time label
     ax = axes[idx // 4, idx % 4]
@@ -152,6 +150,22 @@ for i, time in enumerate(times):
 axes[0, 1].axis(False)
 plt.savefig("laplacian_smoothing-adapted_meshes.jpg")
 
+# This should give command line output similar to the following:
+#
+# .. code-block:: none
+#
+#    0.00 s   Volume ratio  1.00   Variation (σ/μ) 5.16e-16   Displacement 0.00 m
+#    0.10 s   Volume ratio  1.03   Variation (σ/μ) 7.35e-03   Displacement 0.04 m
+#    0.20 s   Volume ratio  1.08   Variation (σ/μ) 1.90e-02   Displacement 0.06 m
+#    0.30 s   Volume ratio  1.13   Variation (σ/μ) 3.04e-02   Displacement 0.06 m
+#    0.40 s   Volume ratio  1.17   Variation (σ/μ) 3.73e-02   Displacement 0.04 m
+#    0.50 s   Volume ratio  1.17   Variation (σ/μ) 3.73e-02   Displacement 0.00 m
+#    0.60 s   Volume ratio  1.13   Variation (σ/μ) 3.04e-02   Displacement 0.04 m
+#    0.70 s   Volume ratio  1.08   Variation (σ/μ) 1.90e-02   Displacement 0.06 m
+#    0.80 s   Volume ratio  1.03   Variation (σ/μ) 7.35e-03   Displacement 0.06 m
+#    0.90 s   Volume ratio  1.00   Variation (σ/μ) 1.34e-10   Displacement 0.04 m
+#    1.00 s   Volume ratio  1.00   Variation (σ/μ) 1.34e-10   Displacement 0.00 m
+#
 # .. figure:: laplacian_smoothing-adapted_meshes.jpg
 #    :figwidth: 100%
 #    :align: center
