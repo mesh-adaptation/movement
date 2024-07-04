@@ -62,6 +62,14 @@ class PrimeMover:
         self._create_function_spaces()
         self._create_functions()
 
+        # Utilities
+        if tangling_check is None:
+            tangling_check = self.dim == 2
+        if tangling_check:
+            self.tangling_checker = MeshTanglingChecker(
+                self.mesh, raise_error=raise_convergence_errors
+            )
+
     @abc.abstractmethod
     def _create_function_spaces(self):
         self.coord_space = self.mesh.coordinates.function_space()
@@ -76,14 +84,6 @@ class PrimeMover:
         self.v = firedrake.Function(self.coord_space, name="Mesh velocity")
         self.volume = firedrake.Function(self.P0, name="Mesh volume")
         self.volume.interpolate(ufl.CellVolume(self.mesh))
-
-        # Utilities
-        if tangling_check is None:
-            tangling_check = self.dim == 2
-        if tangling_check:
-            self.tangling_checker = MeshTanglingChecker(
-                self.mesh, raise_error=raise_convergence_errors
-            )
 
     def _convergence_message(self, iterations=None):
         """
