@@ -13,7 +13,7 @@ from movement.tangling import MeshTanglingChecker
 __all__ = ["PrimeMover"]
 
 
-class PrimeMover:
+class PrimeMover(abc.ABC):
     """
     Base class for all mesh movers.
     """
@@ -24,7 +24,7 @@ class PrimeMover:
         monitor_function=None,
         raise_convergence_errors=True,
         tangling_check=None,
-        **kwargs,
+        quadrature_degree=None,
     ):
         r"""
         :arg mesh: the physical mesh
@@ -38,6 +38,8 @@ class PrimeMover:
         :kwarg tangling_check: check whether the mesh has tangled elements (by default
             on in the 2D case and off otherwise)
         :type tangling_check: :class:`bool`
+        :kwarg quadrature_degree: quadrature degree to be passed to Firedrakes measures
+        :type quadrature_degree: :class:`int`
         """
         self.mesh = firedrake.Mesh(mesh.coordinates.copy(deepcopy=True))
         self.monitor_function = monitor_function
@@ -49,15 +51,22 @@ class PrimeMover:
         self.raise_convergence_errors = raise_convergence_errors
         self.dim = self.mesh.topological_dimension()
         self.gdim = self.mesh.geometric_dimension()
+
+        # DMPlex setup
         self.plex = self.mesh.topology_dm
         self.vertex_indices = self.plex.getDepthStratum(0)
         self.edge_indices = self.plex.getDepthStratum(1)
+        entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
+        entity_dofs[0] = self.gdim
+        self._coordinate_section = create_section(self.mesh, entity_dofs)[0]
+        dm_coords = self.plex.getCoordinateDM()
+        dm_coords.setDefaultSection(self._coordinate_section)
+        self._local_coordinates_vec = dm_coords.createLocalVec()
+        self._update_plex_coordinates()
 
-        # Measures
-        degree = kwargs.get("quadrature_degree")
-        self.dx = firedrake.dx(domain=self.mesh, degree=degree)
-        self.ds = firedrake.ds(domain=self.mesh, degree=degree)
-        self.dS = firedrake.dS(domain=self.mesh, degree=degree)
+        self.dx = firedrake.dx(domain=self.mesh, degree=quadrature_degree)
+        self.ds = firedrake.ds(domain=self.mesh, degree=quadrature_degree)
+        self.dS = firedrake.dS(domain=self.mesh, degree=quadrature_degree)
 
         self._create_function_spaces()
         self._create_functions()
@@ -70,12 +79,10 @@ class PrimeMover:
                 self.mesh, raise_error=raise_convergence_errors
             )
 
-    @abc.abstractmethod
     def _create_function_spaces(self):
         self.coord_space = self.mesh.coordinates.function_space()
         self.P0 = firedrake.FunctionSpace(self.mesh, "DG", 0)
 
-    @abc.abstractmethod
     def _create_functions(self):
         self.x = firedrake.Function(self.mesh.coordinates, name="Physical coordinates")
         self.xi = firedrake.Function(
@@ -145,53 +152,38 @@ class PrimeMover:
             msg += f" after {iterations} iteration{plural(iterations)}"
         self._exception(f"{msg}.", exception=exception)
 
-    def _get_coordinate_section(self):
-        entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
-        entity_dofs[0] = self.gdim
-        self._coordinate_section = create_section(self.mesh, entity_dofs)[0]
-        dm_coords = self.plex.getCoordinateDM()
-        dm_coords.setDefaultSection(self._coordinate_section)
-        self._coords_local_vec = dm_coords.createLocalVec()
-        self._update_plex_coordinates()
-
     def _update_plex_coordinates(self):
-        if not hasattr(self, "_coords_local_vec"):
-            self._get_coordinate_section()
-        self._coords_local_vec.array[:] = np.reshape(
+        """
+        Update the underlying DMPlex coordinates with the coordinates of the Firedrake
+        mesh.
+        """
+        self._local_coordinates_vec.array[:] = np.reshape(
             self.mesh.coordinates.dat.data_with_halos,
-            self._coords_local_vec.array.shape,
+            self._local_coordinates_vec.array.shape,
         )
-        self.plex.setCoordinatesLocal(self._coords_local_vec)
+        self.plex.setCoordinatesLocal(self._local_coordinates_vec)
 
-    def _get_edge_vector_section(self):
-        entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
-        entity_dofs[1] = 1
-        self._edge_vector_section = create_section(self.mesh, entity_dofs)[0]
+    def _coordinate_offset(self, index):
+        """
+        Map the index of a DMPlex coordinate to the coordinate index in Firedrake.
 
-    def coordinate_offset(self, index):
+        :arg index: DMPlex coordinate index
+        :type index: :class:`int`
         """
-        Get the DMPlex coordinate section offset
-        for a given `index`.
-        """
-        if not hasattr(self, "_coordinate_section"):
-            self._get_coordinate_section()
         return self._coordinate_section.getOffset(index) // self.dim
 
-    def edge_vector_offset(self, index):
+    def _edge_offset(self, index):
         """
-        Get the DMPlex edge vector section offset
-        for a given `index`.
+        Map the index of a DMPlex edge to the edge index in Firedrake.
+
+        :arg index: DMPlex edge index
+        :type index: :class:`int`
         """
         if not hasattr(self, "_edge_vector_section"):
-            self._get_edge_vector_section()
+            entity_dofs = np.zeros(self.dim + 1, dtype=np.int32)
+            entity_dofs[1] = 1
+            self._edge_vector_section = create_section(self.mesh, entity_dofs)[0]
         return self._edge_vector_section.getOffset(index)
-
-    def coordinate(self, index):
-        """
-        Get the mesh coordinate associated with
-        a given `index`.
-        """
-        return self.mesh.coordinates.dat.data_with_halos[self.get_offset(index)]
 
     @property
     def volume_ratio(self):
@@ -212,23 +204,17 @@ class PrimeMover:
         mean = volume_array.sum() / volume_array.size
         return np.sqrt(np.sum((volume_array - mean) ** 2) / volume_array.size) / mean
 
+    @abc.abstractmethod
     def move(self):
         """
         Move the mesh according to the method of choice.
         """
-        raise NotImplementedError("Implement `move` in the derived class.")
-
-    def adapt(self):
-        """
-        Alias of `move`.
-        """
-        warn(
-            "`adapt` is deprecated (use `move` instead)",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.move()
+        pass  # pragma: no cover
 
 
 def plural(iterations):
+    """
+    :return: 's' if `iterations` should be referred to in the plural sense
+    :rtype: :class:`str`
+    """
     return "s" if iterations != 1 else ""

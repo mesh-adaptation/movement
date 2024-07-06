@@ -197,12 +197,12 @@ class TestMongeAmpere(unittest.TestCase):
 
     def test_coordinate_update(self):
         mesh = self.mesh(2, n=2)
-        dg_coords = Function(VectorFunctionSpace(mesh, "DG", 1))
-        dg_coords.project(mesh.coordinates)
-        mover = MongeAmpereMover(Mesh(dg_coords), const_monitor)
-        mover._grad_phi.assign(2.0)
+        x, y = SpatialCoordinate(mesh)
+        coords = Function(VectorFunctionSpace(mesh, "CG", 1))
+        coords.interpolate(as_vector([x + 1, y]))
+        mover = MongeAmpereMover(Mesh(coords), const_monitor)
+        mover._grad_phi.interpolate(as_vector([1, 0]))
         mover._update_coordinates()
-        self.assertNotEqual(mover.grad_phi.dof_dset.size, mover._grad_phi.dof_dset.size)
         self.assertAlmostEqual(errornorm(mover.grad_phi, mover._grad_phi), 0)
-        mover.xi += 2
+        mover.xi.dat.data[:, 0] += 1
         self.assertAlmostEqual(errornorm(mover.x, mover.xi), 0)
