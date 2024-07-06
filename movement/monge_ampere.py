@@ -100,6 +100,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.rtol = kwargs.pop("rtol", 1.0e-08)
         self.dtol = kwargs.pop("dtol", 2.0)
         self.fix_boundary_nodes = kwargs.pop("fix_boundary_nodes", False)
+        self.immersed_facet_tags = kwargs.pop("immersed_facet_tags", [])
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
         self.theta = firedrake.Constant(0.0)
 
@@ -198,7 +199,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         n = ufl.FacetNormal(self.mesh)
         iszero = [np.isclose(firedrake.assemble(abs(ni) * ds), 0.0) for ni in n]
         nzero = sum(iszero)
-        # assert nzero < self.dim
+        assert nzero < self.dim
         if nzero == self.dim - 1:
             idx = iszero.index(False)
             return (firedrake.DirichletBC(self.P1_vec.sub(idx), 0, boundary_tag),)
@@ -258,6 +259,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         bcs = [
             dirichlet_bc
             for boundary_tag in self.mesh.exterior_facets.unique_markers
+            if boundary_tag not in self.immersed_facet_tags
             for dirichlet_bc in self._l2_projector_bcs(boundary_tag)
         ]
         if not bcs and self.fix_boundary_nodes:
