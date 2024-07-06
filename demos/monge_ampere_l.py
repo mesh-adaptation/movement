@@ -1,13 +1,16 @@
 # Monge-Ampere in an L-shaped domain
 # ==================================
 
+# NOTE: https://www.firedrakeproject.org/variational-problems.html#boundary-conditions-on-interior-facets
+
 # TODO: text
 
 from firedrake import *
 
 from movement import *
 
-mesh = Mesh("l.msh")
+# mesh = Mesh("l.msh")
+mesh = Mesh("l_convex.msh")
 VTKFile("monge_ampere_l-initial_mesh.pvd").write(mesh.coordinates)
 
 

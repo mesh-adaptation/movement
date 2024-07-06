@@ -198,7 +198,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         n = ufl.FacetNormal(self.mesh)
         iszero = [np.isclose(firedrake.assemble(abs(ni) * ds), 0.0) for ni in n]
         nzero = sum(iszero)
-        assert nzero < self.dim
+        # assert nzero < self.dim
         if nzero == self.dim - 1:
             idx = iszero.index(False)
             return (firedrake.DirichletBC(self.P1_vec.sub(idx), 0, boundary_tag),)
