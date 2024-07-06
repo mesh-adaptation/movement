@@ -28,8 +28,15 @@ m = Function(P1)
 m.interpolate(ring_monitor(mesh))
 VTKFile("monge_ampere_l-monitor.pvd").write(m)
 
-
-rtol = 1.0e-08
-mover = MongeAmpereMover(mesh, ring_monitor, method="quasi_newton", rtol=rtol)
+# FIXME: Why are elements tangling?
+rtol = 1.0e-03
+mover = MongeAmpereMover(
+    mesh,
+    ring_monitor,
+    method="quasi_newton",
+    rtol=rtol,
+    immersed_facet_tags=[3, 4],
+    raise_convergence_errors=False,
+)
 mover.move()
 VTKFile("monge_ampere_l-adapted_mesh.pvd").write(mover.mesh.coordinates)
