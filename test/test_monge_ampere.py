@@ -130,6 +130,13 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
             mover.move()
         self.assertEqual(str(cm.exception), "Mesh has 1 tangled element.")
 
+    def test_periodic_plex_valueerror(self):
+        mover = MongeAmpereMover(self.mesh(1, n=3, periodic=True), const_monitor)
+        with self.assertRaises(ValueError) as cm:
+            mover._update_plex_coordinates()
+        msg = "Cannot update DMPlex coordinates for periodic meshes."
+        self.assertEqual(str(cm.exception), msg)
+
 
 class TestMonitor(BaseClasses.TestMongeAmpere):
     """
