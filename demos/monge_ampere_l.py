@@ -9,8 +9,10 @@ from firedrake import *
 
 from movement import *
 
-# mesh = Mesh("l.msh")
-mesh = Mesh("l_convex.msh")
+# mesh, immersed_facets = Mesh("l.msh"), []
+# mesh, immersed_facets = Mesh("l_convex.msh"), [3, 4]
+mesh, immersed_facets = SquareMesh(20, 20, 2, 2), []
+mesh.coordinates.dat.data[:] -= 1
 VTKFile("monge_ampere_l-initial_mesh.pvd").write(mesh.coordinates)
 
 
@@ -35,7 +37,7 @@ mover = MongeAmpereMover(
     ring_monitor,
     method="quasi_newton",
     rtol=rtol,
-    immersed_facet_tags=[3, 4],
+    immersed_facet_tags=immersed_facets,
     raise_convergence_errors=False,
 )
 mover.move()
