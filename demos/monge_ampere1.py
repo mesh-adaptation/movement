@@ -57,7 +57,7 @@ from firedrake.pyplot import triplot
 fig, axes = plt.subplots()
 triplot(mesh, axes=axes)
 axes.set_aspect(1)
-plt.savefig("monge_ampere1-initial_mesh.jpg")
+plt.savefig("monge_ampere1-initial_mesh.jpg", bbox_inches="tight")
 
 # .. figure:: monge_ampere1-initial_mesh.jpg
 #    :figwidth: 60%
@@ -160,7 +160,7 @@ mover.move()
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
 axes.set_aspect(1)
-plt.savefig("monge_ampere1-adapted_mesh.jpg")
+plt.savefig("monge_ampere1-adapted_mesh.jpg", bbox_inches="tight")
 
 # .. figure:: monge_ampere1-adapted_mesh.jpg
 #    :figwidth: 60%
@@ -174,11 +174,39 @@ triplot(mover.mesh, axes=axes)
 axes.set_xlim([0.15, 0.3])
 axes.set_ylim([0.15, 0.3])
 axes.set_aspect(1)
-plt.savefig("monge_ampere1-adapted_mesh_zoom.jpg")
+plt.savefig("monge_ampere1-adapted_mesh_zoom.jpg", bbox_inches="tight")
 
 # .. figure:: monge_ampere1-adapted_mesh_zoom.jpg
 #    :figwidth: 60%
 #    :align: center
+#
+# We should also check that the monitor values are indeed equidistributed. That is, the
+# integral of the monitor function should be approximately equal over all elements of the
+# *computational mesh*. We can check this with the ``monitor_integral`` method. ::
+
+integral = mover.monitor_integral()
+fig, axes = plt.subplots()
+axes.hist(integral.dat.data.flatten())
+num_elements = mover.mesh.num_cells()
+yticks = axes.get_yticks()
+axes.set_yticks(yticks)
+axes.set_yticklabels([f"{100 * yt / num_elements:.2f}%" for yt in yticks])
+axes.set_xlabel("Integral of monitor in an element")
+axes.grid(True)
+plt.savefig("monge_ampere1-monitor_integral_histogram.jpg", bbox_inches="tight")
+
+# .. figure:: monge_ampere1-monitor_integral_histogram.jpg
+#    :figwidth: 60%
+#    :align: center
+#
+# We see that the monitor function is close to being equidistributed but it is not
+# perfect. One way to get closer to equidistribution, we could tighten the solver
+# tolerance for solving the Monge-Ampère problem.
+#
+# .. rubric:: Exercise
+#
+# Run the demo again with a tighter tolerance and convince yourself that the
+# equidistribution does indeed improve.
 #
 # .. rubric:: Exercise
 #
