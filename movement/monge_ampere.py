@@ -238,6 +238,21 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         )
         return self._l2_projector
 
+    def monitor_integral(self):
+        r"""
+        Compute the integral of the monitor function over the *computational* mesh as a
+        :class:`firedrake.function.Function` in :math:`\mathbb{P}0_{DG}` space.
+
+        :return: the integral of the monitor function over the mesh.
+        :rtype: :class:`firedrake.function.Function`
+        """
+        self.mesh.coordinates.assign(self.xi)
+        P0 = firedrake.FunctionSpace(self.mesh, "DG", 0)
+        monitor = self.monitor_function(self.mesh)
+        integral = firedrake.assemble(firedrake.TestFunction(P0) * monitor * self.dx)
+        self.mesh.coordinates.assign(self.x)
+        return integral
+
 
 class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     r"""
