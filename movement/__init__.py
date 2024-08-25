@@ -1,3 +1,4 @@
+from movement.monitor import *  # noqa
 from movement.tangling import *  # noqa
 
 from movement.laplacian_smoothing import *  # noqa
