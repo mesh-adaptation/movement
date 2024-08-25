@@ -1,12 +1,15 @@
 import abc
 
 import ufl
-from animate.recovery import recover_gradient_l2
+from animate.recovery import recover_gradient_l2, recover_hessian_clement
 from animate.utility import norm
 from firedrake import SpatialCoordinate
 from firedrake.constant import Constant
 from firedrake.function import Function
-from firedrake.functionspace import FunctionSpace, VectorFunctionSpace
+from firedrake.functionspace import (
+    FunctionSpace,
+    VectorFunctionSpace,
+)
 
 __all__ = [
     "ConstantMonitorFactory",
@@ -128,6 +131,7 @@ class BallMonitorFactory(MonitorFactory):
         )
 
 
+# TODO: Support computing gradient with Clement interpolant
 class GradientMonitorFactory(MonitorFactory):
     """
     Factory class for monitor functions based on gradients of solutions.
@@ -152,15 +156,38 @@ class GradientMonitorFactory(MonitorFactory):
         P1 = FunctionSpace(mesh, "CG", 1)
         P1_vec = VectorFunctionSpace(mesh, "CG", 1)
         g = recover_gradient_l2(self.solution, target_space=P1_vec)
+        denomintor = norm(Function(P1).interpolate(ufl.dot(g, g)), norm_type="linf")
         return Constant(1.0) + self.scale_factor * Function(P1).interpolate(
-            ufl.dot(g, g) / norm(g, norm_type="linf")
+            ufl.dot(g, g) / denomintor
         )
 
 
+# TODO: Support computing Hessian with double L2 projection
 class HessianMonitorFactory(MonitorFactory):
     """
     Factory class for monitor functions based on Hessians of solutions.
     """
 
+    def __init__(self, dim, scale_factor, solution):
+        """
+        :arg dim: mesh dimension
+        :type dim: :class:`int`
+        :arg scale_factor: scale factor for the Hessian part
+        :type scale_factor: :class:`float`
+        :arg solution: solution to recover the Hessian of
+        :type solution: :class:`firedrake.function.Function`
+        """
+        super().__init__(dim)
+        assert scale_factor > 0
+        self.scale_factor = Constant(scale_factor)
+        assert isinstance(solution, Function)
+        self.solution = solution
+
     def monitor(self, mesh):
-        raise NotImplementedError  # TODO
+        P1 = FunctionSpace(mesh, "CG", 1)
+        H = recover_hessian_clement(self.solution)
+        # FIXME: Something isn't quite right here
+        denomintor = norm(Function(P1).interpolate(ufl.inner(H, H)), norm_type="linf")
+        return Constant(1.0) + self.scale_factor * Function(P1).interpolate(
+            ufl.inner(H, H) / denomintor
+        )
