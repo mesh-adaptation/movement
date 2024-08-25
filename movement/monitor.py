@@ -4,9 +4,14 @@ import ufl
 from firedrake import SpatialCoordinate
 from firedrake.constant import Constant
 from firedrake.function import Function
-from firedrake.functionspaceimpl import FunctionSpace
+from firedrake.functionspace import FunctionSpace
 
-__all__ = ["ConstantMonitorFactory", "BallMonitorFactory"]
+__all__ = [
+    "ConstantMonitorFactory",
+    "BallMonitorFactory",
+    "GradientMonitorFactory",
+    "HessianMonitorFactory",
+]
 
 
 class MonitorFactory(metaclass=abc.ABCMeta):
@@ -38,11 +43,9 @@ class MonitorFactory(metaclass=abc.ABCMeta):
 
         def monitor(mesh):
             m = self.monitor(mesh)
-            if isinstance(m, Constant):
+            if not isinstance(m, (Constant, Function)):
                 m = Function(FunctionSpace(mesh, "CG", 1)).interpolate(m)
-            if (m.ufl_element().family(), m.ufl_element().degree()) != ("Lagrange", 1):
-                raise ValueError("Monitor function must live in P1 space.")
-            return
+            return m
 
         return monitor
 
@@ -83,7 +86,10 @@ class BallMonitorFactory(MonitorFactory):
         """
         super().__init__(dim)
         assert len(centre) == self.dim
-        self.centre = Constant(centre)
+        assert radius > 0
+        assert amplitude > 0
+        assert width > 0
+        self.centre = ufl.as_vector([Constant(c) for c in centre])
         self.radius = Constant(radius)
         self.amplitude = Constant(amplitude)
         self.width = Constant(width)
@@ -99,5 +105,23 @@ class BallMonitorFactory(MonitorFactory):
         dist = ufl.dot(diff, diff)
         return (
             Constant(1.0)
-            + self.amplitude / ufl.cosh(self.width * (dist - self.radius)) ** 2
+            + self.amplitude / ufl.cosh(self.width * (dist - self.radius**2)) ** 2
         )
+
+
+class GradientMonitorFactory(MonitorFactory):
+    """
+    Factory class for monitor functions based on gradients of solutions.
+    """
+
+    def monitor(self, mesh):
+        raise NotImplementedError  # TODO
+
+
+class HessianMonitorFactory(MonitorFactory):
+    """
+    Factory class for monitor functions based on Hessians of solutions.
+    """
+
+    def monitor(self, mesh):
+        raise NotImplementedError  # TODO
