@@ -5,12 +5,11 @@ Unit tests for monitor module.
 import unittest
 
 import numpy as np
-from firedrake import SpatialCoordinate, UnitTriangleMesh
+from firedrake import SpatialCoordinate, UnitSquareMesh, UnitTriangleMesh
 from firedrake.function import Function
 from firedrake.functionspace import FunctionSpace
 
 from movement.monitor import *
-from movement.monitor import MonitorFactory
 
 
 class TestConstant(unittest.TestCase):
@@ -37,47 +36,41 @@ class TestBall(unittest.TestCase):
         self.assertTrue(np.allclose(mf.get_monitor()(mesh).dat.data, 1))
 
 
-class BaseClasses:
-    """
-    Base classes for unit testing.
-    """
-
-    class TestSolutionBased(unittest.TestCase):
-        """
-        Unit tests for monitor function factories based on solution data.
-        """
-
-        def setUp(self):
-            self.factory = MonitorFactory
-
-        def test_tiny_slope(self):
-            mesh = UnitTriangleMesh()
-            x, y = SpatialCoordinate(mesh)
-            sol = Function(FunctionSpace(mesh, "CG", 1)).interpolate(1e-8 * x)
-            mf = self.factory(dim=2, scale_factor=1e-8, solution=sol)
-            self.assertTrue(np.allclose(mf.get_monitor()(mesh).dat.data, 1))
-
-        def test_tiny_scale_factor(self):
-            mesh = UnitTriangleMesh()
-            x, y = SpatialCoordinate(mesh)
-            sol = Function(FunctionSpace(mesh, "CG", 1)).interpolate(x)
-            mf = self.factory(dim=2, scale_factor=1e-8, solution=sol)
-            self.assertTrue(np.allclose(mf.get_monitor()(mesh).dat.data, 1))
-
-
-class TestGradient(BaseClasses.TestSolutionBased):
+class TestGradient(unittest.TestCase):
     """
     Unit tests for :class:`~.GradientMonitorFactory`.
     """
 
-    def setUp(self):
-        self.factory = GradientMonitorFactory
+    def test_tiny_scale_factor(self):
+        mesh = UnitSquareMesh(5, 5)
+        x, y = SpatialCoordinate(mesh)
+        sol = Function(FunctionSpace(mesh, "CG", 1)).interpolate(x**2)
+        mf = GradientMonitorFactory(dim=2, scale_factor=1e-8, solution=sol)
+        self.assertTrue(np.allclose(mf.get_monitor()(mesh).dat.data, 1))
+
+    def test_linear(self):
+        mesh = UnitSquareMesh(5, 5)
+        x, y = SpatialCoordinate(mesh)
+        sol = Function(FunctionSpace(mesh, "CG", 1)).interpolate(x)
+        mf = GradientMonitorFactory(dim=2, scale_factor=1, solution=sol)
+        self.assertTrue(np.allclose(mf.get_monitor()(mesh).dat.data, 2))
 
 
-class TestHessian(BaseClasses.TestSolutionBased):
+class TestHessian(unittest.TestCase):
     """
     Unit tests for :class:`~.HessianMonitorFactory`.
     """
 
-    def setUp(self):
-        self.factory = HessianMonitorFactory
+    def test_tiny_scale_factor(self):
+        mesh = UnitSquareMesh(5, 5)
+        x, y = SpatialCoordinate(mesh)
+        sol = Function(FunctionSpace(mesh, "CG", 1)).interpolate(x**3)
+        mf = HessianMonitorFactory(dim=2, scale_factor=1e-8, solution=sol)
+        self.assertTrue(np.allclose(mf.get_monitor()(mesh).dat.data, 1))
+
+    def test_quadratic(self):
+        mesh = UnitSquareMesh(5, 5)
+        x, y = SpatialCoordinate(mesh)
+        sol = Function(FunctionSpace(mesh, "CG", 2)).interpolate(0.5 * x**2)
+        mf = HessianMonitorFactory(dim=2, scale_factor=1, solution=sol)
+        self.assertTrue(np.allclose(mf.get_monitor()(mesh).dat.data, 2))
