@@ -87,8 +87,15 @@ class ConstantMonitorFactory(MonitorFactory):
 
 
 class BallMonitorFactory(MonitorFactory):
-    """
-    Factory class for monitor functions focused around ball shapes.
+    r"""
+    Factory class for monitor functions focused around ball shapes:
+
+    .. math::
+        m(\mathbf{x}) = 1 + \frac{\alpha}{\cosh^2\left(\beta\left((\mathbf{x}-\mathbf{c})\cdot(\mathbf{x}-\mathbf{c})-\gamma^2\right)\right)},
+
+    where :math:`\mathbf{c}` is the centre point, :math:`\alpha` is the amplitude of the
+    monitor function, :math:`\beta` is the width of the transition region, and
+    :math:`\gamma` is the radius of the ball.
     """
 
     def __init__(self, dim, centre, radius, amplitude, width):
@@ -133,8 +140,14 @@ class BallMonitorFactory(MonitorFactory):
 
 # TODO: Support computing gradient with Clement interpolant
 class GradientMonitorFactory(MonitorFactory):
-    """
-    Factory class for monitor functions based on gradients of solutions.
+    r"""
+    Factory class for monitor functions based on gradients of solutions:
+
+    .. math::
+        m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}{\max_{x\in\Omega}\nabla u\cdot\nabla u},
+
+    where :math:`\alpha` is a scale factor and :math:`u` is the solution field of
+    interest.
     """
 
     def __init__(self, dim, scale_factor, solution):
@@ -152,20 +165,41 @@ class GradientMonitorFactory(MonitorFactory):
         assert isinstance(solution, Function)
         self.solution = solution
 
+    def recover_gradient(self, target_space):
+        r"""
+        Recover the gradient of the solution field.
+
+        :arg target_space: space to recover gradient in
+        :type target_space: :class:`firedrake.functionspace.FunctionSpace`
+        :return: the recovered gradient in vector :math:`\mathbb{P}1` space
+        :rtype: :class:`firedrake.function.Function`
+        """
+        return recover_gradient_l2(self.solution, target_space=target_space)
+
     def monitor(self, mesh):
-        P1 = FunctionSpace(mesh, "CG", 1)
-        P1_vec = VectorFunctionSpace(mesh, "CG", 1)
-        g = recover_gradient_l2(self.solution, target_space=P1_vec)
-        denomintor = norm(Function(P1).interpolate(ufl.dot(g, g)), norm_type="linf")
-        return Constant(1.0) + self.scale_factor * Function(P1).interpolate(
-            ufl.dot(g, g) / denomintor
-        )
+        """
+        Monitor function based on recovered gradient.
+
+        :arg mesh: the mesh on which the monitor function is to be defined
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :return: gradient-based monitor function evaluated on given mesh
+        :rtype: :class:`firedrake.function.Function`
+        """
+        g = self.recover_gradient(VectorFunctionSpace(mesh, "CG", 1))
+        gg = Function(FunctionSpace(mesh, "CG", 1)).interpolate(ufl.dot(g, g))
+        return Constant(1.0) + self.scale_factor * (gg / norm(gg, norm_type="linf"))
 
 
 # TODO: Support computing Hessian with double L2 projection
 class HessianMonitorFactory(MonitorFactory):
-    """
+    r"""
     Factory class for monitor functions based on Hessians of solutions.
+
+    .. math::
+        m(\mathbf{x}) = 1 + \alpha\frac{\mathbf{H}(u):\mathbf{H}(u)}{\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
+
+    where :math:`\alpha` is a scale factor, :math:`u` is the solution field of interest,
+    :math:`\mathbf{H}(u)` is the Hessian
     """
 
     def __init__(self, dim, scale_factor, solution):
@@ -183,11 +217,25 @@ class HessianMonitorFactory(MonitorFactory):
         assert isinstance(solution, Function)
         self.solution = solution
 
+    def recover_hessian(self):
+        r"""
+        Recover the Hessian of the solution field.
+
+        :return: the recovered Hessian in tensor :math:`\mathbb{P}1` space
+        :rtype: :class:`firedrake.function.Function`
+        """
+        return recover_hessian_clement(self.solution)[1]
+
     def monitor(self, mesh):
-        P1 = FunctionSpace(mesh, "CG", 1)
-        H = recover_hessian_clement(self.solution)
-        # FIXME: Something isn't quite right here
-        denomintor = norm(Function(P1).interpolate(ufl.inner(H, H)), norm_type="linf")
-        return Constant(1.0) + self.scale_factor * Function(P1).interpolate(
-            ufl.inner(H, H) / denomintor
-        )
+        """
+        Monitor function based on recovered Hessian.
+
+        :arg mesh: the mesh on which the monitor function is to be defined
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :return: Hessian-based monitor function evaluated on given mesh
+        :rtype: :class:`firedrake.function.Function`
+        """
+        H = self.recover_hessian()
+        frob = sum(H[i, j] ** 2 for i in range(self.dim) for j in range(self.dim))
+        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(frob)
+        return Constant(1.0) + self.scale_factor * (HH / norm(HH, norm_type="linf"))
