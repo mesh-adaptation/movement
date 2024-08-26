@@ -19,27 +19,38 @@ __all__ = [
 
 
 def tangential(v, n):
-    """Return component of v perpendicular to n (assumed normalized)"""
+    """
+    Return component of `v` perpendicular to `n` (assumed normalised).
+
+    This is used to project vectors onto the tangent plane of a boundary.
+
+    :arg v: the vector to project
+    :type v: :class:`ufl.Expr`
+    :arg n: the normal vector
+    :type n: :class:`ufl.Expr`
+    """
     return v - ufl.dot(v, n) * n
 
 
 def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     r"""
-    Movement of a `mesh` is determined by a `monitor_function`
-    :math:`m` and the Monge-Ampère type equation
+    Factory function for generating Monge-Ampère mesh movers.
+
+    Movement of a *mesh* is determined by a *monitor_function* :math:`m` and an equation
+    of Monge-Ampère type,
 
     .. math::
-        m(x)\det(I + H(\phi)) = \theta,
+        m(\mathbf{x})\det(I + H(\phi)) = \theta,
 
-    for a scalar potential :math:`\phi`, where :math:`I` is the
-    identity matrix, :math:`\theta` is a normalisation coefficient
-    and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with
-    respect to the coordinates :math:`\xi` of the computational mesh.
+    for a convex scalar potential :math:`\phi`. Here :math:`I` is the identity matrix,
+    :math:`\theta` is a normalisation coefficient and :math:`H(\phi)` denotes the Hessian
+    of :math:`\phi` with respect to the coordinates :math:`\xi` of the computational
+    mesh.
 
-    The physical mesh coordinates :math:`x` are updated according to
+    The physical mesh coordinates :math:`\mathbf{x}` are updated according to
 
     .. math::
-        x = \xi + \nabla\phi.
+        \mathbf{x} = \boldsymbol{\xi} + \nabla_{\boldsymbol{\xi}}\phi.
 
     :arg mesh: the physical mesh
     :type mesh: :class:`firedrake.mesh.MeshGeometry`
@@ -65,8 +76,7 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
 
 class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
     """
-    Base class for mesh movers based on the solution
-    of Monge-Ampere type equations.
+    Base class for mesh movers based on the solution of Monge-Ampère type equations.
     """
 
     def __init__(self, mesh, monitor_function, **kwargs):
@@ -122,8 +132,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         Initialise the approximations to the scalar potential and its Hessian with an
         initial guess.
 
-        By default, both are initialised to zero, which corresponds to the case where
-        the computational and physical meshes coincide.
+        By default, both are initialised to zero, which corresponds to the case where the
+        computational and physical meshes coincide.
 
         :arg phi_init: initial guess for the scalar potential
         :type phi_init: :class:`firedrake.function.Function`
@@ -155,6 +165,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
     def _update_coordinates(self):
         r"""
         Update the physical coordinates :math:`\mathbf{x}` using the recovered gradient:
+
         .. math::
             \mathbf{x} = \boldsymbol{\xi} + \nabla_{\boldsymbol{\xi}}\phi.
         """
@@ -165,6 +176,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.x.assign(self.xi + self.grad_phi)
         self.mesh.coordinates.assign(self.x)
 
+        # Check if the mesh has become tangled
         if hasattr(self, "tangling_checker"):
             self.tangling_checker.check()
 
@@ -241,8 +253,19 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
 
 class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     r"""
-    The elliptic Monge-Ampere equation is solved in a parabolised form using a
-    pseudo-time relaxation,
+    The standard, elliptic form of the Monge-Ampère equation used for mesh movement takes
+    the form,
+
+    .. math::
+        m(\mathbf{x})\det(I + H(\phi)) = \theta,
+
+    for a convex scalar potential :math:`\phi`. Here :math:`I` is the identity matrix,
+    :math:`\theta` is a normalisation coefficient and :math:`H(\phi)` denotes the Hessian
+    of :math:`\phi` with respect to the coordinates :math:`\xi` of the computational
+    mesh.
+
+    In this mesh mover, the Monge-Ampère equation is instead solved in a parabolised form
+    using a pseudo-time relaxation,
 
     .. math::
         -\frac\partial{\partial\tau}\Delta\phi = m(x)\det(I + H(\phi)) - \theta,
@@ -301,6 +324,10 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         """
         Setup the pseudo-timestepper for the relaxation method.
 
+        Forward Euler is used for the pseudo-time integration (see :cite:`MCB:18` for
+        details). The pseudo-timestep may be set through the `pseudo_timestep` keyword
+        argument to the constructor.
+
         :return: the pseudo-timestepper
         :rtype: :class:`~.LinearVariationalSolver`
         """
@@ -326,8 +353,20 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     @property
     @PETSc.Log.EventDecorator()
     def equidistributor(self):
-        """
+        r"""
         Setup the equidistributor for the relaxation method.
+
+        The equidistributor solves the following equation:
+
+        .. math::
+            \int_{\Omega} \tau : \sigma \, \mathrm{d}x
+            = -\int_{\Omega} (\nabla \cdot \tau) \cdot (\nabla \phi) \, \mathrm{d}x
+            + \int_{\partial \Omega} ((\nabla \phi \cdot \widehat{\mathbf{n}}) \cdot
+            \tau) \cdot \widehat{\mathbf{n}} \, \mathrm{d}s,
+            \quad \forall \tau \in \mathbb{P}1^{d \times d},
+
+        where :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}` is a
+        normal vector to the boundary.
 
         :return: the equidistributor
         :rtype: :class:`~.LinearVariationalSolver`
@@ -401,8 +440,19 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
 
 class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     r"""
-    The elliptic Monge-Ampere equation is solved using a quasi-Newton method (see
-    :cite:`MCB:18` for details).
+    The standard, elliptic form of the Monge-Ampère equation used for mesh movement takes
+    the form,
+
+    .. math::
+        m(\mathbf{x})\det(I + H(\phi)) = \theta,
+
+    for a convex scalar potential :math:`\phi`. Here :math:`I` is the identity matrix,
+    :math:`\theta` is a normalisation coefficient and :math:`H(\phi)` denotes the Hessian
+    of :math:`\phi` with respect to the coordinates :math:`\xi` of the computational
+    mesh.
+
+    In this mesh mover, the elliptic Monge-Ampère equation is solved using a quasi-Newton
+    method (see :cite:`MCB:18` for details).
     """
 
     @PETSc.Log.EventDecorator()
@@ -450,8 +500,24 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     @property
     @PETSc.Log.EventDecorator()
     def equidistributor(self):
-        """
+        r"""
         Setup the equidistributor for the quasi-newton method.
+
+        The equation being solved is:
+
+        .. math::
+            \int_{\Omega} \boldsymbol{\tau} \cdot \boldsymbol{\sigma} \, \mathrm{d}x
+            + \int_{\Omega} (\nabla \cdot \boldsymbol{\tau}) \cdot (\nabla \phi) \,
+            \mathrm{d}x
+            - \int_{\partial \Omega} (((\nabla \phi) \cdot \widehat{\mathbf{n}}) \cdot
+              \boldsymbol{\tau}) \cdot \widehat{\mathbf{n}} \, \mathrm{d}s
+            - \int_{\Omega} \psi (m \det(\mathbf{I} + \boldsymbol{\sigma}) - \theta) \,
+              \mathrm{d}x = 0,
+              \quad \forall \boldsymbol{\tau} \in \mathbb{P}1^{d \times d},
+              \quad \forall \psi \in \mathbb{P}1,
+
+        where :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}` is a
+        normal vector to the boundary.
 
         :return: the equidistributor
         :rtype: :class:`~.NonlinearVariationalSolver`
