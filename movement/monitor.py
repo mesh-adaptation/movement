@@ -8,6 +8,7 @@ from firedrake.constant import Constant
 from firedrake.function import Function
 from firedrake.functionspace import (
     FunctionSpace,
+    TensorFunctionSpace,
     VectorFunctionSpace,
 )
 
@@ -158,6 +159,18 @@ class SolutionBasedMonitorBuilder(MonitorBuilder, metaclass=abc.ABCMeta):
         assert isinstance(solution, Function)
         self.solution = solution
 
+    def projection(self, mesh):
+        """
+        Project the solution field onto the given mesh.
+
+        :arg mesh: the mesh on which the solution is to be projected
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :return: the projected solution field
+        :rtype: :class:`firedrake.function.Function`
+        """
+        fs = FunctionSpace(mesh, self.solution.ufl_element())
+        return Function(fs).project(self.solution)
+
 
 # TODO: Support computing gradient with Clement interpolant
 class GradientMonitorBuilder(SolutionBasedMonitorBuilder):
@@ -187,14 +200,15 @@ class GradientMonitorBuilder(SolutionBasedMonitorBuilder):
 
     def recover_gradient(self, target_space):
         r"""
-        Recover the gradient of the solution field.
+        Recover the gradient of the solution field projected onto the current mesh.
 
         :arg target_space: space to recover gradient in
         :type target_space: :class:`firedrake.functionspace.FunctionSpace`
         :return: the recovered gradient in vector :math:`\mathbb{P}1` space
         :rtype: :class:`firedrake.function.Function`
         """
-        return recover_gradient_l2(self.solution, target_space=target_space)
+        mesh = target_space.mesh()
+        return recover_gradient_l2(self.projection(mesh), target_space=target_space)
 
     def monitor(self, mesh):
         """
@@ -240,14 +254,16 @@ class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
         assert scale_factor > 0
         self.hessian_scale_factor = Constant(scale_factor)
 
-    def recover_hessian(self):
+    def recover_hessian(self, target_space):
         r"""
         Recover the Hessian of the solution field.
 
+        :arg target_space: space to recover Hessian in
+        :type target_space: :class:`firedrake.functionspace.FunctionSpace`
         :return: the recovered Hessian in tensor :math:`\mathbb{P}1` space
         :rtype: :class:`firedrake.function.Function`
         """
-        return recover_hessian_clement(self.solution)[1]
+        return recover_hessian_clement(self.projection(target_space.mesh()))[1]
 
     def monitor(self, mesh):
         """
@@ -258,7 +274,7 @@ class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
         :return: Hessian-based monitor function evaluated on given mesh
         :rtype: :class:`firedrake.function.Function`
         """
-        H = self.recover_hessian()
+        H = self.recover_hessian(TensorFunctionSpace(mesh, "CG", 1))
         frob = sum(H[i, j] ** 2 for i in range(self.dim) for j in range(self.dim))
         HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(frob)
         return Constant(1.0) + self.hessian_scale_factor * (
@@ -311,7 +327,7 @@ class GradientHessianMonitorBuilder(GradientMonitorBuilder, HessianMonitorBuilde
         gg = Function(FunctionSpace(mesh, "CG", 1)).interpolate(ufl.dot(g, g))
 
         # Recover Hessian
-        H = self.recover_hessian()
+        H = self.recover_hessian(TensorFunctionSpace(mesh, "CG", 1))
         frob = sum(H[i, j] ** 2 for i in range(self.dim) for j in range(self.dim))
         HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(frob)
 
