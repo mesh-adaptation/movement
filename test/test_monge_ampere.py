@@ -238,7 +238,8 @@ class TestBCs(BaseClasses.TestMongeAmpere):
 
     def _test_boundary_preservation(self, mesh, method, fixed_boundaries):
         bnd = assemble(Constant(1.0) * ds(domain=mesh))
-        bnodes = DirichletBC(mesh.coordinates.function_space(), 0, "on_boundary").nodes
+        coord_space = mesh.coordinates.function_space()
+        bnodes = DirichletBC(coord_space, 0, fixed_boundaries or "on_boundary").nodes
         bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
 
         # Adapt to a ring monitor
@@ -252,8 +253,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         mover.move()
 
         # Check boundary lengths are preserved
-        bnd_new = assemble(Constant(1.0) * ds(domain=mover.mesh))
-        self.assertAlmostEqual(bnd, bnd_new)
+        self.assertAlmostEqual(bnd, assemble(Constant(1.0) * mover.ds))
 
         # Check boundaries are indeed fixed
         if fixed_boundaries:
@@ -373,25 +373,43 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         # Check the volume of the domain is conserved
         self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
 
-        # If boundaries are not fixed then EquationBCs should be used for boundaries of
-        # the xy-plane
+        # If boundaries are fixed then they should have a single DirichletBC associated
+        # with them
+        # If boundaries are not fixed then they should have two  EquationBCs associated
+        # with them
         bcs = mover._l2_projector._problem.bcs
         if fixed_boundaries == "on_boundary":
-            self.assertTrue(len(bcs) == 2 * dim)
+            # All boundary segments are fixed => one DirichletBC per edge/face
+            self.assertEqual(len(bcs), 2 * dim)
             self.assertTrue(all(isinstance(bc, DirichletBC) for bc in bcs))
+        elif fixed_boundaries == []:
+            if dim == 2:
+                # All four boundary edges have two EquationBCs each
+                self.assertEqual(len(bcs), 8)
+                self.assertTrue(all(isinstance(bc, EquationBC) for bc in bcs))
+            else:
+                # The four non-axis-aligned boundary faces have two EquationBCs each
+                # There are also two axis-aligned boundary faces, which have a
+                # DirichletBC each
+                self.assertEqual(len(bcs), 10)
+                self.assertEqual(sum(isinstance(bc, DirichletBC) for bc in bcs), 2)
         elif fixed_boundaries == [1]:
-            self.assertTrue(len(bcs) == 8)
-            self.assertTrue(sum(isinstance(bc, DirichletBC) for bc in bcs) == 1)
-            self.assertTrue(
-                sum(isinstance(bc, EquationBC) for bc in bcs) == 2 * dim - 1
-            )
-        elif dim == 2:
-            self.assertTrue(len(bcs) == 8)
-            self.assertTrue(all(isinstance(bc, EquationBC) for bc in bcs))
-        else:
-            self.assertTrue(len(bcs) == 10)
-            self.assertEqual(sum(isinstance(bc, EquationBC) for bc in bcs), 8)
-            self.assertEqual(sum(isinstance(bc, DirichletBC) for bc in bcs), 2)
+            if dim == 2:
+                # One of four non-axis-aligned boundary edges is fixed
+                # => one edge has a single DirichletBC and the other three have two
+                #    EquationBCs each
+                self.assertEqual(len(bcs), 7)
+                self.assertEqual(sum(isinstance(bc, DirichletBC) for bc in bcs), 1)
+                self.assertEqual(sum(isinstance(bc, EquationBC) for bc in bcs), 6)
+            else:
+                # One of four non-axis-aligned boundary faces is fixed
+                # => one of these faces has a single DirichletBC and the other three have
+                #    two EquationBCs each
+                # There are also two axis-aligned boundary faces, with a single
+                # DirichletBC each
+                self.assertEqual(len(bcs), 9)
+                self.assertEqual(sum(isinstance(bc, DirichletBC) for bc in bcs), 3)
+                self.assertEqual(sum(isinstance(bc, EquationBC) for bc in bcs), 6)
 
 
 class TestMisc(BaseClasses.TestMongeAmpere):
