@@ -72,7 +72,7 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :type pseudo_timestep: :class:`float`
     :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
     :type fix_boundary_nodes: :class:`bool`
-    :return: the Monge-Ampere Mover object
+    :return: the Monge-Ampère Mover object
     :rtype: :class:`MongeAmpereMover_Relaxation` or
         :class:`MongeAmpereMover_QuasiNewton`
     """

@@ -12,7 +12,7 @@ from movement import *
 class BaseClasses:
     class TestMongeAmpere(unittest.TestCase):
         """
-        Base class for Monge-ampere unit tests.
+        Base class for Monge-Ampère unit tests.
         """
 
         def mesh(self, dim=1, n=10, periodic=False):
@@ -34,7 +34,7 @@ class BaseClasses:
 
 class TestExceptions(BaseClasses.TestMongeAmpere):
     """
-    Unit tests for exceptions raised by Monge-Ampere movers.
+    Unit tests for exceptions raised by Monge-Ampère movers.
     """
 
     def test_method_valueerror(self):
@@ -144,7 +144,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
 
 class TestMonitor(BaseClasses.TestMongeAmpere):
     """
-    Unit tests for monitor functions used by Monge-Ampere movers.
+    Unit tests for monitor functions used by Monge-Ampère movers.
     """
 
     @parameterized.expand(
@@ -233,7 +233,7 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
 
 class TestBCs(BaseClasses.TestMongeAmpere):
     """
-    Unit tests for boundary conditions of Monge-Ampere movers.
+    Unit tests for boundary conditions of Monge-Ampère movers.
     """
 
     def _test_boundary_preservation(self, mesh, method, fixed_boundaries):
@@ -274,7 +274,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     def test_periodic(self, dim, method):
         """
         Test that periodic unit domains are not given boundary conditions by the
-        Monge-Ampere movers.
+        Monge-Ampère movers.
         """
         mesh = self.mesh(dim=dim, periodic=True)
         volume = assemble(Constant(1.0) * dx(domain=mesh))
@@ -317,7 +317,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     )
     def test_boundary_preservation_axis_aligned(self, dim, method, fixed_boundaries):
         """
-        Test that boundaries of unit domains are preserved by the Monge-Ampere movers.
+        Test that boundaries of unit domains are preserved by the Monge-Ampère movers.
         """
         mesh = self.mesh(dim=dim)
         volume = assemble(Constant(1.0) * dx(domain=mesh))
@@ -352,7 +352,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     ):
         """
         Test that boundaries of rotated unit domains are preserved by the
-        Monge-Ampere movers.
+        Monge-Ampère movers.
         """
         mesh = self.mesh(dim=dim)
         volume = assemble(Constant(1.0) * dx(domain=mesh))
@@ -414,7 +414,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
 
 class TestMisc(BaseClasses.TestMongeAmpere):
     """
-    Unit tests for other misc. functionality of Monge-Ampere movers.
+    Unit tests for other misc. functionality of Monge-Ampère movers.
     """
 
     @parameterized.expand(
