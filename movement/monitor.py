@@ -161,7 +161,7 @@ class GradientMonitorFactory(MonitorFactory):
         """
         super().__init__(dim)
         assert scale_factor > 0
-        self.scale_factor = Constant(scale_factor)
+        self.gradient_scale_factor = Constant(scale_factor)
         assert isinstance(solution, Function)
         self.solution = solution
 
@@ -187,7 +187,9 @@ class GradientMonitorFactory(MonitorFactory):
         """
         g = self.recover_gradient(VectorFunctionSpace(mesh, "CG", 1))
         gg = Function(FunctionSpace(mesh, "CG", 1)).interpolate(ufl.dot(g, g))
-        return Constant(1.0) + self.scale_factor * (gg / norm(gg, norm_type="linf"))
+        return Constant(1.0) + self.gradient_scale_factor * (
+            gg / norm(gg, norm_type="linf")
+        )
 
 
 # TODO: Support computing Hessian with double L2 projection
@@ -199,7 +201,7 @@ class HessianMonitorFactory(MonitorFactory):
         m(\mathbf{x}) = 1 + \alpha\frac{\mathbf{H}(u):\mathbf{H}(u)}{\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
 
     where :math:`\alpha` is a scale factor, :math:`u` is the solution field of interest,
-    :math:`\mathbf{H}(u)` is the Hessian
+    and :math:`\mathbf{H}(u)` is the Hessian
     """
 
     def __init__(self, dim, scale_factor, solution):
@@ -213,7 +215,7 @@ class HessianMonitorFactory(MonitorFactory):
         """
         super().__init__(dim)
         assert scale_factor > 0
-        self.scale_factor = Constant(scale_factor)
+        self.hessian_scale_factor = Constant(scale_factor)
         assert isinstance(solution, Function)
         self.solution = solution
 
@@ -238,4 +240,59 @@ class HessianMonitorFactory(MonitorFactory):
         H = self.recover_hessian()
         frob = sum(H[i, j] ** 2 for i in range(self.dim) for j in range(self.dim))
         HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(frob)
-        return Constant(1.0) + self.scale_factor * (HH / norm(HH, norm_type="linf"))
+        return Constant(1.0) + self.hessian_scale_factor * (
+            HH / norm(HH, norm_type="linf")
+        )
+
+
+class GradientHessianMonitorFactory(GradientMonitorFactory, HessianMonitorFactory):
+    r"""
+    Factory class for monitor functions based on both gradients and Hessians of
+    solutions.
+
+    .. math::
+        m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}{\max_{x\in\Omega}\nabla u\cdot\nabla u} + \beta\frac{\mathbf{H}(u):\mathbf{H}(u)}{\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
+
+    where :math:`\alpha` is a scale factor for the gradient part, :math:`\beta` is a
+    scale factor for the Hessian part, :math:`u` is the solution field of interest, and
+    :math:`\mathbf{H}(u)` is the Hessian
+    """
+
+    def __init__(self, dim, gradient_scale_factor, hessian_scale_factor, solution):
+        """
+        :arg dim: mesh dimension
+        :type dim: :class:`int`
+        :arg gradient_scale_factor: scale factor for the gradient part
+        :type gradient_scale_factor: :class:`float`
+        :arg hessian_scale_factor: scale factor for the Hessian part
+        :type hessian_scale_factor: :class:`float`
+        :arg solution: solution to recover the gradient and Hessian of
+        :type solution: :class:`firedrake.function.Function`
+        """
+        GradientMonitorFactory.__init__(self, dim, gradient_scale_factor, solution)
+        HessianMonitorFactory.__init__(self, dim, hessian_scale_factor, solution)
+
+    def monitor(self, mesh):
+        """
+        Monitor function based on recovered gradient and Hessian.
+
+        :arg mesh: the mesh on which the monitor function is to be defined
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :return: gradient and Hessian-based monitor function evaluated on given mesh
+        :rtype: :class:`firedrake.function.Function`
+        """
+        # Recover gradient
+        g = self.recover_gradient(VectorFunctionSpace(mesh, "CG", 1))
+        gg = Function(FunctionSpace(mesh, "CG", 1)).interpolate(ufl.dot(g, g))
+
+        # Recover Hessian
+        H = self.recover_hessian()
+        frob = sum(H[i, j] ** 2 for i in range(self.dim) for j in range(self.dim))
+        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(frob)
+
+        # Combine both gradient and Hessian parts
+        return (
+            Constant(1.0)
+            + self.gradient_scale_factor * (gg / norm(gg, norm_type="linf"))
+            + self.hessian_scale_factor * (HH / norm(HH, norm_type="linf"))
+        )
