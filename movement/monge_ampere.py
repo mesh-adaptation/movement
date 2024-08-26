@@ -3,6 +3,7 @@ Mesh movement based on solutions of equations of Monge-Ampère type.
 """
 
 import abc
+from collections.abc import Iterable
 
 import firedrake
 import firedrake.exceptions as fexc
@@ -124,8 +125,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
-        :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-        :type fix_boundary_nodes: :class:`bool`
+        :kwarg fixed_boundary_segments: boundary segments to hold fixed
+        :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
         """
         if monitor_function is None:
             raise ValueError("Please supply a monitor function.")
@@ -138,7 +139,11 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.maxiter = kwargs.pop("maxiter", 1000)
         self.rtol = kwargs.pop("rtol", 1.0e-08)
         self.dtol = kwargs.pop("dtol", 2.0)
-        self.fix_boundary_nodes = kwargs.pop("fix_boundary_nodes", False)
+        self.fixed_boundary_segments = kwargs.pop("fixed_boundary_segments", [])
+        if self.fixed_boundary_segments == "on_boundary":
+            self.fixed_boundary_segments = mesh.exterior_facets.unique_markers
+        elif not isinstance(self.fixed_boundary_segments, Iterable):
+            self.fixed_boundary_segments = [self.fixed_boundary_segments]
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
         self.theta = firedrake.Constant(0.0)
 
@@ -232,7 +237,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :rtype: :class:`tuple` of :class:`~.DirichletBC`\s
         """
         zero_bc = firedrake.DirichletBC(self.P1_vec, 0, boundary_tag)
-        if self.fix_boundary_nodes or self.dim == 1:
+        if boundary_tag in self.fixed_boundary_segments or self.dim == 1:
             return (zero_bc,)
 
         # If the boundary segment is axis-aligned, it is straightforward to avoid
@@ -309,8 +314,19 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             for boundary_tag in self.mesh.exterior_facets.unique_markers
             for dirichlet_bc in self._l2_projector_bcs(boundary_tag)
         ]
-        if not bcs and self.fix_boundary_nodes:
-            raise ValueError("Cannot fix boundary nodes for periodic meshes.")
+
+        # Check for an attempt to fix periodic boundary segments
+        subdomains = set()
+        for bc in bcs:
+            if not hasattr(bc, "sub_domain"):
+                subdomain = bc._F.sub_domain  # EquationBC doesn't have sub_domain attr
+            else:
+                subdomain = bc.sub_domain
+            if not isinstance(subdomain, Iterable):
+                subdomain = [subdomain]
+            subdomains = subdomains.union(subdomain)
+        if set(self.fixed_boundary_segments).difference(subdomains):
+            raise ValueError("Cannot fix boundary nodes for periodic segments.")
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)

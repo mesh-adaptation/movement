@@ -109,12 +109,14 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Could not determine a plane for the provided points."
         self.assertEqual(str(cm.exception), msg)
 
-    def test_periodic_fix_boundary_valueerror(self):
+    def test_periodic_fixed_boundaries_valueerror(self):
         mesh = self.mesh(n=3, periodic=True)
-        mover = MongeAmpereMover_Relaxation(mesh, ring_monitor, fix_boundary_nodes=True)
+        mover = MongeAmpereMover_Relaxation(
+            mesh, ring_monitor, fixed_boundary_segments=["on_boundary"]
+        )
         with self.assertRaises(ValueError) as cm:
             mover.move()
-        msg = "Cannot fix boundary nodes for periodic meshes."
+        msg = "Cannot fix boundary nodes for periodic segments."
         self.assertEqual(str(cm.exception), msg)
 
     def test_curved_notimplementederror(self):
@@ -234,7 +236,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     Unit tests for boundary conditions of Monge-Ampere movers.
     """
 
-    def _test_boundary_preservation(self, mesh, method, fix_boundary):
+    def _test_boundary_preservation(self, mesh, method, fixed_boundaries):
         bnd = assemble(Constant(1.0) * ds(domain=mesh))
         bnodes = DirichletBC(mesh.coordinates.function_space(), 0, "on_boundary").nodes
         bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
@@ -244,7 +246,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             mesh,
             ring_monitor,
             method=method,
-            fix_boundary_nodes=fix_boundary,
+            fixed_boundary_segments=fixed_boundaries,
             rtol=1e-3,
         )
         mover.move()
@@ -254,7 +256,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         self.assertAlmostEqual(bnd, bnd_new)
 
         # Check boundaries are indeed fixed
-        if fix_boundary:
+        if fixed_boundaries:
             bnd_coords_new = mover.mesh.coordinates.dat.data[bnodes]
             self.assertTrue(np.allclose(bnd_coords, bnd_coords_new))
         return mover
@@ -276,7 +278,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         """
         mesh = self.mesh(dim=dim, periodic=True)
         volume = assemble(Constant(1.0) * dx(domain=mesh))
-        mover = self._test_boundary_preservation(mesh, method, False)
+        mover = self._test_boundary_preservation(mesh, method, [])
 
         # Check the volume of the domain is conserved
         self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
@@ -293,27 +295,27 @@ class TestBCs(BaseClasses.TestMongeAmpere):
 
     @parameterized.expand(
         [
-            (1, "relaxation", True),
-            (1, "relaxation", False),
-            (1, "quasi_newton", True),
-            (1, "quasi_newton", False),
-            (2, "relaxation", True),
-            (2, "relaxation", False),
-            (2, "quasi_newton", True),
-            (2, "quasi_newton", False),
-            (3, "relaxation", True),
-            (3, "relaxation", False),
-            (3, "quasi_newton", True),
-            (3, "quasi_newton", False),
+            (1, "relaxation", "on_boundary"),
+            (1, "relaxation", []),
+            (1, "quasi_newton", "on_boundary"),
+            (1, "quasi_newton", []),
+            (2, "relaxation", "on_boundary"),
+            (2, "relaxation", []),
+            (2, "quasi_newton", "on_boundary"),
+            (2, "quasi_newton", []),
+            (3, "relaxation", "on_boundary"),
+            (3, "relaxation", []),
+            (3, "quasi_newton", "on_boundary"),
+            (3, "quasi_newton", []),
         ]
     )
-    def test_boundary_preservation_axis_aligned(self, dim, method, fix_boundary):
+    def test_boundary_preservation_axis_aligned(self, dim, method, fixed_boundaries):
         """
         Test that boundaries of unit domains are preserved by the Monge-Ampere movers.
         """
         mesh = self.mesh(dim=dim)
         volume = assemble(Constant(1.0) * dx(domain=mesh))
-        mover = self._test_boundary_preservation(mesh, method, fix_boundary)
+        mover = self._test_boundary_preservation(mesh, method, fixed_boundaries)
 
         # Check the volume of the domain is conserved
         self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
@@ -325,17 +327,19 @@ class TestBCs(BaseClasses.TestMongeAmpere):
 
     @parameterized.expand(
         [
-            (2, "relaxation", True),
-            (2, "relaxation", False),
-            (2, "quasi_newton", True),
-            (2, "quasi_newton", False),
-            (3, "relaxation", True),
-            (3, "relaxation", False),
-            (3, "quasi_newton", True),
-            (3, "quasi_newton", False),
+            (2, "relaxation", "on_boundary"),
+            (2, "relaxation", []),
+            (2, "quasi_newton", "on_boundary"),
+            (2, "quasi_newton", []),
+            (3, "relaxation", "on_boundary"),
+            (3, "relaxation", []),
+            (3, "quasi_newton", "on_boundary"),
+            (3, "quasi_newton", []),
         ]
     )
-    def test_boundary_preservation_non_axis_aligned(self, dim, method, fix_boundary):
+    def test_boundary_preservation_non_axis_aligned(
+        self, dim, method, fixed_boundaries
+    ):
         """
         Test that boundaries of rotated unit domains are preserved by the
         Monge-Ampere movers.
@@ -354,7 +358,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             raise ValueError(f"Dimension {dim} not supported.")
         coords = Function(mesh.coordinates.function_space())
         coords.interpolate(ufl.dot(rotation_matrix, mesh.coordinates))
-        mover = self._test_boundary_preservation(Mesh(coords), method, fix_boundary)
+        mover = self._test_boundary_preservation(Mesh(coords), method, fixed_boundaries)
 
         # Check the volume of the domain is conserved
         self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
@@ -362,7 +366,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         # If boundaries are not fixed then EquationBCs should be used for boundaries of
         # the xy-plane
         bcs = mover._l2_projector._problem.bcs
-        if fix_boundary:
+        if fixed_boundaries:
             self.assertTrue(len(bcs) == 2 * dim)
             self.assertTrue(all(isinstance(bc, DirichletBC) for bc in bcs))
         elif dim == 2:
