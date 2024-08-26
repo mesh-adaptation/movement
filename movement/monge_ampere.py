@@ -23,7 +23,7 @@ def tangential(v, n):
     return v - ufl.dot(v, n) * n
 
 
-def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
+def MongeAmpereMover(mesh, monitor_function, method=None, **kwargs):
     r"""
     Movement of a `mesh` is determined by a `monitor_function`
     :math:`m` and the Monge-Ampère type equation
@@ -55,6 +55,10 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :rtype: :class:`MongeAmpereMover_Relaxation` or
         :class:`MongeAmpereMover_QuasiNewton`
     """
+    if mesh.topological_dimension() == 1:
+        return MongeAmpereMover_1d(mesh, monitor_function, **kwargs)
+    elif method is None:
+        raise ValueError("Please specify a method.")
     if method == "relaxation":
         return MongeAmpereMover_Relaxation(mesh, monitor_function, **kwargs)
     elif method == "quasi_newton":
@@ -237,6 +241,56 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             problem, solver_parameters=solver_parameters.cg_ilu
         )
         return self._l2_projector
+
+
+class MongeAmpereMover_1d(MongeAmpereMover_Base):
+    r"""
+    Specialisation for the 1D case.
+
+    In the 1D case there is no need to introduce the scalar potential because the
+    equation simplifies to
+
+    .. math::
+        m(x)\left(1 + \frac{\partial x}{\partial\xi}\right) = \theta.
+    """
+
+    @PETSc.Log.EventDecorator()
+    def __init__(self, mesh, monitor_function, **kwargs):
+        """
+        :arg mesh: the physical mesh
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :arg monitor_function: a Python function which takes a mesh as input
+        :type monitor_function: :class:`~.Callable`
+        :kwarg maxiter: maximum number of iterations for the relaxation
+        :type maxiter: :class:`int`
+        :kwarg rtol: relative tolerance for the residual
+        :type rtol: :class:`float`
+        :kwarg dtol: divergence tolerance for the residual
+        :type dtol: :class:`float`
+        """
+        super().__init__(mesh, monitor_function=monitor_function, **kwargs)
+        I = ufl.Identity(self.dim)
+        self.solution = firedrake.Function(self.P1_vec)
+        self.residual = self.monitor * ufl.det(I + ufl.grad(self.solution)) - self.theta
+
+    def move(self):
+        """
+        Solve the Monge-Ampere equation in 1D and update the mesh.
+        """
+        self.monitor.interpolate(self.monitor_function(self.mesh))
+        firedrake.assemble(self.L_P0, tensor=self.volume)
+        self.volume.interpolate(self.volume / self.original_volume)
+        self.mesh.coordinates.assign(self.xi)
+
+        tau = firedrake.TestFunction(self.P1_ten)
+        sp = None  # TODO: Choose some appropriate solver parameters
+        firedrake.solve(
+            ufl.inner(self.residual, tau) * self.dx == 0,
+            self.sigma,
+            solver_parameters=sp,
+        )
+
+        self.mesh.coordinates.assign(self.x)
 
 
 class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
