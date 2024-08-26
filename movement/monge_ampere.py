@@ -1,3 +1,7 @@
+"""
+Mesh movement based on solutions of equations of Monge-Ampère type.
+"""
+
 import abc
 from warnings import warn
 
@@ -16,20 +20,6 @@ __all__ = [
     "MongeAmpereMover_QuasiNewton",
     "MongeAmpereMover",
 ]
-
-
-def tangential(v, n):
-    """
-    Return component of `v` perpendicular to `n` (assumed normalised).
-
-    This is used to project vectors onto the tangent plane of a boundary.
-
-    :arg v: the vector to project
-    :type v: :class:`ufl.Expr`
-    :arg n: the normal vector
-    :type n: :class:`ufl.Expr`
-    """
-    return v - ufl.dot(v, n) * n
 
 
 def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
@@ -72,6 +62,20 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
         return MongeAmpereMover_QuasiNewton(mesh, monitor_function, **kwargs)
     else:
         raise ValueError(f"Method '{method}' not recognised.")
+
+
+def tangential(v, n):
+    """
+    Return component of `v` perpendicular to `n` (assumed normalised).
+
+    This is used to project vectors onto the tangent plane of a boundary.
+
+    :arg v: the vector to project
+    :type v: :class:`ufl.Expr`
+    :arg n: the normal vector
+    :type n: :class:`ufl.Expr`
+    """
+    return v - ufl.dot(v, n) * n
 
 
 class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
@@ -551,18 +555,28 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
                 firedrake.assemble(self.theta_form) * self.total_volume ** (-1)
             )
 
-        # Custom preconditioner
+        # Setup the variational problem
+        # =============================
+        # We use a custom preconditioner Jp, chosen to approximate the Jacobian of the
+        # system. It includes terms that represent the inner product of tau and sigma,
+        # the product of phi and psi, and the inner product of the gradients of phi and
+        # psi. This helps in stabilising the solver and improving convergence.
         Jp = (
             ufl.inner(tau, sigma) * self.dx
             + phi * psi * self.dx
             + ufl.inner(ufl.grad(phi), ufl.grad(psi)) * self.dx
         )
-
-        # Setup the variational problem
         problem = firedrake.NonlinearVariationalProblem(F, self.phisigma, Jp=Jp)
+
+        # Setup the variational solver
+        # ============================
+        # A nullspace is defined to handle the invariance of the solution under certain
+        # transformations. The first component is a constant vector space basis, since
+        # constant shifts in phi do not affect the solution.
         nullspace = firedrake.MixedVectorSpaceBasis(
             self.V, [firedrake.VectorSpaceBasis(constant=True), self.V.sub(1)]
         )
+        # Note that different solver parameters are used for serial and parallel runs
         sp = (
             solver_parameters.serial_qn
             if firedrake.COMM_WORLD.size == 1
