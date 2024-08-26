@@ -1,7 +1,10 @@
 import unittest
 from unittest.mock import MagicMock
 
+import matplotlib.pyplot as plt
 import numpy as np
+from animate.quality import QualityMeasure
+from firedrake.pyplot import triplot
 from monitors import *
 from parameterized import parameterized
 
@@ -86,15 +89,37 @@ class TestMongeAmpere(unittest.TestCase):
         mover.rtol = rtol
         num_it_continue = mover.move()
 
+        # NOTE: DEBUGGING
+        min_angle = QualityMeasure(mover.mesh)("min_angle").vector().gather().min()
+        title = f"min_angle: {min_angle * 180 / np.pi:.2f} degrees"
+        volumes = QualityMeasure(mover.mesh, python=True)("volume").vector().gather()
+        title += f", max/min volume: {volumes.max() / volumes.min()}"
+        fig, axes = plt.subplots()
+        triplot(mover.mesh, axes=axes)
+        axes.axis(False)
+        axes.set_title(title)
+        plt.savefig(f"mesh_{method}_{dim}d_before.png")
+
         # Solve the problem again to a tight tolerance
         mesh = self.mesh(dim)
         mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=rtol)
         num_it_naive = mover.move()
 
+        # NOTE: DEBUGGING
+        min_angle = QualityMeasure(mover.mesh)("min_angle").vector().gather().min()
+        title = f"min_angle: {min_angle * 180 / np.pi:.2f} degrees"
+        volumes = QualityMeasure(mover.mesh, python=True)("volume").vector().gather()
+        title += f", max/min volume: {volumes.max() / volumes.min()}"
+        fig, axes = plt.subplots()
+        triplot(mover.mesh, axes=axes)
+        axes.axis(False)
+        axes.set_title(title)
+        plt.savefig(f"mesh_{method}_{dim}d_after.png")
+
         self.assertLessEqual(num_it_continue, num_it_naive)
         self.assertLessEqual(num_it_init + num_it_continue, num_it_naive)
-        # FIXME: Looks like the mesh is tangled or close to tangling
-        #        for the relaxation method, which is concerning.
+
+        raise Exception
 
     @parameterized.expand(
         [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
