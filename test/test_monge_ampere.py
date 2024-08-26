@@ -93,8 +93,6 @@ class TestMongeAmpere(unittest.TestCase):
 
         self.assertLessEqual(num_it_continue, num_it_naive)
         self.assertLessEqual(num_it_init + num_it_continue, num_it_naive)
-        # FIXME: Looks like the mesh is tangled or close to tangling
-        #        for the relaxation method, which is concerning.
 
     @parameterized.expand(
         [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
