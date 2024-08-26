@@ -296,16 +296,22 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     @parameterized.expand(
         [
             (1, "relaxation", "on_boundary"),
+            (1, "relaxation", [1]),
             (1, "relaxation", []),
             (1, "quasi_newton", "on_boundary"),
+            (1, "quasi_newton", [1]),
             (1, "quasi_newton", []),
             (2, "relaxation", "on_boundary"),
+            (2, "relaxation", [1]),
             (2, "relaxation", []),
             (2, "quasi_newton", "on_boundary"),
+            (2, "quasi_newton", [1]),
             (2, "quasi_newton", []),
             (3, "relaxation", "on_boundary"),
+            (3, "relaxation", [1]),
             (3, "relaxation", []),
             (3, "quasi_newton", "on_boundary"),
+            (3, "quasi_newton", [1]),
             (3, "quasi_newton", []),
         ]
     )
@@ -328,12 +334,16 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     @parameterized.expand(
         [
             (2, "relaxation", "on_boundary"),
+            (2, "relaxation", [1]),
             (2, "relaxation", []),
             (2, "quasi_newton", "on_boundary"),
+            (2, "quasi_newton", [1]),
             (2, "quasi_newton", []),
             (3, "relaxation", "on_boundary"),
+            (3, "relaxation", [1]),
             (3, "relaxation", []),
             (3, "quasi_newton", "on_boundary"),
+            (3, "quasi_newton", [1]),
             (3, "quasi_newton", []),
         ]
     )
@@ -366,9 +376,15 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         # If boundaries are not fixed then EquationBCs should be used for boundaries of
         # the xy-plane
         bcs = mover._l2_projector._problem.bcs
-        if fixed_boundaries:
+        if fixed_boundaries == "on_boundary":
             self.assertTrue(len(bcs) == 2 * dim)
             self.assertTrue(all(isinstance(bc, DirichletBC) for bc in bcs))
+        elif fixed_boundaries == [1]:
+            self.assertTrue(len(bcs) == 8)
+            self.assertTrue(sum(isinstance(bc, DirichletBC) for bc in bcs) == 1)
+            self.assertTrue(
+                sum(isinstance(bc, EquationBC) for bc in bcs) == 2 * dim - 1
+            )
         elif dim == 2:
             self.assertTrue(len(bcs) == 8)
             self.assertTrue(all(isinstance(bc, EquationBC) for bc in bcs))

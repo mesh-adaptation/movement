@@ -237,7 +237,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :rtype: :class:`tuple` of :class:`~.DirichletBC`\s
         """
         zero_bc = firedrake.DirichletBC(self.P1_vec, 0, boundary_tag)
-        if boundary_tag in self.fixed_boundary_segments or self.dim == 1:
+        if (boundary_tag in self.fixed_boundary_segments) or self.dim == 1:
             return (zero_bc,)
 
         # If the boundary segment is axis-aligned, it is straightforward to avoid
