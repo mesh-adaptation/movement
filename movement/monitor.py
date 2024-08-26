@@ -91,7 +91,9 @@ class BallMonitorFactory(MonitorFactory):
     Factory class for monitor functions focused around ball shapes:
 
     .. math::
-        m(\mathbf{x}) = 1 + \frac{\alpha}{\cosh^2\left(\beta\left((\mathbf{x}-\mathbf{c})\cdot(\mathbf{x}-\mathbf{c})-\gamma^2\right)\right)},
+        m(\mathbf{x}) = 1 + \frac{\alpha}
+        {\cosh^2\left(\beta\left((\mathbf{x}-\mathbf{c})\cdot(\mathbf{x}-\mathbf{c})
+        -\gamma^2\right)\right)},
 
     where :math:`\mathbf{c}` is the centre point, :math:`\alpha` is the amplitude of the
     monitor function, :math:`\beta` is the width of the transition region, and
@@ -144,7 +146,8 @@ class GradientMonitorFactory(MonitorFactory):
     Factory class for monitor functions based on gradients of solutions:
 
     .. math::
-        m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}{\max_{x\in\Omega}\nabla u\cdot\nabla u},
+        m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}
+        {\max_{x\in\Omega}\nabla u\cdot\nabla u},
 
     where :math:`\alpha` is a scale factor and :math:`u` is the solution field of
     interest.
@@ -198,7 +201,10 @@ class HessianMonitorFactory(MonitorFactory):
     Factory class for monitor functions based on Hessians of solutions.
 
     .. math::
-        m(\mathbf{x}) = 1 + \alpha\frac{\mathbf{H}(u):\mathbf{H}(u)}{\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
+        m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}
+        {\max_{x\in\Omega}\nabla u\cdot\nabla u} +
+        \beta\frac{\mathbf{H}(u):\mathbf{H}(u)}
+        {\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
 
     where :math:`\alpha` is a scale factor, :math:`u` is the solution field of interest,
     and :math:`\mathbf{H}(u)` is the Hessian
@@ -251,7 +257,10 @@ class GradientHessianMonitorFactory(GradientMonitorFactory, HessianMonitorFactor
     solutions.
 
     .. math::
-        m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}{\max_{x\in\Omega}\nabla u\cdot\nabla u} + \beta\frac{\mathbf{H}(u):\mathbf{H}(u)}{\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
+        m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}
+        {\max_{x\in\Omega}\nabla u\cdot\nabla u} +
+        \beta\frac{\mathbf{H}(u):\mathbf{H}(u)}
+        {\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
 
     where :math:`\alpha` is a scale factor for the gradient part, :math:`\beta` is a
     scale factor for the Hessian part, :math:`u` is the solution field of interest, and
