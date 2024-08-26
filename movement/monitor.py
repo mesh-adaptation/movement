@@ -16,6 +16,7 @@ __all__ = [
     "BallMonitorFactory",
     "GradientMonitorFactory",
     "HessianMonitorFactory",
+    "GradientHessianMonitorFactory",
 ]
 
 
@@ -140,8 +141,26 @@ class BallMonitorFactory(MonitorFactory):
         )
 
 
+class SolutionBasedMonitorFactory(MonitorFactory, metaclass=abc.ABCMeta):
+    """
+    Abstract base class for monitor factories based on solution data.
+    """
+
+    @abc.abstractmethod
+    def __init__(self, dim, solution):
+        """
+        :arg dim: mesh dimension
+        :type dim: :class:`int`
+        :arg solution: solution to base the monitor on
+        :type solution: :class:`firedrake.function.Function`
+        """
+        super().__init__(dim)
+        assert isinstance(solution, Function)
+        self.solution = solution
+
+
 # TODO: Support computing gradient with Clement interpolant
-class GradientMonitorFactory(MonitorFactory):
+class GradientMonitorFactory(SolutionBasedMonitorFactory):
     r"""
     Factory class for monitor functions based on gradients of solutions:
 
@@ -153,20 +172,18 @@ class GradientMonitorFactory(MonitorFactory):
     interest.
     """
 
-    def __init__(self, dim, scale_factor, solution):
+    def __init__(self, dim, solution, scale_factor):
         """
         :arg dim: mesh dimension
         :type dim: :class:`int`
-        :arg scale_factor: scale factor for the gradient part
-        :type scale_factor: :class:`float`
         :arg solution: solution to recover the gradient of
         :type solution: :class:`firedrake.function.Function`
+        :arg scale_factor: scale factor for the gradient part
+        :type scale_factor: :class:`float`
         """
-        super().__init__(dim)
+        super().__init__(dim, solution)
         assert scale_factor > 0
         self.gradient_scale_factor = Constant(scale_factor)
-        assert isinstance(solution, Function)
-        self.solution = solution
 
     def recover_gradient(self, target_space):
         r"""
@@ -196,7 +213,7 @@ class GradientMonitorFactory(MonitorFactory):
 
 
 # TODO: Support computing Hessian with double L2 projection
-class HessianMonitorFactory(MonitorFactory):
+class HessianMonitorFactory(SolutionBasedMonitorFactory):
     r"""
     Factory class for monitor functions based on Hessians of solutions.
 
@@ -210,20 +227,18 @@ class HessianMonitorFactory(MonitorFactory):
     and :math:`\mathbf{H}(u)` is the Hessian
     """
 
-    def __init__(self, dim, scale_factor, solution):
+    def __init__(self, dim, solution, scale_factor):
         """
         :arg dim: mesh dimension
         :type dim: :class:`int`
-        :arg scale_factor: scale factor for the Hessian part
-        :type scale_factor: :class:`float`
         :arg solution: solution to recover the Hessian of
         :type solution: :class:`firedrake.function.Function`
+        :arg scale_factor: scale factor for the Hessian part
+        :type scale_factor: :class:`float`
         """
-        super().__init__(dim)
+        super().__init__(dim, solution)
         assert scale_factor > 0
         self.hessian_scale_factor = Constant(scale_factor)
-        assert isinstance(solution, Function)
-        self.solution = solution
 
     def recover_hessian(self):
         r"""
@@ -267,7 +282,7 @@ class GradientHessianMonitorFactory(GradientMonitorFactory, HessianMonitorFactor
     :math:`\mathbf{H}(u)` is the Hessian
     """
 
-    def __init__(self, dim, gradient_scale_factor, hessian_scale_factor, solution):
+    def __init__(self, dim, solution, gradient_scale_factor, hessian_scale_factor):
         """
         :arg dim: mesh dimension
         :type dim: :class:`int`
@@ -278,8 +293,9 @@ class GradientHessianMonitorFactory(GradientMonitorFactory, HessianMonitorFactor
         :arg solution: solution to recover the gradient and Hessian of
         :type solution: :class:`firedrake.function.Function`
         """
-        GradientMonitorFactory.__init__(self, dim, gradient_scale_factor, solution)
-        HessianMonitorFactory.__init__(self, dim, hessian_scale_factor, solution)
+        SolutionBasedMonitorFactory.__init__(self, dim, solution)
+        self.gradient_scale_factor = Constant(gradient_scale_factor)
+        self.hessian_scale_factor = Constant(hessian_scale_factor)
 
     def monitor(self, mesh):
         """
