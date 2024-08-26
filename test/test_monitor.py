@@ -18,7 +18,7 @@ class BaseClasses:
     Base classes for monitor factories.
     """
 
-    class TestMonitorFactory(unittest.TestCase):
+    class TestMonitorBuilder(unittest.TestCase):
         """
         Base class for monitor factory unit tests.
         """
@@ -29,55 +29,55 @@ class BaseClasses:
             self.solution = Function(self.P1)
 
 
-class TestConstant(BaseClasses.TestMonitorFactory):
+class TestConstant(BaseClasses.TestMonitorBuilder):
     """
-    Unit tests for :class:`~.ConstantMonitorFactory`.
+    Unit tests for :class:`~.ConstantMonitorBuilder`.
     """
 
     def test_value(self):
-        mf = ConstantMonitorFactory(self.mesh.topological_dimension())
+        mf = ConstantMonitorBuilder(self.mesh.topological_dimension())
         self.assertTrue(np.allclose(mf.get_monitor()(self.mesh).dat.data, 1))
 
 
-class TestBall(BaseClasses.TestMonitorFactory):
+class TestBall(BaseClasses.TestMonitorBuilder):
     """
-    Unit tests for :class:`~.BallMonitorFactory`.
+    Unit tests for :class:`~.BallMonitorBuilder`.
     """
 
     def test_tiny_amplitude(self):
-        mf = BallMonitorFactory(
+        mf = BallMonitorBuilder(
             dim=2, centre=(0, 0), radius=0.1, amplitude=1e-8, width=0.1
         )
         self.assertTrue(np.allclose(mf.get_monitor()(self.mesh).dat.data, 1))
 
 
-class TestGradient(BaseClasses.TestMonitorFactory):
+class TestGradient(BaseClasses.TestMonitorBuilder):
     """
-    Unit tests for :class:`~.GradientMonitorFactory`.
+    Unit tests for :class:`~.GradientMonitorBuilder`.
     """
 
     def test_tiny_scale_factor(self):
         x, y = SpatialCoordinate(self.mesh)
         self.solution.interpolate(x**2)
-        mf = GradientMonitorFactory(dim=2, solution=self.solution, scale_factor=1e-8)
+        mf = GradientMonitorBuilder(dim=2, solution=self.solution, scale_factor=1e-8)
         self.assertTrue(np.allclose(mf.get_monitor()(self.mesh).dat.data, 1))
 
     def test_linear(self):
         x, y = SpatialCoordinate(self.mesh)
         self.solution.interpolate(x)
-        mf = GradientMonitorFactory(dim=2, solution=self.solution, scale_factor=1)
+        mf = GradientMonitorBuilder(dim=2, solution=self.solution, scale_factor=1)
         self.assertTrue(np.allclose(mf.get_monitor()(self.mesh).dat.data, 2))
 
 
-class TestHessian(BaseClasses.TestMonitorFactory):
+class TestHessian(BaseClasses.TestMonitorBuilder):
     """
-    Unit tests for :class:`~.HessianMonitorFactory`.
+    Unit tests for :class:`~.HessianMonitorBuilder`.
     """
 
     def test_tiny_scale_factor(self):
         x, y = SpatialCoordinate(self.mesh)
         self.solution.interpolate(x**3)
-        mf = HessianMonitorFactory(dim=2, solution=self.solution, scale_factor=1e-8)
+        mf = HessianMonitorBuilder(dim=2, solution=self.solution, scale_factor=1e-8)
         self.assertTrue(np.allclose(mf.get_monitor()(self.mesh).dat.data, 1))
 
     def test_quadratic(self):
@@ -85,19 +85,19 @@ class TestHessian(BaseClasses.TestMonitorFactory):
         P2 = FunctionSpace(self.mesh, "CG", 2)
         solution = Function(P2)
         solution.interpolate(0.5 * x**2)
-        mf = HessianMonitorFactory(dim=2, solution=solution, scale_factor=1)
+        mf = HessianMonitorBuilder(dim=2, solution=solution, scale_factor=1)
         self.assertTrue(np.allclose(mf.get_monitor()(self.mesh).dat.data, 2))
 
 
-class TestGradientHessian(BaseClasses.TestMonitorFactory):
+class TestGradientHessian(BaseClasses.TestMonitorBuilder):
     """
-    Unit tests for :class:`~.GradientHessianMonitorFactory`.
+    Unit tests for :class:`~.GradientHessianMonitorBuilder`.
     """
 
     def test_tiny_scale_factors(self):
         x, y = SpatialCoordinate(self.mesh)
         self.solution.interpolate(x**3)
-        mf = GradientHessianMonitorFactory(
+        mf = GradientHessianMonitorBuilder(
             dim=2,
             solution=self.solution,
             gradient_scale_factor=1e-8,
@@ -108,13 +108,13 @@ class TestGradientHessian(BaseClasses.TestMonitorFactory):
     def test_tiny_hessian_scale_factor(self):
         x, y = SpatialCoordinate(self.mesh)
         self.solution.interpolate(x**3)
-        mf1 = GradientHessianMonitorFactory(
+        mf1 = GradientHessianMonitorBuilder(
             dim=2,
             solution=self.solution,
             gradient_scale_factor=1,
             hessian_scale_factor=1e-8,
         )
-        mf2 = GradientMonitorFactory(
+        mf2 = GradientMonitorBuilder(
             dim=2,
             solution=self.solution,
             scale_factor=1,
@@ -126,13 +126,13 @@ class TestGradientHessian(BaseClasses.TestMonitorFactory):
     def test_tiny_gradient_scale_factor(self):
         x, y = SpatialCoordinate(self.mesh)
         self.solution.interpolate(x**3)
-        mf1 = GradientHessianMonitorFactory(
+        mf1 = GradientHessianMonitorBuilder(
             dim=2,
             solution=self.solution,
             gradient_scale_factor=1e-8,
             hessian_scale_factor=1,
         )
-        mf2 = HessianMonitorFactory(
+        mf2 = HessianMonitorBuilder(
             dim=2,
             solution=self.solution,
             scale_factor=1,

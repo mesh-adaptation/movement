@@ -12,15 +12,15 @@ from firedrake.functionspace import (
 )
 
 __all__ = [
-    "ConstantMonitorFactory",
-    "BallMonitorFactory",
-    "GradientMonitorFactory",
-    "HessianMonitorFactory",
-    "GradientHessianMonitorFactory",
+    "ConstantMonitorBuilder",
+    "BallMonitorBuilder",
+    "GradientMonitorBuilder",
+    "HessianMonitorBuilder",
+    "GradientHessianMonitorBuilder",
 ]
 
 
-class MonitorFactory(metaclass=abc.ABCMeta):
+class MonitorBuilder(metaclass=abc.ABCMeta):
     """
     Abstract base class for monitor function factories.
     """
@@ -70,9 +70,9 @@ class MonitorFactory(metaclass=abc.ABCMeta):
         return self.get_monitor()
 
 
-class ConstantMonitorFactory(MonitorFactory):
+class ConstantMonitorBuilder(MonitorBuilder):
     """
-    Factory class for constant monitor functions.
+    Builder class for constant monitor functions.
     """
 
     def monitor(self, mesh):
@@ -87,9 +87,9 @@ class ConstantMonitorFactory(MonitorFactory):
         return Constant(1.0)
 
 
-class BallMonitorFactory(MonitorFactory):
+class BallMonitorBuilder(MonitorBuilder):
     r"""
-    Factory class for monitor functions focused around ball shapes:
+    Builder class for monitor functions focused around ball shapes:
 
     .. math::
         m(\mathbf{x}) = 1 + \frac{\alpha}
@@ -141,7 +141,7 @@ class BallMonitorFactory(MonitorFactory):
         )
 
 
-class SolutionBasedMonitorFactory(MonitorFactory, metaclass=abc.ABCMeta):
+class SolutionBasedMonitorBuilder(MonitorBuilder, metaclass=abc.ABCMeta):
     """
     Abstract base class for monitor factories based on solution data.
     """
@@ -160,9 +160,9 @@ class SolutionBasedMonitorFactory(MonitorFactory, metaclass=abc.ABCMeta):
 
 
 # TODO: Support computing gradient with Clement interpolant
-class GradientMonitorFactory(SolutionBasedMonitorFactory):
+class GradientMonitorBuilder(SolutionBasedMonitorBuilder):
     r"""
-    Factory class for monitor functions based on gradients of solutions:
+    Builder class for monitor functions based on gradients of solutions:
 
     .. math::
         m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}
@@ -213,9 +213,9 @@ class GradientMonitorFactory(SolutionBasedMonitorFactory):
 
 
 # TODO: Support computing Hessian with double L2 projection
-class HessianMonitorFactory(SolutionBasedMonitorFactory):
+class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
     r"""
-    Factory class for monitor functions based on Hessians of solutions.
+    Builder class for monitor functions based on Hessians of solutions.
 
     .. math::
         m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}
@@ -266,9 +266,9 @@ class HessianMonitorFactory(SolutionBasedMonitorFactory):
         )
 
 
-class GradientHessianMonitorFactory(GradientMonitorFactory, HessianMonitorFactory):
+class GradientHessianMonitorBuilder(GradientMonitorBuilder, HessianMonitorBuilder):
     r"""
-    Factory class for monitor functions based on both gradients and Hessians of
+    Builder class for monitor functions based on both gradients and Hessians of
     solutions.
 
     .. math::
@@ -293,7 +293,7 @@ class GradientHessianMonitorFactory(GradientMonitorFactory, HessianMonitorFactor
         :arg solution: solution to recover the gradient and Hessian of
         :type solution: :class:`firedrake.function.Function`
         """
-        SolutionBasedMonitorFactory.__init__(self, dim, solution)
+        SolutionBasedMonitorBuilder.__init__(self, dim, solution)
         self.gradient_scale_factor = Constant(gradient_scale_factor)
         self.hessian_scale_factor = Constant(hessian_scale_factor)
 
