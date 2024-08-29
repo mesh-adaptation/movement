@@ -30,13 +30,14 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     of Monge-Ampère type,
 
     .. math::
-        m(\mathbf{x})\det(I + H(\phi)) = \theta,
+        m(\mathbf{x})\det(\mathbf{I} + \mathbf{H}(\phi)) = \theta,
 
     for a convex scalar potential :math:`\phi=\phi(\boldsymbol{\xi})`, which is a
     function of the coordinates of the *computational* mesh. Here :math:`m=m(\mathbf{x})`
-    is a function of the coordinates of the *physical* mesh, :math:`I` is the identity
-    matrix, :math:`\theta` is a normalisation coefficient  and :math:`H(\phi)` denotes
-    the Hessian of :math:`\phi` with respect to :math:`\boldsymbol{\xi}`.
+    is a function of the coordinates of the *physical* mesh, :math:`\mathbf{I}` is the
+    identity matrix, :math:`\theta` is a normalisation coefficient  and
+    :math:`\mathbf{H}(\phi)` denotes the Hessian of :math:`\phi` with respect to
+    :math:`\boldsymbol{\xi}`.
 
     Different implementations solve the Monge-Ampère equation in different ways. If the
     `method` argument is set to `"relaxation"` then it is solved in parabolised form in
@@ -274,20 +275,21 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     The standard, elliptic form of the Monge-Ampère equation used for mesh movement is:
 
     .. math::
-        m(\mathbf{x})\det(I + H(\phi)) = \theta,
+        m(\mathbf{x})\det(\mathbf{I} + \mathbf{H}(\phi)) = \theta,
 
     for a convex scalar potential :math:`\phi=\phi(\boldsymbol{\xi})`, which is a
     function of the coordinates of the *computational* mesh. Here :math:`m=m(\mathbf{x})`
     is a user-provided monitor function, which is a function of the coordinates of the
-    *physical* mesh. :math:`I` is the identity matrix, :math:`\theta` is a normalisation
-    coefficient  and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with respect to
-    :math:`\boldsymbol{\xi}`.
+    *physical* mesh. :math:`\mathbf{I}` is the identity matrix, :math:`\theta` is a
+    normalisation coefficient  and :math:`\mathbf{H}(\phi)` denotes the Hessian of
+    :math:`\phi` with respect to :math:`\boldsymbol{\xi}`.
 
     In this mesh mover, the Monge-Ampère equation is instead solved in a parabolised form
     using a pseudo-time relaxation,
 
     .. math::
-        -\frac\partial{\partial\tau}\Delta\phi = m(\mathbf{x})\det(I + H(\phi)) - \theta,
+        -\frac\partial{\partial\tau}\Delta\phi
+        = m(\mathbf{x})\det(\mathbf{I} + \mathbf{H}(\phi)) - \theta,
 
     where :math:`\tau` is the pseudo-time variable. Forward Euler is used for the
     pseudo-time integration (see :cite:`MCB:18` for details).
@@ -384,7 +386,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             \tau) \cdot \widehat{\mathbf{n}} \, \mathrm{d}s,
             \quad \forall \tau \in \mathbb{P}1^{d \times d},
 
-        where :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}` is a
+        where :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}}` is a
         normal vector to the boundary.
 
         :return: the equidistributor
@@ -462,14 +464,14 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     The standard, elliptic form of the Monge-Ampère equation used for mesh movement is:
 
     .. math::
-        m(\mathbf{x})\det(I + H(\phi)) = \theta,
+        m(\mathbf{x})\det(\mathbf{I} + \mathbf{H}(\phi)) = \theta,
 
     for a convex scalar potential :math:`\phi=\phi(\boldsymbol{\xi})`, which is a
     function of the coordinates of the *computational* mesh. Here :math:`m=m(\mathbf{x})`
     is a user-provided monitor function, which is a function of the coordinates of the
-    *physical* mesh. :math:`I` is the identity matrix, :math:`\theta` is a normalisation
-    coefficient  and :math:`H(\phi)` denotes the Hessian of :math:`\phi` with respect to
-    :math:`\boldsymbol{\xi}`.
+    *physical* mesh. :math:`\mathbf{I}` is the identity matrix, :math:`\theta` is a
+    normalisation coefficient  and :math:`\mathbf{H}(\phi)` denotes the Hessian of
+    :math:`\phi` with respect to :math:`\boldsymbol{\xi}`.
 
     In this mesh mover, the elliptic Monge-Ampère equation is solved using a quasi-Newton
     method (see :cite:`MCB:18` for details).
@@ -536,7 +538,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
               \quad \forall \boldsymbol{\tau} \in \mathbb{P}1^{d \times d},
               \quad \forall \psi \in \mathbb{P}1,
 
-        where :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}` is a
+        where :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}}` is a
         normal vector to the boundary.
 
         :return: the equidistributor
