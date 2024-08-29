@@ -211,6 +211,19 @@ class PrimeMover(abc.ABC):
         """
         pass  # pragma: no cover
 
+    def to_physical_coordinates(self):
+        r"""
+        Switch coordinates to correspond to the physical mesh :class:`\mathcal{H}_P`.
+        """
+        self.mesh.coordinates.assign(self.x)
+
+    def to_computational_coordinates(self):
+        r"""
+        Switch coordinates to correspond to the computational mesh
+        :class:`\mathcal{H}_C`.
+        """
+        self.mesh.coordinates.assign(self.xi)
+
 
 def plural(iterations):
     """

@@ -191,7 +191,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         )
 
     @PETSc.Log.EventDecorator()
-    def _update_coordinates(self):
+    def _update_physical_coordinates(self):
         r"""
         Update the physical coordinates :math:`\mathbf{x}` using the recovered gradient:
 
@@ -206,7 +206,6 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         except Exception:
             self.grad_phi.interpolate(self._grad_phi)
         self.x.assign(self.xi + self.grad_phi)
-        self.mesh.coordinates.assign(self.x)
 
         # Check if the mesh has become tangled
         if hasattr(self, "tangling_checker"):
@@ -437,13 +436,14 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         # Take iterations of the relaxed system until reaching convergence
         for i in range(self.maxiter):
             self.l2_projector.solve()
-            self._update_coordinates()
+            self._update_physical_coordinates()
 
             # Update monitor function
+            self.to_physical_coordinates()
             self.monitor.interpolate(self.monitor_function(self.mesh))
             firedrake.assemble(self.L_P0, tensor=self.volume)
             self.volume.interpolate(self.volume / self.original_volume)
-            self.mesh.coordinates.assign(self.xi)
+            self.to_computational_coordinates()
 
             # Evaluate normalisation coefficient
             self.theta.assign(firedrake.assemble(self.theta_form) / self.total_volume)
@@ -471,9 +471,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.equidistributor.solve()
             self.phi_old.assign(self.phi)
             self.sigma_old.assign(self.sigma)
-
-        # Update mesh coordinates accordingly
-        self._update_coordinates()
+        self.to_physical_coordinates()
         return i
 
 
@@ -587,9 +585,10 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             with self.phisigma_old.dat.vec as v:
                 cursol.copy(v)
             self.l2_projector.solve()
-            self._update_coordinates()
+            self._update_physical_coordinates()
+            self.to_physical_coordinates()
             self.monitor.interpolate(self.monitor_function(self.mesh))
-            self.mesh.coordinates.assign(self.xi)
+            self.to_computational_coordinates()
             self.theta.assign(
                 firedrake.assemble(self.theta_form) * self.total_volume ** (-1)
             )
@@ -642,10 +641,10 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             """
             cursol = snes.getSolution()
             update_monitor(cursol)
-            self._update_coordinates()
+            self.to_physical_coordinates()
             firedrake.assemble(self.L_P0, tensor=self.volume)
             self.volume.interpolate(self.volume / self.original_volume)
-            self.mesh.coordinates.assign(self.xi)
+            self.to_computational_coordinates()
             PETSc.Sys.Print(
                 f"{i:4d}"
                 f"   Volume ratio {self.volume_ratio:5.2f}"
@@ -674,5 +673,5 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             self._convergence_error(self.snes.getIterationNumber(), exception=conv_err)
 
         # Update mesh coordinates accordingly
-        self._update_coordinates()
+        self.to_physical_coordinates()
         return self.snes.getIterationNumber()
