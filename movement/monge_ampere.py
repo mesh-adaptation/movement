@@ -61,6 +61,16 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :type phi_init: :class:`firedrake.function.Function`
     :kwarg sigma_init: initial guess for the Hessian
     :type sigma_init: :class:`firedrake.function.Function`
+    :kwarg maxiter: maximum number of iterations for the solver
+    :type maxiter: :class:`int`
+    :kwarg rtol: relative tolerance for the residual
+    :type rtol: :class:`float`
+    :kwarg dtol: divergence tolerance for the residual
+    :type dtol: :class:`float`
+    :kwarg pseudo_timestep: pseudo-timestep (only relevant to relaxation method)
+    :type pseudo_timestep: :class:`float`
+    :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
+    :type fix_boundary_nodes: :class:`bool`
     :return: the Monge-Ampere Mover object
     :rtype: :class:`MongeAmpereMover_Relaxation` or
         :class:`MongeAmpereMover_QuasiNewton`
@@ -322,6 +332,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
+        :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
+        :type fix_boundary_nodes: :class:`bool`
         """
         self.pseudo_dt = firedrake.Constant(kwargs.pop("pseudo_timestep", 0.1))
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
