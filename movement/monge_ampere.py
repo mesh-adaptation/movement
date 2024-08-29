@@ -430,6 +430,10 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         :return: the iteration count
         :rtype: :class:`int`
         """
+
+        # Switch to computational coordinates
+        self.to_computational_coordinates()
+
         # Take iterations of the relaxed system until reaching convergence
         for i in range(self.maxiter):
             self.l2_projector.solve()
