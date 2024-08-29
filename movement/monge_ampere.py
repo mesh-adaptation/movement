@@ -234,10 +234,12 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         zero_bc = firedrake.DirichletBC(self.P1_vec, 0, boundary_tag)
         if self.fix_boundary_nodes or self.dim == 1:
             return (zero_bc,)
-        ds = self.ds(boundary_tag)
 
-        # Check for axis-aligned boundaries
+        # If the boundary segment is axis-aligned, it is straightforward to avoid
+        # movement in the normal direction while allowing tangential movement - simply
+        # fix the component for the appropriate coordinate
         n = ufl.FacetNormal(self.mesh)
+        ds = self.ds(boundary_tag)
         iszero = [np.isclose(firedrake.assemble(abs(ni) * ds), 0.0) for ni in n]
         nzero = sum(iszero)
         assert nzero < self.dim
@@ -245,22 +247,26 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             idx = iszero.index(False)
             return (firedrake.DirichletBC(self.P1_vec.sub(idx), 0, boundary_tag),)
 
-        # Enforce no mesh movement normal to boundaries
+        # Create an equation boundary condition for enforcing no mesh movement normal to
+        # domain boundaries
         u_cts = firedrake.TrialFunction(self.P1_vec)
         v_cts = firedrake.TestFunction(self.P1_vec)
         a_bc = ufl.dot(v_cts, n) * ufl.dot(u_cts, n) * ds
         L_bc = ufl.dot(v_cts, n) * firedrake.Constant(0.0) * ds
         bc1 = firedrake.EquationBC(a_bc == L_bc, self._grad_phi, boundary_tag)
 
-        # Check the current boundary segment is a straight line or plane
+        # Determine the 'corner' vertices which are at the intersection of two boundary
+        # segments and create a Dirichlet condition for fixing them under mesh movement
         facet_indices = set(self.mesh.exterior_facets.unique_markers)
         ffacet_indices = [
             (tag, boundary_tag) for tag in facet_indices.difference([boundary_tag])
         ]
         ffacet_bc = firedrake.DirichletBC(self.P1_vec, 0, ffacet_indices)
-        ffacets = list(self.mesh.coordinates.dat.data_with_halos[ffacet_bc.nodes])
+
+        # Check the current boundary segment is a straight line or plane
         # TODO: Only do the following check in debugging mode (#94)
         assert self.coord_space.ufl_element().degree() == 1
+        ffacets = list(self.mesh.coordinates.dat.data_with_halos[ffacet_bc.nodes])
         hyperplane = equation_of_hyperplane(*ffacets)
         for x in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
             if not np.isclose(float(hyperplane(*x)), 0):
@@ -269,7 +275,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
                     f" {'linear' if self.dim == 2 else 'planar'}."
                 )
 
-        # Allow tangential movement, but only up until the end of boundary segments
+        # Create an equation boundary condition which allows tangential movement, but
+        # only up until the 'corner' vertices where boundary segments meet
         a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * ds
         L_bc = ufl.dot(tangential(v_cts, n), tangential(ufl.grad(self.phi_old), n)) * ds
         bc2 = firedrake.EquationBC(
