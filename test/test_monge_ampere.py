@@ -166,13 +166,39 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
             const_monitor,
             method=method,
             phi_init=Function(FunctionSpace(mesh, "CG", 1)),
-            sigma_init=Function(TensorFunctionSpace(mesh, "CG", 1)),
+            H_init=Function(TensorFunctionSpace(mesh, "CG", 1)),
             rtol=1e-3,
         )
         num_iterations = mover.move()
 
         self.assertTrue(np.allclose(coords, mover.mesh.coordinates.dat.data))
         self.assertEqual(num_iterations, 0)
+
+    @parameterized.expand(
+        [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
+    )
+    def test_continue(self, dim, method):
+        """
+        Test that providing a good initial guess benefits the solver.
+        """
+        mesh = self.mesh(dim)
+        rtol = 1.0e-03
+
+        # Solve the problem to a weak tolerance
+        mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=0.1)
+        num_it_init = mover.move()
+
+        # Continue with a tighter tolerance
+        mover.rtol = rtol
+        num_it_continue = mover.move()
+
+        # Solve the problem again to a tight tolerance
+        mesh = self.mesh(dim)
+        mover = MongeAmpereMover(mesh, ring_monitor, method=method, rtol=rtol)
+        num_it_naive = mover.move()
+
+        self.assertLessEqual(num_it_continue, num_it_naive)
+        self.assertLessEqual(num_it_init + num_it_continue, num_it_naive)
 
     @parameterized.expand(
         [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
@@ -255,6 +281,13 @@ class TestBCs(BaseClasses.TestMongeAmpere):
 
         # Check that the variational problem does not have boundary conditions
         self.assertTrue(len(mover._l2_projector._problem.bcs) == 0)
+
+    def test_initial_guess_valueerror(self):
+        mesh = self.mesh(2, n=2)
+        phi_init = Function(FunctionSpace(mesh, "CG", 1))
+        with self.assertRaises(ValueError) as cm:
+            MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
+        self.assertEqual(str(cm.exception), "Need to initialise both phi *and* H.")
 
     @parameterized.expand(
         [
@@ -397,7 +430,8 @@ class TestMisc(BaseClasses.TestMongeAmpere):
         coords.interpolate(as_vector(xyz))
         mover = MongeAmpereMover(Mesh(coords), const_monitor, method=method)
         mover._grad_phi.interpolate(as_vector(np.eye(dim)[0]))
-        mover._update_coordinates()
+        mover._update_physical_coordinates()
+        mover.to_physical_coordinates()
         self.assertAlmostEqual(errornorm(mover.grad_phi, mover._grad_phi), 0)
         if dim == 1:
             mover.xi.dat.data[:] += 1

@@ -4,7 +4,7 @@ import numpy as np
 import ufl
 from firedrake.petsc import PETSc
 
-import movement.solver_parameters as solver_parameters
+import movement.solver_parameters as sp
 from movement.mover import PrimeMover
 
 __all__ = ["LaplacianSmoother"]
@@ -50,7 +50,15 @@ class LaplacianSmoother(PrimeMover):
         self.rhs = firedrake.Function(self.coord_space, name="Zero RHS")
 
     @PETSc.Log.EventDecorator()
-    def _setup_solver(self, boundary_conditions):
+    def _solve(self, boundary_conditions, solver_parameters=None):
+        """
+        Solve the Laplace system.
+
+        :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
+        :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
+        :kwarg solver_parameters: solver parameters for solving the Laplace equation
+        :type solver_parameters: :class:`dict`
+        """
         if not hasattr(self, "_solver"):
             test = firedrake.TestFunction(self.coord_space)
             trial = firedrake.TrialFunction(self.coord_space)
@@ -62,23 +70,31 @@ class LaplacianSmoother(PrimeMover):
             )
             self._solver = firedrake.LinearVariationalSolver(
                 problem,
-                solver_parameters=solver_parameters.cg_ilu,
+                solver_parameters=solver_parameters or sp.cg_ilu,
             )
         self._solver.solve()
 
     @PETSc.Log.EventDecorator()
-    def move(self, time, update_boundary_velocity=None, boundary_conditions=None):
+    def move(
+        self,
+        time,
+        update_boundary_velocity=None,
+        boundary_conditions=None,
+        solver_parameters=None,
+    ):
         """
         Assemble and solve the Laplacian system and update the coordinates.
 
         :arg time: the current time
         :type time: :class:`float`
-        :kwarg update_boundary_velocity: function that updates the boundary conditions at
-            the current time
+        :kwarg update_boundary_velocity: function that updates the boundary conditions
+            at the current time
         :type update_boundary_velocity: :class:`~.Callable` with a single argument of
             :class:`float` type
         :kwarg boundary_conditions: Dirichlet boundary conditions to be enforced
         :type boundary_conditions: :class:`~.DirichletBC` or :class:`list` thereof
+        :kwarg solver_parameters: solver parameters for solving the Laplace equation
+        :type solver_parameters: :class:`dict`
         """
         if update_boundary_velocity is not None:
             update_boundary_velocity(time)
@@ -86,12 +102,11 @@ class LaplacianSmoother(PrimeMover):
             boundary_conditions = firedrake.DirichletBC(
                 self.coord_space, 0, "on_boundary"
             )
-        self._setup_solver(boundary_conditions)
 
         # Solve on computational mesh
         self.mesh.coordinates.assign(self.xi)
         try:
-            self._solver.solve()
+            self._solve(boundary_conditions, solver_parameters=solver_parameters)
         except fexc.ConvergenceError as conv_err:
             self._convergence_error(exception=conv_err)
 
@@ -99,8 +114,6 @@ class LaplacianSmoother(PrimeMover):
         self.displacement[:] = self.v.dat.data_with_halos * self.dt
         self.x.dat.data_with_halos[:] += self.displacement
         self.mesh.coordinates.assign(self.x)
-        if hasattr(self, "tangling_checker"):
-            self.tangling_checker.check()
         self.volume.interpolate(ufl.CellVolume(self.mesh))
         PETSc.Sys.Print(
             f"{time:.2f} s"
@@ -108,3 +121,5 @@ class LaplacianSmoother(PrimeMover):
             f"   Variation (σ/μ) {self.coefficient_of_variation:8.2e}"
             f"   Displacement {np.linalg.norm(self.displacement):.2f} m"
         )
+        if hasattr(self, "tangling_checker"):
+            self.tangling_checker.check()
