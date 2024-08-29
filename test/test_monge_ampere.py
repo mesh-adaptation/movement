@@ -73,11 +73,13 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
             mover.move()
         self.assertEqual(str(cm.exception), "Solver diverged after 1 iteration.")
 
-    def test_initial_guess_valueerror(self):
+    @parameterized.expand([("phi",), ("H",)])
+    def test_initial_guess_valueerror(self, var):
         mesh = self.mesh(n=2)
-        phi_init = Function(FunctionSpace(mesh, "CG", 1))
+        fs_constructor = {"phi": FunctionSpace, "H": TensorFunctionSpace}[var]
+        kwargs = {f"{var}_init": Function(fs_constructor(mesh, "CG", 1))}
         with self.assertRaises(ValueError) as cm:
-            MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
+            MongeAmpereMover(mesh, ring_monitor, **kwargs)
         self.assertEqual(str(cm.exception), "Need to initialise both phi *and* H.")
 
     def test_non_straight_boundary_valueerror(self):
