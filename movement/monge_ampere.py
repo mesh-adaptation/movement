@@ -633,8 +633,8 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         )
 
         @no_annotations
-        @PETSc.Log.EventDecorator("MongeAmpereMover.monitor")
-        def monitor(snes, i, rnorm):
+        @PETSc.Log.EventDecorator("MongeAmpereMover.callback")
+        def callback(snes, i, rnorm):
             """
             Print progress of the optimisation to screen.
 
@@ -654,7 +654,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             )
 
         self.snes = self._equidistributor.snes
-        self.snes.setMonitor(monitor)
+        self.snes.setMonitor(callback)
         return self._equidistributor
 
     @PETSc.Log.EventDecorator()
