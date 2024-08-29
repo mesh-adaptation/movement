@@ -187,6 +187,9 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
 
         .. math::
             \mathbf{x} = \boldsymbol{\xi} + \nabla_{\boldsymbol{\xi}}\phi.
+
+        After updating the coordinates, this method also checks for mesh tangling if this
+        is turned on. (It will be turned on by default in the 2D case.)
         """
         try:
             self.grad_phi.assign(self._grad_phi)
