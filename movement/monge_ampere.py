@@ -80,7 +80,7 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
         "quasi_newton": MongeAmpereMover_QuasiNewton,
     }
     try:
-        implemented_methods[method](mesh, monitor_function, **kwargs)
+        return implemented_methods[method](mesh, monitor_function, **kwargs)
     except KeyError:
         raise ValueError(f"Method '{method}' not recognised.")
 
