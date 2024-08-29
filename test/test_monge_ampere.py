@@ -78,7 +78,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         phi_init = Function(FunctionSpace(mesh, "CG", 1))
         with self.assertRaises(ValueError) as cm:
             MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
-        self.assertEqual(str(cm.exception), "Need to initialise both phi *and* sigma.")
+        self.assertEqual(str(cm.exception), "Need to initialise both phi *and* H.")
 
     def test_non_straight_boundary_valueerror(self):
         mesh = self.mesh(dim=2, n=3)
