@@ -177,13 +177,11 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             if self.dim == 1:
                 self.phi.interpolate(phi_init)
                 self.H.interpolate(H_init)
-                self.phi_old.interpolate(phi_init)
-                self.H_old.interpolate(H_init)
             else:
                 self.phi.project(phi_init)
                 self.H.project(H_init)
-                self.phi_old.project(phi_init)
-                self.H_old.project(H_init)
+            self.phi_old.assign(self.phi)
+            self.H_old.assign(self.H)
         elif phi_init is not None or H_init is not None:
             raise ValueError("Need to initialise both phi *and* H.")
 
