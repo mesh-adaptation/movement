@@ -59,8 +59,8 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :type method: :class:`str`
     :kwarg phi_init: initial guess for the scalar potential
     :type phi_init: :class:`firedrake.function.Function`
-    :kwarg sigma_init: initial guess for the Hessian
-    :type sigma_init: :class:`firedrake.function.Function`
+    :kwarg H_init: initial guess for the Hessian
+    :type H_init: :class:`firedrake.function.Function`
     :kwarg maxiter: maximum number of iterations for the solver
     :type maxiter: :class:`int`
     :kwarg rtol: relative tolerance for the residual
@@ -116,8 +116,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :type monitor_function: :class:`~.Callable`
         :kwarg phi_init: initial guess for the scalar potential
         :type phi_init: :class:`firedrake.function.Function`
-        :kwarg sigma_init: initial guess for the Hessian
-        :type sigma_init: :class:`firedrake.function.Function`
+        :kwarg H_init: initial guess for the Hessian
+        :type H_init: :class:`firedrake.function.Function`
         :kwarg maxiter: maximum number of iterations for the relaxation
         :type maxiter: :class:`int`
         :kwarg rtol: relative tolerance for the residual
@@ -156,7 +156,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.L_P0 = firedrake.TestFunction(self.P0) * self.monitor * self.dx
 
     @PETSc.Log.EventDecorator()
-    def apply_initial_guess(self, phi_init, sigma_init):
+    def apply_initial_guess(self, phi_init, H_init):
         """
         Initialise the approximations to the scalar potential and its Hessian with an
         initial guess.
@@ -166,16 +166,16 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
 
         :arg phi_init: initial guess for the scalar potential
         :type phi_init: :class:`firedrake.function.Function`
-        :arg sigma_init: initial guess for the Hessian
-        :type sigma_init: :class:`firedrake.function.Function`
+        :arg H_init: initial guess for the Hessian
+        :type H_init: :class:`firedrake.function.Function`
         """
-        if phi_init is not None and sigma_init is not None:
+        if phi_init is not None and H_init is not None:
             self.phi.project(phi_init)
-            self.sigma.project(sigma_init)
+            self.H.project(H_init)
             self.phi_old.project(phi_init)
-            self.sigma_old.project(sigma_init)
-        elif phi_init is not None or sigma_init is not None:
-            raise ValueError("Need to initialise both phi *and* sigma.")
+            self.H_old.project(H_init)
+        elif phi_init is not None or H_init is not None:
+            raise ValueError("Need to initialise both phi *and* H.")
 
     @property
     def relative_l2_residual(self):
@@ -311,9 +311,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     """
 
     @PETSc.Log.EventDecorator()
-    def __init__(
-        self, mesh, monitor_function, phi_init=None, sigma_init=None, **kwargs
-    ):
+    def __init__(self, mesh, monitor_function, phi_init=None, H_init=None, **kwargs):
         """
         :arg mesh: the physical mesh
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
@@ -321,8 +319,8 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         :type monitor_function: :class:`~.Callable`
         :kwarg phi_init: initial guess for the scalar potential
         :type phi_init: :class:`firedrake.function.Function`
-        :kwarg sigma_init: initial guess for the Hessian
-        :type sigma_init: :class:`firedrake.function.Function`
+        :kwarg H_init: initial guess for the Hessian
+        :type H_init: :class:`firedrake.function.Function`
         :kwarg pseudo_timestep: pseudo-timestep to use for the relaxation
         :type pseudo_timestep: :class:`float`
         :kwarg maxiter: maximum number of iterations for the relaxation
@@ -337,14 +335,14 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         self.pseudo_dt = firedrake.Constant(kwargs.pop("pseudo_timestep", 0.1))
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
 
-        # Initialise phi and sigma
-        if phi_init or sigma_init:
-            self.apply_initial_guess(phi_init, sigma_init)
+        # Initialise phi and H
+        if phi_init or H_init:
+            self.apply_initial_guess(phi_init, H_init)
 
         # Setup residuals
         I = ufl.Identity(self.dim)
-        self.theta_form = self.monitor * ufl.det(I + self.sigma_old) * self.dx
-        self.residual = self.monitor * ufl.det(I + self.sigma_old) - self.theta
+        self.theta_form = self.monitor * ufl.det(I + self.H_old) * self.dx
+        self.residual = self.monitor * ufl.det(I + self.H_old) - self.theta
         psi = firedrake.TestFunction(self.P1)
         self._residual_l2_form = psi * self.residual * self.dx
         self._norm_l2_form = psi * self.theta * self.dx
@@ -352,9 +350,9 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
     def _create_functions(self):
         super()._create_functions()
         self.phi = firedrake.Function(self.P1)
-        self.sigma = firedrake.Function(self.P1_ten)
+        self.H = firedrake.Function(self.P1_ten)
         self.phi_old = firedrake.Function(self.P1)
-        self.sigma_old = firedrake.Function(self.P1_ten)
+        self.H_old = firedrake.Function(self.P1_ten)
 
     @property
     @PETSc.Log.EventDecorator()
@@ -397,14 +395,14 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         The equidistributor solves the following equation:
 
         .. math::
-            \int_{\Omega} \tau : \sigma \, \mathrm{d}x
+            \int_{\Omega} \tau : \mathbf{H} \, \mathrm{d}x
             = -\int_{\Omega} (\nabla \cdot \tau) \cdot (\nabla \phi) \, \mathrm{d}x
             + \int_{\partial \Omega} ((\nabla \phi \cdot \widehat{\mathbf{n}}) \cdot
             \tau) \cdot \widehat{\mathbf{n}} \, \mathrm{d}s,
-            \quad \forall \tau \in \mathbb{P}1^{d \times d},
+            \quad \forall \tau \in \mathbb{P}1^{d \times d}
 
-        where :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}}` is a
-        normal vector to the boundary.
+        for the Hessian :math:`\mathbf{H}`, where :math:`d` is the spatial dimension and
+        :math:`\widehat{\mathbf{n}}` is a normal vector to the boundary.
 
         :return: the equidistributor
         :rtype: :class:`~.LinearVariationalSolver`
@@ -412,14 +410,13 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         if hasattr(self, "_equidistributor"):
             return self._equidistributor
         n = ufl.FacetNormal(self.mesh)
-        sigma = firedrake.TrialFunction(self.P1_ten)
         tau = firedrake.TestFunction(self.P1_ten)
-        a = ufl.inner(tau, sigma) * self.dx
+        a = ufl.inner(tau, firedrake.TrialFunction(self.P1_ten)) * self.dx
         L = (
             -ufl.dot(ufl.div(tau), ufl.grad(self.phi)) * self.dx
             + ufl.dot(ufl.dot(tangential(ufl.grad(self.phi), n), tau), n) * self.ds
         )
-        problem = firedrake.LinearVariationalProblem(a, L, self.sigma)
+        problem = firedrake.LinearVariationalProblem(a, L, self.H)
         self._equidistributor = firedrake.LinearVariationalSolver(
             problem, solver_parameters=solver_parameters.cg_ilu
         )
@@ -470,7 +467,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.pseudotimestepper.solve()
             self.equidistributor.solve()
             self.phi_old.assign(self.phi)
-            self.sigma_old.assign(self.sigma)
+            self.H_old.assign(self.H)
         self.to_physical_coordinates()
         return i
 
@@ -497,9 +494,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     """
 
     @PETSc.Log.EventDecorator()
-    def __init__(
-        self, mesh, monitor_function, phi_init=None, sigma_init=None, **kwargs
-    ):
+    def __init__(self, mesh, monitor_function, phi_init=None, H_init=None, **kwargs):
         """
         :arg mesh: the physical mesh
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
@@ -507,8 +502,8 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         :type monitor_function: :class:`~.Callable`
         :kwarg phi_init: initial guess for the scalar potential
         :type phi_init: :class:`firedrake.function.Function`
-        :kwarg sigma_init: initial guess for the Hessian
-        :type sigma_init: :class:`firedrake.function.Function`
+        :kwarg H_init: initial guess for the Hessian
+        :type H_init: :class:`firedrake.function.Function`
         :kwarg maxiter: maximum number of iterations for the Quasi-Newton solver
         :type maxiter: :class:`int`
         :kwarg rtol: relative tolerance for the residual
@@ -518,14 +513,14 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         """
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
 
-        # Initialise phi and sigma
-        if phi_init or sigma_init:
-            self.apply_initial_guess(phi_init, sigma_init)
+        # Initialise phi and H
+        if phi_init or H_init:
+            self.apply_initial_guess(phi_init, H_init)
 
         # Setup residuals
         I = ufl.Identity(self.dim)
-        self.theta_form = self.monitor * ufl.det(I + self.sigma_old) * self.dx
-        self.residual = self.monitor * ufl.det(I + self.sigma_old) - self.theta
+        self.theta_form = self.monitor * ufl.det(I + self.H_old) * self.dx
+        self.residual = self.monitor * ufl.det(I + self.H_old) - self.theta
         psi = firedrake.TestFunction(self.P1)
         self._residual_l2_form = psi * self.residual * self.dx
         self._norm_l2_form = psi * self.theta * self.dx
@@ -533,10 +528,10 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     def _create_functions(self):
         super()._create_functions()
         self.V = self.P1 * self.P1_ten
-        self.phisigma = firedrake.Function(self.V)
-        self.phi, self.sigma = self.phisigma.subfunctions
-        self.phisigma_old = firedrake.Function(self.V)
-        self.phi_old, self.sigma_old = self.phisigma_old.subfunctions
+        self.phi_and_hessian = firedrake.Function(self.V)
+        self.phi, self.H = self.phi_and_hessian.subfunctions
+        self.phi_and_hessian_old = firedrake.Function(self.V)
+        self.phi_old, self.H_old = self.phi_and_hessian_old.subfunctions
 
     @property
     @PETSc.Log.EventDecorator()
@@ -544,21 +539,22 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         r"""
         Setup the equidistributor for the quasi-newton method.
 
-        The equation being solved is:
+        The equidistributor solves
 
         .. math::
-            \int_{\Omega} \boldsymbol{\tau} \cdot \boldsymbol{\sigma} \, \mathrm{d}x
+            \int_{\Omega} \boldsymbol{\tau} \cdot \mathbf{H} \, \mathrm{d}x
             + \int_{\Omega} (\nabla \cdot \boldsymbol{\tau}) \cdot (\nabla \phi) \,
             \mathrm{d}x
             - \int_{\partial \Omega} (((\nabla \phi) \cdot \widehat{\mathbf{n}}) \cdot
               \boldsymbol{\tau}) \cdot \widehat{\mathbf{n}} \, \mathrm{d}s
-            - \int_{\Omega} \psi (m \det(\mathbf{I} + \boldsymbol{\sigma}) - \theta) \,
+            - \int_{\Omega} \psi (m \det(\mathbf{I} + \mathbf{H}) - \theta) \,
               \mathrm{d}x = 0,
               \quad \forall \boldsymbol{\tau} \in \mathbb{P}1^{d \times d},
               \quad \forall \psi \in \mathbb{P}1,
 
-        where :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}}` is a
-        normal vector to the boundary.
+        for the potential :math:`\phi` and its Hessian :math:`\mathbf{H}`, where
+        :math:`d` is the spatial dimension and :math:`\widehat{\mathbf{n}}` is a normal
+        vector to the boundary.
 
         :return: the equidistributor
         :rtype: :class:`~.NonlinearVariationalSolver`
@@ -567,22 +563,22 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             return self._equidistributor
         n = ufl.FacetNormal(self.mesh)
         I = ufl.Identity(self.dim)
-        phi, sigma = firedrake.split(self.phisigma)
+        phi, H = firedrake.split(self.phi_and_hessian)
         psi, tau = firedrake.TestFunctions(self.V)
         F = (
-            ufl.inner(tau, sigma) * self.dx
+            ufl.inner(tau, H) * self.dx
             + ufl.dot(ufl.div(tau), ufl.grad(phi)) * self.dx
             - ufl.dot(ufl.dot(tangential(ufl.grad(phi), n), tau), n) * self.ds
-            - psi * (self.monitor * ufl.det(I + sigma) - self.theta) * self.dx
+            - psi * (self.monitor * ufl.det(I + H) - self.theta) * self.dx
         )
-        phi, sigma = firedrake.TrialFunctions(self.V)
+        phi, H = firedrake.TrialFunctions(self.V)
 
         @PETSc.Log.EventDecorator("MongeAmpereMover.update_monitor")
         def update_monitor(cursol):
             """
             Callback for updating the monitor function.
             """
-            with self.phisigma_old.dat.vec as v:
+            with self.phi_and_hessian_old.dat.vec as v:
                 cursol.copy(v)
             self.l2_projector.solve()
             self._update_physical_coordinates()
@@ -596,15 +592,15 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         # Setup the variational problem
         # =============================
         # We use a custom preconditioner Jp, chosen to approximate the Jacobian of the
-        # system. It includes terms that represent the inner product of tau and sigma,
+        # system. It includes terms that represent the inner product of tau and H,
         # the product of phi and psi, and the inner product of the gradients of phi and
         # psi. This helps in stabilising the solver and improving convergence.
         Jp = (
-            ufl.inner(tau, sigma) * self.dx
+            ufl.inner(tau, H) * self.dx
             + phi * psi * self.dx
             + ufl.inner(ufl.grad(phi), ufl.grad(psi)) * self.dx
         )
-        problem = firedrake.NonlinearVariationalProblem(F, self.phisigma, Jp=Jp)
+        problem = firedrake.NonlinearVariationalProblem(F, self.phi_and_hessian, Jp=Jp)
 
         # Setup the variational solver
         # ============================
