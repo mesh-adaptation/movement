@@ -296,6 +296,9 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
 
     where :math:`\tau` is the pseudo-time variable. Forward Euler is used for the
     pseudo-time integration (see :cite:`MCB:18` for details).
+
+    This approach typically takes tens or hundreds of iterations to converge, but each
+    iteration is relatively cheap.
     """
 
     @PETSc.Log.EventDecorator()
@@ -478,6 +481,9 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
 
     In this mesh mover, the elliptic Monge-Ampère equation is solved using a quasi-Newton
     method (see :cite:`MCB:18` for details).
+
+    This approach typically takes fewer than ten iterations to converge, but each
+    iteration is relatively expensive.
     """
 
     @PETSc.Log.EventDecorator()
