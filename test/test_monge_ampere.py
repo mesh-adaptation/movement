@@ -60,7 +60,7 @@ class TestMongeAmpere(unittest.TestCase):
             const_monitor,
             method=method,
             phi_init=Function(P1),
-            sigma_init=Function(P1_ten),
+            H_init=Function(P1_ten),
             rtol=1e-3,
         )
         num_iterations = mover.move()
@@ -191,7 +191,7 @@ class TestMongeAmpere(unittest.TestCase):
         phi_init = Function(FunctionSpace(mesh, "CG", 1))
         with self.assertRaises(ValueError) as cm:
             MongeAmpereMover_Relaxation(mesh, ring_monitor, phi_init=phi_init)
-        self.assertEqual(str(cm.exception), "Need to initialise both phi *and* sigma.")
+        self.assertEqual(str(cm.exception), "Need to initialise both phi *and* H.")
 
     def test_coordinate_update(self):
         mesh = self.mesh(2, n=2)
@@ -200,7 +200,8 @@ class TestMongeAmpere(unittest.TestCase):
         coords.interpolate(as_vector([x + 1, y]))
         mover = MongeAmpereMover(Mesh(coords), const_monitor)
         mover._grad_phi.interpolate(as_vector([1, 0]))
-        mover._update_coordinates()
+        mover._update_physical_coordinates()
+        mover.to_physical_coordinates()
         self.assertAlmostEqual(errornorm(mover.grad_phi, mover._grad_phi), 0)
         mover.xi.dat.data[:, 0] += 1
         self.assertAlmostEqual(errornorm(mover.x, mover.xi), 0)
