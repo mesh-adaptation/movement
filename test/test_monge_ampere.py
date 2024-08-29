@@ -202,7 +202,8 @@ class TestMongeAmpere(unittest.TestCase):
         coords.interpolate(as_vector([x + 1, y]))
         mover = MongeAmpereMover(Mesh(coords), const_monitor)
         mover._grad_phi.interpolate(as_vector([1, 0]))
-        mover._update_coordinates()
+        mover._update_physical_coordinates()
+        mover.to_physical_coordinates()
         self.assertAlmostEqual(errornorm(mover.grad_phi, mover._grad_phi), 0)
         mover.xi.dat.data[:, 0] += 1
         self.assertAlmostEqual(errornorm(mover.x, mover.xi), 0)
