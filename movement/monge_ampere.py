@@ -149,20 +149,20 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.theta = firedrake.Constant(0.0)
 
         # Handle boundary segments where zero Dirichlet conditions are applied
-        if not self._all_boundary_segments:
+        if self.fixed_boundary_segments == "on_boundary":
+            self.fixed_boundary_segments = self._all_boundary_segments
+        elif not isinstance(self.fixed_boundary_segments, Iterable):
+            self.fixed_boundary_segments = [self.fixed_boundary_segments]
+        if len(self._all_boundary_segments) == 0:
             warn(
                 "Provided mesh has no boundary segments with Physical ID tags. If the "
                 "boundaries aren't fully periodic then this will likely cause errors."
             )
-        if self.fixed_boundary_segments == "on_boundary":
-            self.fixed_boundary_segments = self._all_boundary_segments
         elif (
             len(self.fixed_boundary_segments) == 1
             and self.fixed_boundary_segments[0] == "on_boundary"
         ):
             self.fixed_boundary_segments = self._all_boundary_segments
-        elif not isinstance(self.fixed_boundary_segments, Iterable):
-            self.fixed_boundary_segments = [self.fixed_boundary_segments]
         for boundary_tag in self.fixed_boundary_segments:
             if boundary_tag not in self._all_boundary_segments:
                 raise ValueError(f"Provided boundary_tag '{boundary_tag}' is invalid.")
