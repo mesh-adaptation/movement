@@ -61,8 +61,12 @@ class PrimeMover(abc.ABC):
         self._coordinate_section = create_section(self.mesh, entity_dofs)[0]
         dm_coords = self.plex.getCoordinateDM()
         dm_coords.setDefaultSection(self._coordinate_section)
-        self._local_coordinates_vec = dm_coords.createLocalVec()
-        self._update_plex_coordinates()
+        try:
+            self._local_coordinates_vec = dm_coords.createLocalVec()
+            self._update_plex_coordinates()
+        except ValueError:
+            warn("Cannot update DMPlex coordinates for periodic meshes.")
+            self._local_coordinates_vec = None
 
         self.dx = firedrake.dx(domain=self.mesh, degree=quadrature_degree)
         self.ds = firedrake.ds(domain=self.mesh, degree=quadrature_degree)
@@ -70,6 +74,7 @@ class PrimeMover(abc.ABC):
 
         self._create_function_spaces()
         self._create_functions()
+        self._all_boundary_segments = self.mesh.exterior_facets.unique_markers
 
         # Utilities
         if tangling_check is None:
@@ -157,6 +162,8 @@ class PrimeMover(abc.ABC):
         Update the underlying DMPlex coordinates with the coordinates of the Firedrake
         mesh.
         """
+        if self._local_coordinates_vec is None:
+            raise ValueError("Cannot update DMPlex coordinates for periodic meshes.")
         self._local_coordinates_vec.array[:] = np.reshape(
             self.mesh.coordinates.dat.data_with_halos,
             self._local_coordinates_vec.array.shape,

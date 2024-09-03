@@ -3,6 +3,7 @@ Mesh movement based on solutions of equations of Monge-Ampère type.
 """
 
 import abc
+from collections.abc import Iterable
 from warnings import warn
 
 import firedrake
@@ -13,6 +14,7 @@ from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
 
 import movement.solver_parameters as solver_parameters
+from movement.math import equation_of_hyperplane
 from movement.mover import PrimeMover
 
 __all__ = [
@@ -69,9 +71,11 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :type dtol: :class:`float`
     :kwarg pseudo_timestep: pseudo-timestep (only relevant to relaxation method)
     :type pseudo_timestep: :class:`float`
-    :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-    :type fix_boundary_nodes: :class:`bool`
-    :return: the Monge-Ampere Mover object
+    :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be fixed
+        with a zero Dirichlet condition. The 'on_boundary' label indicates the whole
+        domain boundary
+    :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
+    :return: the Monge-Ampère Mover object
     :rtype: :class:`MongeAmpereMover_Relaxation` or
         :class:`MongeAmpereMover_QuasiNewton`
     """
@@ -124,19 +128,44 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
-        :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-        :type fix_boundary_nodes: :class:`bool`
+        :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be
+            fixed with a zero Dirichlet condition. The 'on_boundary' label indicates
+            the whole domain boundary
+        :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
         """
         if monitor_function is None:
             raise ValueError("Please supply a monitor function.")
+        if mesh.coordinates.ufl_element().degree() != 1:
+            raise NotImplementedError(
+                f"{type(self).__name__} not implemented on curved meshes."
+            )  # TODO: (#107)
 
         # Collect parameters before calling super
         self.maxiter = kwargs.pop("maxiter", 1000)
         self.rtol = kwargs.pop("rtol", 1.0e-08)
         self.dtol = kwargs.pop("dtol", 2.0)
-        self.fix_boundary_nodes = kwargs.pop("fix_boundary_nodes", False)
+        self.fixed_boundary_segments = kwargs.pop("fixed_boundary_segments", [])
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
         self.theta = firedrake.Constant(0.0)
+
+        # Handle boundary segments where zero Dirichlet conditions are applied
+        if self.fixed_boundary_segments == "on_boundary":
+            self.fixed_boundary_segments = self._all_boundary_segments
+        elif not isinstance(self.fixed_boundary_segments, Iterable):
+            self.fixed_boundary_segments = [self.fixed_boundary_segments]
+        if len(self._all_boundary_segments) == 0:
+            warn(
+                "Provided mesh has no boundary segments with Physical ID tags. If the "
+                "boundaries aren't fully periodic then this will likely cause errors."
+            )
+        elif (
+            len(self.fixed_boundary_segments) == 1
+            and self.fixed_boundary_segments[0] == "on_boundary"
+        ):
+            self.fixed_boundary_segments = self._all_boundary_segments
+        for boundary_tag in self.fixed_boundary_segments:
+            if boundary_tag not in self._all_boundary_segments:
+                raise ValueError(f"Provided boundary_tag '{boundary_tag}' is invalid.")
 
     def _create_function_spaces(self):
         super()._create_function_spaces()
@@ -170,10 +199,14 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :type H_init: :class:`firedrake.function.Function`
         """
         if phi_init is not None and H_init is not None:
-            self.phi.project(phi_init)
-            self.H.project(H_init)
-            self.phi_old.project(phi_init)
-            self.H_old.project(H_init)
+            if self.dim == 1:
+                self.phi.interpolate(phi_init)
+                self.H.interpolate(H_init)
+            else:
+                self.phi.project(phi_init)
+                self.H.project(H_init)
+            self.phi_old.assign(self.phi)
+            self.H_old.assign(self.H)
         elif phi_init is not None or H_init is not None:
             raise ValueError("Need to initialise both phi *and* H.")
 
@@ -211,14 +244,77 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         if hasattr(self, "tangling_checker"):
             self.tangling_checker.check()
 
+    def _l2_projector_bcs(self, boundary_tag):
+        r"""
+        Determine boundary conditions to apply for the :math:`L^2` projection step for
+        a given boundary segment.
+
+        Note that the boundary segment *must* be a straight line or plane.
+
+        :arg boundary_tag: tag for the boundary segment in consideration
+        :type boundary_tag: :class:`str`
+        :returns: tuple of boundary conditions
+        :rtype: :class:`tuple` of :class:`~.DirichletBC`\s
+        """
+        zero_bc = firedrake.DirichletBC(self.P1_vec, 0, boundary_tag)
+        if (boundary_tag in self.fixed_boundary_segments) or self.dim == 1:
+            return (zero_bc,)
+
+        # If the boundary segment is axis-aligned, it is straightforward to avoid
+        # movement in the normal direction while allowing tangential movement - simply
+        # fix the component for the appropriate coordinate
+        n = ufl.FacetNormal(self.mesh)
+        ds = self.ds(boundary_tag)
+        iszero = [np.isclose(firedrake.assemble(abs(ni) * ds), 0.0) for ni in n]
+        nzero = sum(iszero)
+        assert nzero < self.dim
+        if nzero == self.dim - 1:
+            idx = iszero.index(False)
+            return (firedrake.DirichletBC(self.P1_vec.sub(idx), 0, boundary_tag),)
+
+        # Create an equation boundary condition for enforcing no mesh movement normal to
+        # domain boundaries
+        u_cts = firedrake.TrialFunction(self.P1_vec)
+        v_cts = firedrake.TestFunction(self.P1_vec)
+        a_bc = ufl.dot(v_cts, n) * ufl.dot(u_cts, n) * ds
+        L_bc = ufl.dot(v_cts, n) * firedrake.Constant(0.0) * ds
+        bc1 = firedrake.EquationBC(a_bc == L_bc, self._grad_phi, boundary_tag)
+
+        # Determine the 'corner' vertices which are at the intersection of two boundary
+        # segments and create a Dirichlet condition for fixing them under mesh movement
+        facet_indices = set(self._all_boundary_segments)
+        ffacet_indices = [
+            (tag, boundary_tag) for tag in facet_indices.difference([boundary_tag])
+        ]
+        ffacet_bc = firedrake.DirichletBC(self.P1_vec, 0, ffacet_indices)
+
+        # Check the current boundary segment is a straight line or plane
+        # TODO: Only do the following check in debugging mode (#94)
+        assert self.coord_space.ufl_element().degree() == 1
+        ffacets = list(self.mesh.coordinates.dat.data_with_halos[ffacet_bc.nodes])
+        hyperplane = equation_of_hyperplane(*ffacets)
+        for x in self.mesh.coordinates.dat.data_with_halos[zero_bc.nodes]:
+            if not np.isclose(float(hyperplane(*x)), 0):
+                raise ValueError(
+                    f"Boundary segment '{boundary_tag}' is not"
+                    f" {'linear' if self.dim == 2 else 'planar'}."
+                )
+
+        # Create an equation boundary condition which allows tangential movement, but
+        # only up until the 'corner' vertices where boundary segments meet
+        a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * ds
+        L_bc = ufl.dot(tangential(v_cts, n), tangential(ufl.grad(self.phi_old), n)) * ds
+        bc2 = firedrake.EquationBC(
+            a_bc == L_bc, self._grad_phi, boundary_tag, bcs=ffacet_bc
+        )
+        return bc1, bc2
+
     @property
     @PETSc.Log.EventDecorator()
     def l2_projector(self):
         """
         Create a linear solver for obtaining the gradient of the potential using an
         :math:`L^2` projection.
-
-        Boundary conditions are imposed as a post-processing step.
 
         :return: the linear solver
         :rtype: :class:`~.LinearVariationalSolver`
@@ -233,46 +329,11 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         L = ufl.inner(v_cts, ufl.grad(self.phi_old)) * self.dx
 
         # Enforce no movement normal to boundary
-        n = ufl.FacetNormal(self.mesh)
-        bcs = []
-        for tag in self.mesh.exterior_facets.unique_markers:
-            # TODO: Write tests for the boundary conditions block below (#79)
-            if self.fix_boundary_nodes:
-                bcs.append(firedrake.DirichletBC(self.P1_vec, 0, tag))
-                continue
-
-            # Check for axis-aligned boundaries
-            _n = [firedrake.assemble(abs(n[j]) * self.ds(tag)) for j in range(self.dim)]
-            iszero = [np.allclose(ni, 0.0) for ni in _n]
-            nzero = sum(iszero)
-            assert nzero < self.dim
-            if nzero == self.dim - 1:
-                idx = iszero.index(False)
-                bcs.append(firedrake.DirichletBC(self.P1_vec.sub(idx), 0, tag))
-                continue
-
-            # Enforce no mesh movement normal to boundaries
-            a_bc = ufl.dot(v_cts, n) * ufl.dot(u_cts, n) * self.ds
-            L_bc = ufl.dot(v_cts, n) * firedrake.Constant(0.0) * self.ds
-            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, tag))
-
-            # Allow tangential movement, but only up until the end of boundary segments
-            a_bc = ufl.dot(tangential(v_cts, n), tangential(u_cts, n)) * self.ds
-            L_bc = (
-                ufl.dot(tangential(v_cts, n), tangential(ufl.grad(self.phi_old), n))
-                * self.ds
-            )
-            edges = set(self.mesh.exterior_facets.unique_markers)
-            if len(edges) == 0:
-                bbc = None  # Periodic case
-            else:
-                warn(
-                    "Have you checked that all straight line segments are uniquely"
-                    " tagged?"
-                )
-                corners = [(i, j) for i in edges for j in edges.difference([i])]
-                bbc = firedrake.DirichletBC(self.P1_vec, 0, corners)
-            bcs.append(firedrake.EquationBC(a_bc == L_bc, self._grad_phi, tag, bcs=bbc))
+        bcs = [
+            dirichlet_bc
+            for boundary_tag in self._all_boundary_segments
+            for dirichlet_bc in self._l2_projector_bcs(boundary_tag)
+        ]
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
@@ -329,8 +390,10 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
-        :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-        :type fix_boundary_nodes: :class:`bool`
+        :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be
+            fixed with a zero Dirichlet condition. The 'on_boundary' label indicates
+            the whole domain boundary
+        :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
         """
         self.pseudo_dt = firedrake.Constant(kwargs.pop("pseudo_timestep", 0.1))
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
