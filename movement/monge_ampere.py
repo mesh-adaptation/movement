@@ -70,8 +70,10 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :type dtol: :class:`float`
     :kwarg pseudo_timestep: pseudo-timestep (only relevant to relaxation method)
     :type pseudo_timestep: :class:`float`
-    :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-    :type fix_boundary_nodes: :class:`bool`
+    :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be fixed
+        with a zero Dirichlet condition. The 'on_boundary' label indicates the whole
+        domain boundary
+    :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
     :return: the Monge-Ampère Mover object
     :rtype: :class:`MongeAmpereMover_Relaxation` or
         :class:`MongeAmpereMover_QuasiNewton`
@@ -125,7 +127,9 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
-        :kwarg fixed_boundary_segments: boundary segments to hold fixed
+        :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be
+            fixed with a zero Dirichlet condition. The 'on_boundary' label indicates
+            the whole domain boundary
         :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
         """
         if monitor_function is None:
@@ -383,8 +387,10 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
-        :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-        :type fix_boundary_nodes: :class:`bool`
+        :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be
+            fixed with a zero Dirichlet condition. The 'on_boundary' label indicates
+            the whole domain boundary
+        :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
         """
         self.pseudo_dt = firedrake.Constant(kwargs.pop("pseudo_timestep", 0.1))
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
