@@ -109,16 +109,6 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Could not determine a plane for the provided points."
         self.assertEqual(str(cm.exception), msg)
 
-    def test_periodic_fixed_boundaries_valueerror(self):
-        mesh = self.mesh(n=3, periodic=True)
-        mover = MongeAmpereMover_Relaxation(
-            mesh, ring_monitor, fixed_boundary_segments=["on_boundary"]
-        )
-        with self.assertRaises(ValueError) as cm:
-            mover.move()
-        msg = "Cannot fix boundary nodes for periodic segments."
-        self.assertEqual(str(cm.exception), msg)
-
     def test_curved_notimplementederror(self):
         coords = Function(VectorFunctionSpace(UnitTriangleMesh(), "CG", 2))
         coords.interpolate(coords.function_space().mesh().coordinates)

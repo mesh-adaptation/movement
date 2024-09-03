@@ -329,19 +329,6 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             for dirichlet_bc in self._l2_projector_bcs(boundary_tag)
         ]
 
-        # Check for an attempt to fix periodic boundary segments
-        subdomains = set()
-        for bc in bcs:
-            if not hasattr(bc, "sub_domain"):
-                subdomain = bc._F.sub_domain  # EquationBC doesn't have sub_domain attr
-            else:
-                subdomain = bc.sub_domain
-            if not isinstance(subdomain, Iterable):
-                subdomain = [subdomain]
-            subdomains = subdomains.union(subdomain)
-        if set(self.fixed_boundary_segments).difference(subdomains):
-            raise ValueError("Cannot fix boundary nodes for periodic segments.")
-
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
         self._l2_projector = firedrake.LinearVariationalSolver(
