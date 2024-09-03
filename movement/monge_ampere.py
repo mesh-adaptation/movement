@@ -4,6 +4,7 @@ Mesh movement based on solutions of equations of Monge-Ampère type.
 
 import abc
 from collections.abc import Iterable
+from warnings import warn
 
 import firedrake
 import firedrake.exceptions as fexc
@@ -148,6 +149,11 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.theta = firedrake.Constant(0.0)
 
         # Handle boundary segments where zero Dirichlet conditions are applied
+        if not self._all_boundary_segments:
+            warn(
+                "Provided mesh has no boundary segments with Physical ID tags. If the "
+                "boundaries aren't fully periodic then this will likely cause errors."
+            )
         if self.fixed_boundary_segments == "on_boundary":
             self.fixed_boundary_segments = self._all_boundary_segments
         elif (
