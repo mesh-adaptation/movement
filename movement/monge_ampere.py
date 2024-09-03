@@ -144,12 +144,22 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.rtol = kwargs.pop("rtol", 1.0e-08)
         self.dtol = kwargs.pop("dtol", 2.0)
         self.fixed_boundary_segments = kwargs.pop("fixed_boundary_segments", [])
-        if self.fixed_boundary_segments == "on_boundary":
-            self.fixed_boundary_segments = mesh.exterior_facets.unique_markers
-        elif not isinstance(self.fixed_boundary_segments, Iterable):
-            self.fixed_boundary_segments = [self.fixed_boundary_segments]
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
         self.theta = firedrake.Constant(0.0)
+
+        # Handle boundary segments where zero Dirichlet conditions are applied
+        if self.fixed_boundary_segments == "on_boundary":
+            self.fixed_boundary_segments = self._all_boundary_segments
+        elif (
+            len(self.fixed_boundary_segments) == 1
+            and self.fixed_boundary_segments[0] == "on_boundary"
+        ):
+            self.fixed_boundary_segments = self._all_boundary_segments
+        elif not isinstance(self.fixed_boundary_segments, Iterable):
+            self.fixed_boundary_segments = [self.fixed_boundary_segments]
+        for boundary_tag in self.fixed_boundary_segments:
+            if boundary_tag not in self._all_boundary_segments:
+                raise ValueError(f"Provided boundary_tag '{boundary_tag}' is invalid.")
 
     def _create_function_spaces(self):
         super()._create_function_spaces()
@@ -266,7 +276,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
 
         # Determine the 'corner' vertices which are at the intersection of two boundary
         # segments and create a Dirichlet condition for fixing them under mesh movement
-        facet_indices = set(self.mesh.exterior_facets.unique_markers)
+        facet_indices = set(self._all_boundary_segments)
         ffacet_indices = [
             (tag, boundary_tag) for tag in facet_indices.difference([boundary_tag])
         ]
@@ -315,7 +325,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         # Enforce no movement normal to boundary
         bcs = [
             dirichlet_bc
-            for boundary_tag in self.mesh.exterior_facets.unique_markers
+            for boundary_tag in self._all_boundary_segments
             for dirichlet_bc in self._l2_projector_bcs(boundary_tag)
         ]
 

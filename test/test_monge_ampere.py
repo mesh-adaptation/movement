@@ -141,6 +141,12 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Cannot update DMPlex coordinates for periodic meshes."
         self.assertEqual(str(cm.exception), msg)
 
+    def test_fix_invalid_segment_valueerror(self):
+        with self.assertRaises(ValueError) as cm:
+            MongeAmpereMover(self.mesh(1), const_monitor, fixed_boundary_segments=[-1])
+        msg = "Provided boundary_tag '-1' is invalid."
+        self.assertEqual(str(cm.exception), msg)
+
 
 class TestMonitor(BaseClasses.TestMongeAmpere):
     """
