@@ -3,6 +3,8 @@ Mesh movement based on solutions of equations of Monge-Ampère type.
 """
 
 import abc
+from collections.abc import Iterable
+from warnings import warn
 
 import firedrake
 import firedrake.exceptions as fexc
@@ -69,9 +71,11 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :type dtol: :class:`float`
     :kwarg pseudo_timestep: pseudo-timestep (only relevant to relaxation method)
     :type pseudo_timestep: :class:`float`
-    :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-    :type fix_boundary_nodes: :class:`bool`
-    :return: the Monge-Ampere Mover object
+    :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be fixed
+        with a zero Dirichlet condition. The 'on_boundary' label indicates the whole
+        domain boundary
+    :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
+    :return: the Monge-Ampère Mover object
     :rtype: :class:`MongeAmpereMover_Relaxation` or
         :class:`MongeAmpereMover_QuasiNewton`
     """
@@ -124,8 +128,10 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
-        :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-        :type fix_boundary_nodes: :class:`bool`
+        :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be
+            fixed with a zero Dirichlet condition. The 'on_boundary' label indicates
+            the whole domain boundary
+        :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
         """
         if monitor_function is None:
             raise ValueError("Please supply a monitor function.")
@@ -138,9 +144,28 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         self.maxiter = kwargs.pop("maxiter", 1000)
         self.rtol = kwargs.pop("rtol", 1.0e-08)
         self.dtol = kwargs.pop("dtol", 2.0)
-        self.fix_boundary_nodes = kwargs.pop("fix_boundary_nodes", False)
+        self.fixed_boundary_segments = kwargs.pop("fixed_boundary_segments", [])
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)
         self.theta = firedrake.Constant(0.0)
+
+        # Handle boundary segments where zero Dirichlet conditions are applied
+        if self.fixed_boundary_segments == "on_boundary":
+            self.fixed_boundary_segments = self._all_boundary_segments
+        elif not isinstance(self.fixed_boundary_segments, Iterable):
+            self.fixed_boundary_segments = [self.fixed_boundary_segments]
+        if len(self._all_boundary_segments) == 0:
+            warn(
+                "Provided mesh has no boundary segments with Physical ID tags. If the "
+                "boundaries aren't fully periodic then this will likely cause errors."
+            )
+        elif (
+            len(self.fixed_boundary_segments) == 1
+            and self.fixed_boundary_segments[0] == "on_boundary"
+        ):
+            self.fixed_boundary_segments = self._all_boundary_segments
+        for boundary_tag in self.fixed_boundary_segments:
+            if boundary_tag not in self._all_boundary_segments:
+                raise ValueError(f"Provided boundary_tag '{boundary_tag}' is invalid.")
 
     def _create_function_spaces(self):
         super()._create_function_spaces()
@@ -232,7 +257,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         :rtype: :class:`tuple` of :class:`~.DirichletBC`\s
         """
         zero_bc = firedrake.DirichletBC(self.P1_vec, 0, boundary_tag)
-        if self.fix_boundary_nodes or self.dim == 1:
+        if (boundary_tag in self.fixed_boundary_segments) or self.dim == 1:
             return (zero_bc,)
 
         # If the boundary segment is axis-aligned, it is straightforward to avoid
@@ -257,7 +282,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
 
         # Determine the 'corner' vertices which are at the intersection of two boundary
         # segments and create a Dirichlet condition for fixing them under mesh movement
-        facet_indices = set(self.mesh.exterior_facets.unique_markers)
+        facet_indices = set(self._all_boundary_segments)
         ffacet_indices = [
             (tag, boundary_tag) for tag in facet_indices.difference([boundary_tag])
         ]
@@ -306,11 +331,9 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         # Enforce no movement normal to boundary
         bcs = [
             dirichlet_bc
-            for boundary_tag in self.mesh.exterior_facets.unique_markers
+            for boundary_tag in self._all_boundary_segments
             for dirichlet_bc in self._l2_projector_bcs(boundary_tag)
         ]
-        if not bcs and self.fix_boundary_nodes:
-            raise ValueError("Cannot fix boundary nodes for periodic meshes.")
 
         # Create solver
         problem = firedrake.LinearVariationalProblem(a, L, self._grad_phi, bcs=bcs)
@@ -367,8 +390,10 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         :type rtol: :class:`float`
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
-        :kwarg fix_boundary_nodes: should all boundary nodes remain fixed?
-        :type fix_boundary_nodes: :class:`bool`
+        :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be
+            fixed with a zero Dirichlet condition. The 'on_boundary' label indicates
+            the whole domain boundary
+        :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
         """
         self.pseudo_dt = firedrake.Constant(kwargs.pop("pseudo_timestep", 0.1))
         super().__init__(mesh, monitor_function=monitor_function, **kwargs)

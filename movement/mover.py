@@ -74,6 +74,7 @@ class PrimeMover(abc.ABC):
 
         self._create_function_spaces()
         self._create_functions()
+        self._all_boundary_segments = self.mesh.exterior_facets.unique_markers
 
         # Utilities
         if tangling_check is None:
