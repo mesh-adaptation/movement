@@ -21,9 +21,10 @@ class BaseClasses:
             mesh,
             fixed_boundary_tags=None,
             moving_boundary_tags=None,
-            vector=[1, 0],
+            vector=None,
             **kwargs,
         ):
+            vector = vector or [1, 0]
             mover = self.mover(mesh)
             bcs = []
             if fixed_boundary_tags:

@@ -186,10 +186,9 @@ class SpringMover_Base(PrimeMover):
         :returns: the stiffness matrix with boundary conditions applied
         :rtype: :class:`numpy.ndarray`
         """
-        if not boundary_conditions:
-            boundary_conditions = firedrake.DirichletBC(
-                self.coord_space, 0, "on_boundary"
-            )
+        boundary_conditions = boundary_conditions or firedrake.DirichletBC(
+            self.coord_space, 0, "on_boundary"
+        )
         if isinstance(boundary_conditions, firedrake.DirichletBC):
             boundary_conditions = [boundary_conditions]
         assert isinstance(boundary_conditions, Iterable)
@@ -208,8 +207,7 @@ class SpringMover_Base(PrimeMover):
             tags = boundary_condition.sub_domain
             if tags == "on_boundary":
                 tags = bnd.unique_markers
-            if not isinstance(tags, Iterable):
-                tags = [tags]
+            tags = [tags] if not isinstance(tags, Iterable) else tags
             if not set(tags).issubset(set(bnd.unique_markers)):
                 raise ValueError(f"{tags} contains invalid boundary tags.")
             subsets = np.array([bnd.subset(tag).indices for tag in tags]).flatten()

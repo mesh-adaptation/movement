@@ -64,5 +64,5 @@ class MeshTanglingChecker:
             msg = f"Mesh has {num_tangled} tangled element{plural}."
             if self.raise_error:
                 raise ValueError(msg)
-            warnings.warn(msg)
+            warnings.warn(msg, stacklevel=8)
         return num_tangled

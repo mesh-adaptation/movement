@@ -46,7 +46,8 @@ class PrimeMover(abc.ABC):
         if not raise_convergence_errors:
             warn(
                 f"{type(self)}.move called with raise_convergence_errors=False."
-                " Beware: this option can produce poor quality meshes!"
+                " Beware: this option can produce poor quality meshes!",
+                stacklevel=5,
             )
         self.raise_convergence_errors = raise_convergence_errors
         self.dim = self.mesh.topological_dimension()
@@ -65,7 +66,7 @@ class PrimeMover(abc.ABC):
             self._local_coordinates_vec = dm_coords.createLocalVec()
             self._update_plex_coordinates()
         except ValueError:
-            warn("Cannot update DMPlex coordinates for periodic meshes.")
+            warn("Cannot update DMPlex coordinates for periodic meshes.", stacklevel=5)
             self._local_coordinates_vec = None
 
         self.dx = firedrake.dx(domain=self.mesh, degree=quadrature_degree)
