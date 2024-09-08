@@ -157,7 +157,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
             warn(
                 "Provided mesh has no boundary segments with Physical ID tags. If the "
                 "boundaries aren't fully periodic then this will likely cause errors.",
-                stacklevel=4,
+                stacklevel=1,
             )
         elif (
             len(self.fixed_boundary_segments) == 1
