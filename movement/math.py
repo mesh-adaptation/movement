@@ -33,7 +33,7 @@ def equation_of_hyperplane(*points):
         try:
             hyperplane = Hyperplane(*(Point(points[i]) for i in indices[:dim]))
 
-            def equation(*xyz):
+            def equation(*xyz, hyperplane=hyperplane):
                 return hyperplane.distance(Point(xyz))
 
             return equation

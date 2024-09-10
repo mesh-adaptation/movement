@@ -85,8 +85,8 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     }
     try:
         return implemented_methods[method](mesh, monitor_function, **kwargs)
-    except KeyError:
-        raise ValueError(f"Method '{method}' not recognised.")
+    except KeyError as e:
+        raise ValueError(f"Method '{method}' not recognised.") from e
 
 
 def tangential(v, n):
@@ -156,7 +156,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         if len(self._all_boundary_segments) == 0:
             warn(
                 "Provided mesh has no boundary segments with Physical ID tags. If the "
-                "boundaries aren't fully periodic then this will likely cause errors."
+                "boundaries aren't fully periodic then this will likely cause errors.",
+                stacklevel=1,
             )
         elif (
             len(self.fixed_boundary_segments) == 1
