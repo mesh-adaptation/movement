@@ -9,8 +9,9 @@
 #    -\Delta_{\boldsymbol{\xi}}\mathbf{v} = \boldsymbol{0},
 #
 # where :math:`\mathbf{v}` is the so-called *mesh velocity* that we solve for. Note that
-# the derivatives in the Laplace equation are in terms of the *computational coordinates*
-# :math:`\boldsymbol{\xi}`, rather than the physical coordinates :math:`\mathbf{x}`.
+# the derivatives in the Laplace equation are in terms of the *computational
+# coordinates* :math:`\boldsymbol{\xi}`, rather than the physical coordinates
+# :math:`\mathbf{x}`.
 #
 # With the mesh velocity, we update the physical coordinates according to
 #
@@ -64,7 +65,8 @@ plt.savefig("laplacian_smoothing-initial_mesh.jpg")
 # on the top boundary and see how the mesh responds. Consider the velocity
 #
 # .. math::
-#     \mathbf{v}_f(x,y,t) = \left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right]
+#     \mathbf{v}_f(x,y,t) = \left[0, A
+#     \:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right]
 #
 # acting only in the vertical direction, where :math:`A` is the amplitude and :math:`T`
 # is the time period. The displacement follows a sinusoidal pattern along that
@@ -103,9 +105,10 @@ plt.savefig("laplacian_smoothing-boundary_velocity.jpg")
 #
 # To enforce this boundary velocity, we need to create a :class:`~.LaplacianSmoother`
 # instance and define a function for updating the boundary conditions. Since we are
-# going to enforce the velocity on the top boundary, we create a :class:`~firedrake.function.Function` to
-# represent the boundary condition values and pass this to a :class:`~firedrake.bcs.DirichletBC`
-# object. We then define a function which updates it as time progresses. ::
+# going to enforce the velocity on the top boundary, we create a
+# :class:`~firedrake.function.Function` to represent the boundary condition values and
+# pass this to a :class:`~firedrake.bcs.DirichletBC` object. We then define a function
+# which updates it as time progresses. ::
 
 mover = LaplacianSmoother(mesh, timestep)
 top = Function(mover.coord_space)
@@ -120,7 +123,8 @@ def update_boundary_velocity(t):
         bv_data[i][1] = boundary_velocity(x, t)
 
 
-# In addition to the moving boundary, we specify the remaining boundaries to be fixed. ::
+# In addition to the moving boundary, we specify the remaining boundaries to be fixed.
+# ::
 
 fixed_boundaries = DirichletBC(mover.coord_space, 0, [1, 2, 3])
 boundary_conditions = (fixed_boundaries, moving_boundary)

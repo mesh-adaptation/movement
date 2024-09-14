@@ -33,13 +33,13 @@
 # .. math::
 #     \underline{\mathbf{K}} \mathbf{u} = \boldsymbol{0},
 #
-# where :math:`\mathbf{u}\in\mathbb{R}^{2N}` is a 'flattened' version of the displacement
-# vector. By solving this equation, we see how the structure of beams responds to the
-# forced boundary displacement.
+# where :math:`\mathbf{u}\in\mathbb{R}^{2N}` is a 'flattened' version of the
+# displacement vector. By solving this equation, we see how the structure of beams
+# responds to the forced boundary displacement.
 #
-# There are two main differences to note with the Laplacian smoothing approach. The first
-# is that Laplacian smoothing is formulated in terms of *mesh velocity*, whereas this
-# method is formulated in terms of displacements. Secondly, the mesh velocity
+# There are two main differences to note with the Laplacian smoothing approach. The
+# first is that Laplacian smoothing is formulated in terms of *mesh velocity*, whereas
+# this method is formulated in terms of displacements. Secondly, the mesh velocity
 # :math:`\mathbf{v}` in the Laplacian smoothing method may be approximated at timestep
 # :math:`n` as
 #
@@ -86,7 +86,8 @@ plt.savefig("lineal_spring-initial_mesh.jpg")
 # structure responds. We use a very similar formula,
 #
 # .. math::
-#     \mathbf{u}_f(x,y,t)=\left[0, A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right],
+#     \mathbf{u}_f(x,y,t)=\left[0,
+#     A\:\sin\left(\frac{2\pi t}T\right)\:\sin(\pi x)\right],
 #
 # where :math:`A` is the amplitude and :math:`T` is the time period, but again note that
 # it is now expressed as a boundary *displacement* :math:`\mathbf{u}_f`:, rather than a
@@ -139,7 +140,8 @@ def update_boundary_displacement(t):
         bd_data[i][1] = boundary_displacement(x, t)
 
 
-# In addition to the moving boundary, we specify the remaining boundaries to be fixed. ::
+# In addition to the moving boundary, we specify the remaining boundaries to be fixed.
+# ::
 
 fixed_boundaries = DirichletBC(mover.coord_space, 0, [1, 2, 3])
 boundary_conditions = (fixed_boundaries, moving_boundary)
@@ -187,9 +189,9 @@ plt.savefig("lineal_spring-adapted_meshes.jpg")
 #    :figwidth: 100%
 #    :align: center
 #
-# Again, the mesh is deformed according to the vertical displacement on the top boundary,
-# with the left, right, and bottom boundaries remaining fixed, returning to be very
-# close to its original state after one period. Let's check this in the
+# Again, the mesh is deformed according to the vertical displacement on the top
+# boundary, with the left, right, and bottom boundaries remaining fixed, returning to
+# be very close to its original state after one period. Let's check this in the
 # :math:`\ell_\infty` norm. ::
 
 coord_data = mover.mesh.coordinates.dat.data
@@ -201,9 +203,9 @@ assert linf_error < 0.002
 #
 #    l_infinity error: 0.001 m
 #
-# Note that the mesh doesn't return to its original state quite as neatly with the lineal
-# spring method as it does with the Laplacian smoothing method. However, the result is
-# still very good (as can be seen from the plots above).
+# Note that the mesh doesn't return to its original state quite as neatly with the
+# lineal spring method as it does with the Laplacian smoothing method. However, the
+# result is still very good (as can be seen from the plots above).
 #
 # We can view the sparsity pattern of the stiffness matrix as follows. ::
 

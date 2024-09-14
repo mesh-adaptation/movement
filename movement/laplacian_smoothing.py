@@ -16,7 +16,8 @@ class LaplacianSmoother(PrimeMover):
     determined by solving  a vector Laplace problem
 
     .. math::
-        \nabla^2_{\boldsymbol{\xi}}\mathbf{v} = \boldsymbol{0}, \quad \boldsymbol{\xi}\in\Omega,
+        \nabla^2_{\boldsymbol{\xi}}\mathbf{v} = \boldsymbol{0},
+        \quad \boldsymbol{\xi}\in\Omega,
 
     under non-zero Dirichlet boundary conditions on a forced boundary section
     :math:`\partial\Omega_f` and zero Dirichlet boundary conditions elsewhere:
@@ -24,7 +25,8 @@ class LaplacianSmoother(PrimeMover):
     .. math::
         \mathbf{v} = \left\{\begin{array}{rl}
             \mathbf{v}_D, & \boldsymbol{\xi}\in\partial\Omega_f\\
-            \boldsymbol{0}, & \boldsymbol{\xi}\in\partial\Omega\backslash\partial\Omega_f
+            \boldsymbol{0}, & \boldsymbol{\xi}\in
+            \partial\Omega\backslash\partial\Omega_f
         \end{array}\right.
 
     where the computational coordinates :math:`\boldsymbol{\xi} := \mathbf{x}(t_0)` are

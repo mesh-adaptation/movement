@@ -34,18 +34,18 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
         m(\mathbf{x})\det(\mathbf{I} + \mathbf{H}(\phi)) = \theta,
 
     for a convex scalar potential :math:`\phi=\phi(\boldsymbol{\xi})`, which is a
-    function of the coordinates of the *computational* mesh. Here :math:`m=m(\mathbf{x})`
-    is a function of the coordinates of the *physical* mesh, :math:`\mathbf{I}` is the
-    identity matrix, :math:`\theta` is a normalisation coefficient  and
-    :math:`\mathbf{H}(\phi)` denotes the Hessian of :math:`\phi` with respect to
-    :math:`\boldsymbol{\xi}`.
+    function of the coordinates of the *computational* mesh. Here
+    :math:`m=m(\mathbf{x})` is a function of the coordinates of the *physical* mesh,
+    :math:`\mathbf{I}` is the identity matrix, :math:`\theta` is a normalisation
+    coefficient  and :math:`\mathbf{H}(\phi)` denotes the Hessian of :math:`\phi` with
+    respect to :math:`\boldsymbol{\xi}`.
 
     Different implementations solve the Monge-Ampère equation in different ways. If the
     `method` argument is set to `"relaxation"` then it is solved in parabolised form in
     :class:`~.MongeAmpereMover_Relaxation`. If the argument is set to `"quasi_newton"`
     then it is solved in its elliptic form using a quasi-Newton method in
-    :class:`~.MongeAmpereMover_QuasiNewton`. Descriptions of both methods may be found in
-    :cite:`McRae:2018`.
+    :class:`~.MongeAmpereMover_QuasiNewton`. Descriptions of both methods may be found
+    in :cite:`McRae:2018`.
 
     The physical mesh coordinates :math:`\mathbf{x}` are updated according to
 
@@ -70,9 +70,9 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :type dtol: :class:`float`
     :kwarg pseudo_timestep: pseudo-timestep (only relevant to relaxation method)
     :type pseudo_timestep: :class:`float`
-    :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be fixed
-        with a zero Dirichlet condition. The 'on_boundary' label indicates the whole
-        domain boundary
+    :kwarg fixed_boundary_segments: labels corresponding to boundary segments to be
+        fixed with a zero Dirichlet condition. The 'on_boundary' label indicates the
+        whole domain boundary
     :type fixed_boundary_segments: :class:`list` of :class:`str` or :class:`int`
     :return: the Monge-Ampère Mover object
     :rtype: :class:`MongeAmpereMover_Relaxation` or
@@ -107,8 +107,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
     Base class for mesh movers based on the solution of Monge-Ampère type equations.
 
     Currently implemented subclasses: :class:`~.MongeAmpereMover_Relaxation` and
-    :class:`~.MongeAmpereMover_QuasiNewton`. Descriptions of both methods may be found in
-    :cite:`McRae:2018`.
+    :class:`~.MongeAmpereMover_QuasiNewton`. Descriptions of both methods may be found
+    in :cite:`McRae:2018`.
     """
 
     def __init__(self, mesh, monitor_function, **kwargs):
@@ -188,8 +188,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         Initialise the approximations to the scalar potential and its Hessian with an
         initial guess.
 
-        By default, both are initialised to zero, which corresponds to the case where the
-        computational and physical meshes coincide.
+        By default, both are initialised to zero, which corresponds to the case where
+        the computational and physical meshes coincide.
 
         :arg phi_init: initial guess for the scalar potential
         :type phi_init: :class:`firedrake.function.Function`
@@ -229,8 +229,8 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
         .. math::
             \mathbf{x} = \boldsymbol{\xi} + \nabla_{\boldsymbol{\xi}}\phi.
 
-        After updating the coordinates, this method also checks for mesh tangling if this
-        is turned on. (It will be turned on by default in the 2D case.)
+        After updating the coordinates, this method also checks for mesh tangling if
+        this is turned on. (It will be turned on by default in the 2D case.)
         """
         try:
             self.grad_phi.assign(self._grad_phi)
@@ -349,14 +349,14 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         m(\mathbf{x})\det(\mathbf{I} + \mathbf{H}(\phi)) = \theta,
 
     for a convex scalar potential :math:`\phi=\phi(\boldsymbol{\xi})`, which is a
-    function of the coordinates of the *computational* mesh. Here :math:`m=m(\mathbf{x})`
-    is a user-provided monitor function, which is a function of the coordinates of the
-    *physical* mesh. :math:`\mathbf{I}` is the identity matrix, :math:`\theta` is a
-    normalisation coefficient  and :math:`\mathbf{H}(\phi)` denotes the Hessian of
-    :math:`\phi` with respect to :math:`\boldsymbol{\xi}`.
+    function of the coordinates of the *computational* mesh. Here
+    :math:`m=m(\mathbf{x})` is a user-provided monitor function, which is a function of
+    the coordinates of the *physical* mesh. :math:`\mathbf{I}` is the identity matrix,
+    :math:`\theta` is a normalisation coefficient  and :math:`\mathbf{H}(\phi)` denotes
+    the Hessian of :math:`\phi` with respect to :math:`\boldsymbol{\xi}`.
 
-    In this mesh mover, the Monge-Ampère equation is instead solved in a parabolised form
-    using a pseudo-time relaxation,
+    In this mesh mover, the Monge-Ampère equation is instead solved in a parabolised
+    form using a pseudo-time relaxation,
 
     .. math::
         -\frac\partial{\partial\tau}\Delta\phi
@@ -545,14 +545,14 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         m(\mathbf{x})\det(\mathbf{I} + \mathbf{H}(\phi)) = \theta,
 
     for a convex scalar potential :math:`\phi=\phi(\boldsymbol{\xi})`, which is a
-    function of the coordinates of the *computational* mesh. Here :math:`m=m(\mathbf{x})`
-    is a user-provided monitor function, which is a function of the coordinates of the
-    *physical* mesh. :math:`\mathbf{I}` is the identity matrix, :math:`\theta` is a
-    normalisation coefficient  and :math:`\mathbf{H}(\phi)` denotes the Hessian of
-    :math:`\phi` with respect to :math:`\boldsymbol{\xi}`.
+    function of the coordinates of the *computational* mesh. Here
+    :math:`m=m(\mathbf{x})` is a user-provided monitor function, which is a function of
+    the coordinates of the *physical* mesh. :math:`\mathbf{I}` is the identity matrix,
+    :math:`\theta` is a normalisation coefficient  and :math:`\mathbf{H}(\phi)` denotes
+    the Hessian of :math:`\phi` with respect to :math:`\boldsymbol{\xi}`.
 
-    In this mesh mover, the elliptic Monge-Ampère equation is solved using a quasi-Newton
-    method (see :cite:`McRae:2018` for details).
+    In this mesh mover, the elliptic Monge-Ampère equation is solved using a
+    quasi-Newton method (see :cite:`McRae:2018` for details).
 
     This approach typically takes fewer than ten iterations to converge, but each
     iteration is relatively expensive.

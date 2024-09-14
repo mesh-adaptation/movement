@@ -399,8 +399,8 @@ class TestBCs(BaseClasses.TestMongeAmpere):
                 self.assertEqual(sum(isinstance(bc, EquationBC) for bc in bcs), 6)
             else:
                 # One of four non-axis-aligned boundary faces is fixed
-                # => one of these faces has a single DirichletBC and the other three have
-                #    two EquationBCs each
+                # => one of these faces has a single DirichletBC and the other three
+                #    have two EquationBCs each
                 # There are also two axis-aligned boundary faces, with a single
                 # DirichletBC each
                 self.assertEqual(len(bcs), 9)
