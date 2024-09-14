@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     # The docker container to use.
     container:
-      image: jwallwork/firedrake-parmmg:latest
+      image: ghcr.io/mesh-adaptation/firedrake-parmmg:latest
       options: --user root
     steps:
       - uses: actions/checkout@v2
