@@ -78,12 +78,12 @@ class TestStiffness(unittest.TestCase):
         """
         mesh = UnitTriangleMesh()
         mover = SpringMover(mesh, 1.0, method="lineal")
-        I = np.eye(2 * mesh.num_vertices())
+        id = np.eye(2 * mesh.num_vertices())
         K = mover._stiffness_matrix()
-        self.assertFalse(np.allclose(K, I))
+        self.assertFalse(np.allclose(K, id))
         K_bc = mover.assemble_stiffness_matrix()
         self.assertFalse(np.allclose(K, K_bc))
-        self.assertTrue(np.allclose(K_bc, I))
+        self.assertTrue(np.allclose(K_bc, id))
 
     def test_boundary_conditions_triangle_one_segment(self):
         """
@@ -94,12 +94,12 @@ class TestStiffness(unittest.TestCase):
         mesh = UnitTriangleMesh()
         mover = SpringMover(mesh, 1.0, method="lineal")
         K = mover._stiffness_matrix()
-        I = np.eye(2 * mesh.num_vertices())
-        self.assertFalse(np.allclose(K, I))
+        id = np.eye(2 * mesh.num_vertices())
+        self.assertFalse(np.allclose(K, id))
         bc = DirichletBC(mover.coord_space, 0, 1)
         K_bc = mover.assemble_stiffness_matrix(bc)
         self.assertFalse(np.allclose(K, K_bc))
-        self.assertFalse(np.allclose(K_bc, I))
+        self.assertFalse(np.allclose(K_bc, id))
         self.assertTrue(np.allclose(np.where(np.isclose(K, K_bc), I, K_bc), I))
 
     def test_boundary_conditions_1x1_square_all_boundary(self):
@@ -110,11 +110,11 @@ class TestStiffness(unittest.TestCase):
         mesh = UnitSquareMesh(1, 1)
         mover = SpringMover(mesh, 1.0, method="lineal")
         K = mover._stiffness_matrix()
-        I = np.eye(2 * mesh.num_vertices())
-        self.assertFalse(np.allclose(K, I))
+        id = np.eye(2 * mesh.num_vertices())
+        self.assertFalse(np.allclose(K, id))
         K_bc = mover.assemble_stiffness_matrix()
         self.assertFalse(np.allclose(K, K_bc))
-        self.assertTrue(np.allclose(K_bc, I))
+        self.assertTrue(np.allclose(K_bc, id))
 
 
 class TestQuantities(unittest.TestCase):

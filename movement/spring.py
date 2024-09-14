@@ -155,13 +155,13 @@ class SpringMover_Base(PrimeMover):
         for e in range(*self.edge_indices):
             off = self._edge_offset(e)
             i, j = (self._coordinate_offset(v) for v in self.plex.getCone(e))
-            l = edge_lengths.dat.data_with_halos[off]
+            length = edge_lengths.dat.data_with_halos[off]
             angle = angles.dat.data_with_halos[off]
             c = np.cos(angle)
             s = np.sin(angle)
-            c2 = c * c / l
-            sc = s * c / l
-            s2 = s * s / l
+            c2 = c * c / length
+            sc = s * c / length
+            s2 = s * s / length
             K[2 * i][2 * i] += c2
             K[2 * i][2 * i + 1] += sc
             K[2 * i][2 * j] += -c2

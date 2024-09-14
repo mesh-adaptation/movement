@@ -401,9 +401,9 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             self.apply_initial_guess(phi_init, H_init)
 
         # Setup residuals
-        I = ufl.Identity(self.dim)
-        self.theta_form = self.monitor * ufl.det(I + self.H_old) * self.dx
-        self.residual = self.monitor * ufl.det(I + self.H_old) - self.theta
+        id = ufl.Identity(self.dim)
+        self.theta_form = self.monitor * ufl.det(id + self.H_old) * self.dx
+        self.residual = self.monitor * ufl.det(id + self.H_old) - self.theta
         psi = firedrake.TestFunction(self.P1)
         self._residual_l2_form = psi * self.residual * self.dx
         self._norm_l2_form = psi * self.theta * self.dx
@@ -583,9 +583,9 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             self.apply_initial_guess(phi_init, H_init)
 
         # Setup residuals
-        I = ufl.Identity(self.dim)
-        self.theta_form = self.monitor * ufl.det(I + self.H_old) * self.dx
-        self.residual = self.monitor * ufl.det(I + self.H_old) - self.theta
+        id = ufl.Identity(self.dim)
+        self.theta_form = self.monitor * ufl.det(id + self.H_old) * self.dx
+        self.residual = self.monitor * ufl.det(id + self.H_old) - self.theta
         psi = firedrake.TestFunction(self.P1)
         self._residual_l2_form = psi * self.residual * self.dx
         self._norm_l2_form = psi * self.theta * self.dx
@@ -627,14 +627,14 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         if hasattr(self, "_equidistributor"):
             return self._equidistributor
         n = ufl.FacetNormal(self.mesh)
-        I = ufl.Identity(self.dim)
+        id = ufl.Identity(self.dim)
         phi, H = firedrake.split(self.phi_and_hessian)
         psi, tau = firedrake.TestFunctions(self.V)
         F = (
             ufl.inner(tau, H) * self.dx
             + ufl.dot(ufl.div(tau), ufl.grad(phi)) * self.dx
             - ufl.dot(ufl.dot(tangential(ufl.grad(phi), n), tau), n) * self.ds
-            - psi * (self.monitor * ufl.det(I + H) - self.theta) * self.dx
+            - psi * (self.monitor * ufl.det(id + H) - self.theta) * self.dx
         )
         phi, H = firedrake.TrialFunctions(self.V)
 
