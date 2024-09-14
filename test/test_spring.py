@@ -100,7 +100,7 @@ class TestStiffness(unittest.TestCase):
         K_bc = mover.assemble_stiffness_matrix(bc)
         self.assertFalse(np.allclose(K, K_bc))
         self.assertFalse(np.allclose(K_bc, id))
-        self.assertTrue(np.allclose(np.where(np.isclose(K, K_bc), I, K_bc), I))
+        self.assertTrue(np.allclose(np.where(np.isclose(K, K_bc), id, K_bc), id))
 
     def test_boundary_conditions_1x1_square_all_boundary(self):
         """
