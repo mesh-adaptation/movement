@@ -39,7 +39,7 @@ jobs:
         with:
           files: |
             .github/workflows/test_suite.yml
-            *.py
+            **/*.py
 
       - name: 'Cleanup'
         if: ${{ always() }}
