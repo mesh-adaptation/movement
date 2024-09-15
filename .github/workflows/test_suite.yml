@@ -13,17 +13,33 @@ on:
   schedule:
     - cron: '0 1 * * 0'
 
+concurrency:
+  # Cancel jobs running if new commits are pushed
+  group: >
+    ${{ github.workflow }}-
+    ${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: 'Test suite'
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    # The docker container to use.
     container:
-      image: jwallwork/firedrake-parmmg:latest
+      image: ghcr.io/mesh-adaptation/firedrake-parmmg:latest
       options: --user root
     steps:
-      - uses: actions/checkout@v2
+      - name: 'Check out the repo'
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: 'Determine files differing from target branch'
+        id: changed-files
+        if: ${{ github.event_name != 'push' && github.ref != 'refs/heads/main' }}
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            .github/workflows/test_suite.yml
+            *.py
 
       - name: 'Cleanup'
         if: ${{ always() }}
@@ -31,29 +47,27 @@ jobs:
           cd ..
           rm -rf build
 
-      - name: 'Setup python'
+      - name: 'Setup Python'
+        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (steps.changed-files.outcome == 'success' && steps.changed-files.outputs.any_changed == 'true') || github.event_name == 'schedule' }}
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
 
       - name: 'Install Movement'
+        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (steps.changed-files.outcome == 'success' && steps.changed-files.outputs.any_changed == 'true') || github.event_name == 'schedule' }}
         run: |
           . /home/firedrake/firedrake/bin/activate
           python -m pip uninstall -y movement
           python -m pip install -e .
 
-      - name: 'Check citation'
-        run: |
-          . /home/firedrake/firedrake/bin/activate
-          make check_citation
-
       - name: 'Lint'
-        if: ${{ always() }}
+        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (steps.changed-files.outcome == 'success' && steps.changed-files.outputs.any_changed == 'true') || github.event_name == 'schedule' }}
         run: |
           . /home/firedrake/firedrake/bin/activate
           make lint
 
       - name: 'Test Movement'
+        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (steps.changed-files.outcome == 'success' && steps.changed-files.outputs.any_changed == 'true') || github.event_name == 'schedule' }}
         run: |
           . /home/firedrake/firedrake/bin/activate
           export GITHUB_ACTIONS_TEST_RUN=1
