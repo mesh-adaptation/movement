@@ -39,7 +39,8 @@
 #
 # Based on the code in the Firedrake demo, we first solve the PDE on a uniform mesh.
 # Because our chosen solution does not satisfy homogeneous Neumann boundary conditions,
-# we instead apply Dirichlet boundary conditions based on the chosen analytical solution.
+# we instead apply Dirichlet boundary conditions based on the chosen analytical
+# solution.
 
 from firedrake import *
 
@@ -102,10 +103,11 @@ print("L2-norm error on initial mesh:", sqrt(assemble(dot(error, error) * dx)))
 # this numerical error. We use the same monitor function as
 # in the `previous Monge-Ampère demo <./monge_ampere_3d.py.html>`__
 # based on the norm of the Hessian of the solution.
-# In the following implementation we use the exact solution :math:`u_{\text{exact}}` which we
-# have as a symbolic UFL expression, and thus we can also obtain the Hessian symbolically as
-# :code:`grad(grad(u_exact))`. To compute its maximum norm however we do interpolate it
-# to a P1 function space `V` and take the maximum of the array of nodal values.
+# In the following implementation we use the exact solution :math:`u_{\text{exact}}`
+# which we have as a symbolic UFL expression, and thus we can also obtain the Hessian
+# symbolically as :code:`grad(grad(u_exact))`. To compute its maximum norm however we
+# do interpolate it to a P1 function space `V` and take the maximum of the array of
+# nodal values.
 
 alpha = Constant(5.0)
 
