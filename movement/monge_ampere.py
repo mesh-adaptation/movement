@@ -46,7 +46,7 @@ def MongeAmpereMover(mesh, monitor_function, method="relaxation", **kwargs):
     :class:`~.MongeAmpereMover_Relaxation`. If the argument is set to `"quasi_newton"`
     then it is solved in its elliptic form using a quasi-Newton method in
     :class:`~.MongeAmpereMover_QuasiNewton`. Descriptions of both methods may be found in
-    :cite:`MCB:18`.
+    :cite:`McRae:2018`.
 
     The physical mesh coordinates :math:`\mathbf{x}` are updated according to
 
@@ -109,7 +109,7 @@ class MongeAmpereMover_Base(PrimeMover, metaclass=abc.ABCMeta):
 
     Currently implemented subclasses: :class:`~.MongeAmpereMover_Relaxation` and
     :class:`~.MongeAmpereMover_QuasiNewton`. Descriptions of both methods may be found in
-    :cite:`MCB:18`.
+    :cite:`McRae:2018`.
     """
 
     def __init__(self, mesh, monitor_function, **kwargs):
@@ -366,7 +366,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         = m(\mathbf{x})\det(\mathbf{I} + \mathbf{H}(\phi)) - \theta,
 
     where :math:`\tau` is the pseudo-time variable. Forward Euler is used for the
-    pseudo-time integration (see :cite:`MCB:18` for details).
+    pseudo-time integration (see :cite:`McRae:2018` for details).
 
     This approach typically takes tens or hundreds of iterations to converge, but each
     iteration is relatively cheap.
@@ -424,7 +424,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         """
         Setup the pseudo-timestepper for the relaxation method.
 
-        Forward Euler is used for the pseudo-time integration (see :cite:`MCB:18` for
+        Forward Euler is used for the pseudo-time integration (see :cite:`McRae:2018` for
         details). The pseudo-timestep may be set through the `pseudo_timestep` keyword
         argument to the constructor.
 
@@ -555,7 +555,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
     :math:`\phi` with respect to :math:`\boldsymbol{\xi}`.
 
     In this mesh mover, the elliptic Monge-Ampère equation is solved using a quasi-Newton
-    method (see :cite:`MCB:18` for details).
+    method (see :cite:`McRae:2018` for details).
 
     This approach typically takes fewer than ten iterations to converge, but each
     iteration is relatively expensive.

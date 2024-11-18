@@ -230,5 +230,5 @@ plt.savefig("lineal_spring-sparsity.jpg")
 #
 # .. rubric:: References
 #
-# .. bibliography:: demo_references.bib
+# .. bibliography::
 #    :filter: docname in docnames
