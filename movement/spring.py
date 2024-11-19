@@ -16,7 +16,7 @@ def SpringMover(*args, method="lineal", **kwargs):
     """
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
     beams and solving an associated discrete linear elasticity problem. (See
-    :cite:`FDK+:98` for details.)
+    :cite:`Farhat:1998` for details.)
 
     :arg mesh: the physical mesh to be moved
     :type mesh: :class:`firedrake.mesh.MeshGeometry`
@@ -237,7 +237,7 @@ class SpringMover_Lineal(SpringMover_Base):
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
     beams and solving an associated discrete linear elasticity problem.
 
-    We consider the 'lineal' case, as described in :cite:`FDK+:98`.
+    We consider the 'lineal' case, as described in :cite:`Farhat:1998`.
     """
 
     @PETSc.Log.EventDecorator()
@@ -285,7 +285,7 @@ class SpringMover_Torsional(SpringMover_Lineal):
     Movement of a ``mesh`` is determined by reinterpreting it as a structure of stiff
     beams and solving an associated discrete linear elasticity problem.
 
-    We consider the 'torsional' case, as described in :cite:`FDK+:98`.
+    We consider the 'torsional' case, as described in :cite:`Farhat:1998`.
     """
 
     def __init__(self, *args, **kwargs):

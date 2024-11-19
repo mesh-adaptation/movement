@@ -195,5 +195,5 @@ plt.savefig("monge_ampere1-adapted_mesh_zoom.jpg")
 #
 # .. rubric:: References
 #
-# .. bibliography:: demo_references.bib
+# .. bibliography::
 #    :filter: docname in docnames

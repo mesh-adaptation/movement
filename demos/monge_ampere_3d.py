@@ -3,7 +3,7 @@
 
 # In this demo we demonstrate that the  Monge-Ampère mesh movement
 # can also be applied to 3D meshes. We employ the `sinatan3` function
-# from :cite:`park2019` to introduce an interesting pattern.
+# from :cite:`Park:2019` to introduce an interesting pattern.
 
 from firedrake import *
 
@@ -98,5 +98,5 @@ mover.move()
 #
 # .. rubric:: References
 #
-# .. bibliography:: demo_references.bib
+# .. bibliography::
 #    :filter: docname in docnames
