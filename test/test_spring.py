@@ -59,6 +59,12 @@ class TestExceptions(unittest.TestCase):
             mover.move(0)
         self.assertEqual(str(cm.exception), "Mesh has 1 tangled element.")
 
+    def test_cell_valueerror(self):
+        with self.assertRaises(ValueError) as cm:
+            SpringMover(UnitSquareMesh(1, 1, quadrilateral=True), 1.0)
+        expected = "Spring-based Movers only currently support triangular meshes."
+        self.assertEqual(str(cm.exception), expected)
+
 
 class TestStiffness(unittest.TestCase):
     """

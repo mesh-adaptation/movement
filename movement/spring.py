@@ -45,6 +45,10 @@ class SpringMover_Base(PrimeMover):
         :arg timestep: the timestep length used
         :type timestep: :class:`float`
         """
+        if mesh.coordinates.ufl_element().cell != ufl.triangle:
+            raise ValueError(
+                "Spring-based Movers only currently support triangular meshes."
+            )
         super().__init__(mesh)
         assert timestep > 0.0
         self.dt = timestep
