@@ -5,9 +5,17 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '**.py'
+      - '**.geo'
+      - '.github/workflows/test_suite.yml'
 
   # Run test suite whenever commits are pushed to an open PR
   pull_request:
+    paths:
+      - '**.py'
+      - '**.geo'
+      - '.github/workflows/test_suite.yml'
 
   # Run test suite every Sunday at 1AM
   schedule:
@@ -16,14 +24,3 @@ on:
 jobs:
   test_suite:
     uses: mesh-adaptation/docs/.github/workflows/reusable_test_suite.yml@main
-    with:
-      install-command: 'python -m pip uninstall -y movement && python -m pip install -e .'
-      test-command: |
-        python $(which firedrake-clean)
-        export GITHUB_ACTIONS_TEST_RUN=1
-        python -m coverage erase
-        python -m coverage run --source=movement -m pytest -v --durations=20 test
-        python -m coverage report
-      changed-files-patterns: |
-        **/*.py
-        **/*.geo
