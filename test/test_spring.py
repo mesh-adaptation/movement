@@ -41,7 +41,7 @@ class TestExceptions(unittest.TestCase):
         bc = DirichletBC(mover.coord_space, 0, 4)
         with self.assertRaises(ValueError) as cm:
             mover.assemble_stiffness_matrix(bc)
-        msg = "[4] contains invalid boundary tags."
+        msg = "(4,) contains invalid boundary tags."
         self.assertEqual(str(cm.exception), msg)
 
     def test_convergence_error(self):

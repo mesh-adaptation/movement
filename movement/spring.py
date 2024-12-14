@@ -205,7 +205,7 @@ class SpringMover_Base(PrimeMover):
             # Determine boundary subsets for the associated tags
             bnd = self.mesh.exterior_facets
             tags = boundary_condition.sub_domain
-            if tags == "on_boundary":
+            if tags == ("on_boundary",):
                 tags = bnd.unique_markers
             tags = [tags] if not isinstance(tags, Iterable) else tags
             if not set(tags).issubset(set(bnd.unique_markers)):
