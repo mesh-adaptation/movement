@@ -329,16 +329,16 @@ class TestBCs(BaseClasses.TestMongeAmpere):
 
     @parameterized.expand(
         [
-            (2, "relaxation", "on_boundary"),
+            (2, "relaxation", ["on_boundary"]),
             (2, "relaxation", [1]),
             (2, "relaxation", []),
-            (2, "quasi_newton", "on_boundary"),
+            (2, "quasi_newton", ["on_boundary"]),
             (2, "quasi_newton", [1]),
             (2, "quasi_newton", []),
-            (3, "relaxation", "on_boundary"),
+            (3, "relaxation", ["on_boundary"]),
             (3, "relaxation", [1]),
             (3, "relaxation", []),
-            (3, "quasi_newton", "on_boundary"),
+            (3, "quasi_newton", ["on_boundary"]),
             (3, "quasi_newton", [1]),
             (3, "quasi_newton", []),
         ]
