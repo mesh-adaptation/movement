@@ -1,7 +1,12 @@
 import unittest
 
 import numpy as np
-from firedrake import *
+import ufl
+from firedrake.bcs import DirichletBC
+from firedrake.exceptions import ConvergenceError
+from firedrake.function import Function
+from firedrake.mesh import Mesh
+from firedrake.utility_meshes import RectangleMesh, UnitSquareMesh, UnitTriangleMesh
 
 from movement import LaplacianSmoother, SpringMover
 
@@ -30,7 +35,7 @@ class BaseClasses:
             if fixed_boundary_tags:
                 bcs.append(DirichletBC(mover.coord_space, 0, fixed_boundary_tags))
             if moving_boundary_tags:
-                f = Function(mover.coord_space).interpolate(as_vector(vector))
+                f = Function(mover.coord_space).interpolate(ufl.as_vector(vector))
                 bcs.append(DirichletBC(mover.coord_space, f, moving_boundary_tags))
             mover.move(0.0, boundary_conditions=bcs, **kwargs)
             return mover.mesh
@@ -38,9 +43,9 @@ class BaseClasses:
         @staticmethod
         def shifted_mesh(nx, ny, shift_x=0, shift_y=0):
             mesh = UnitSquareMesh(nx, ny)
-            x, y = SpatialCoordinate(mesh)
+            x, y = ufl.SpatialCoordinate(mesh)
             shifted_coords = Function(mesh.coordinates)
-            shifted_coords.interpolate(as_vector([x + shift_x, y + shift_y]))
+            shifted_coords.interpolate(ufl.as_vector([x + shift_x, y + shift_y]))
             return Mesh(shifted_coords)
 
         @staticmethod
@@ -108,7 +113,9 @@ class TestSpringMover(BaseClasses.TestBoundaryForcing):
         bc = DirichletBC(mover.coord_space, forcing, 1)
 
         def update_bc(time):
-            forcing.interpolate(as_vector([cos(pi * time / 2), sin(pi * time / 2)]))
+            forcing.interpolate(
+                ufl.as_vector([ufl.cos(ufl.pi * time / 2), ufl.sin(ufl.pi * time / 2)])
+            )
 
         mover.move(0.0, boundary_conditions=bc, update_boundary_displacement=update_bc)
         self.assertFalse(np.allclose(coord_array, mover.mesh.coordinates.dat.data))
@@ -144,7 +151,9 @@ class TestLaplacianSmoother(BaseClasses.TestBoundaryForcing):
         bc = DirichletBC(mover.coord_space, forcing, 1)
 
         def update_bc(time):
-            forcing.interpolate(as_vector([cos(pi * time / 2), sin(pi * time / 2)]))
+            forcing.interpolate(
+                ufl.as_vector([ufl.cos(ufl.pi * time / 2), ufl.sin(ufl.pi * time / 2)])
+            )
 
         mover.move(0.0, boundary_conditions=bc, update_boundary_velocity=update_bc)
         self.assertFalse(np.allclose(coord_array, mover.mesh.coordinates.dat.data))

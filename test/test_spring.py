@@ -2,7 +2,10 @@ import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
-from firedrake import *
+from firedrake.bcs import DirichletBC
+from firedrake.exceptions import ConvergenceError
+from firedrake.functionspace import VectorFunctionSpace
+from firedrake.utility_meshes import UnitSquareMesh, UnitTriangleMesh
 
 from movement import SpringMover
 

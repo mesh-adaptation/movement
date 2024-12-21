@@ -3,10 +3,31 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import ufl
-from monitors import *
+from firedrake.assemble import assemble
+from firedrake.bcs import DirichletBC, EquationBC
+from firedrake.constant import Constant
+from firedrake.exceptions import ConvergenceError
+from firedrake.function import Function
+from firedrake.functionspace import (
+    FunctionSpace,
+    TensorFunctionSpace,
+    VectorFunctionSpace,
+)
+from firedrake.mesh import Mesh
+from firedrake.norms import errornorm
+from firedrake.utility_meshes import (
+    PeriodicUnitCubeMesh,
+    PeriodicUnitIntervalMesh,
+    PeriodicUnitSquareMesh,
+    UnitCubeMesh,
+    UnitIntervalMesh,
+    UnitSquareMesh,
+    UnitTriangleMesh,
+)
+from monitors import const_monitor, ring_monitor
 from parameterized import parameterized
 
-from movement import *
+from movement.monge_ampere import MongeAmpereMover, MongeAmpereMover_Relaxation
 
 
 class BaseClasses:
@@ -233,7 +254,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     """
 
     def _test_boundary_preservation(self, mesh, method, fixed_boundaries):
-        bnd = assemble(Constant(1.0) * ds(domain=mesh))
+        bnd = assemble(Constant(1.0) * ufl.ds(domain=mesh))
         coord_space = mesh.coordinates.function_space()
         bnodes = DirichletBC(coord_space, 0, fixed_boundaries or "on_boundary").nodes
         bnd_coords = mesh.coordinates.dat.data.copy()[bnodes]
@@ -273,11 +294,13 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         Monge-Ampère movers.
         """
         mesh = self.mesh(dim=dim, periodic=True)
-        volume = assemble(Constant(1.0) * dx(domain=mesh))
+        volume = assemble(Constant(1.0) * ufl.dx(domain=mesh))
         mover = self._test_boundary_preservation(mesh, method, [])
 
         # Check the volume of the domain is conserved
-        self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
+        self.assertAlmostEqual(
+            assemble(Constant(1.0) * ufl.dx(domain=mover.mesh)), volume
+        )
 
         # Check that the variational problem does not have boundary conditions
         self.assertTrue(len(mover._l2_projector._problem.bcs) == 0)
@@ -316,11 +339,13 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         Test that boundaries of unit domains are preserved by the Monge-Ampère movers.
         """
         mesh = self.mesh(dim=dim)
-        volume = assemble(Constant(1.0) * dx(domain=mesh))
+        volume = assemble(Constant(1.0) * ufl.dx(domain=mesh))
         mover = self._test_boundary_preservation(mesh, method, fixed_boundaries)
 
         # Check the volume of the domain is conserved
-        self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
+        self.assertAlmostEqual(
+            assemble(Constant(1.0) * ufl.dx(domain=mover.mesh)), volume
+        )
 
         # Check that the variational problem has one DirichletBC per boundary segment
         bcs = mover._l2_projector._problem.bcs
@@ -351,7 +376,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         Monge-Ampère movers.
         """
         mesh = self.mesh(dim=dim)
-        volume = assemble(Constant(1.0) * dx(domain=mesh))
+        volume = assemble(Constant(1.0) * ufl.dx(domain=mesh))
 
         # Construct a new mesh by rotating by 45 degrees in the xy-plane
         cs = ufl.cos(ufl.pi / 4)
@@ -367,7 +392,9 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         mover = self._test_boundary_preservation(Mesh(coords), method, fixed_boundaries)
 
         # Check the volume of the domain is conserved
-        self.assertAlmostEqual(assemble(Constant(1.0) * dx(domain=mover.mesh)), volume)
+        self.assertAlmostEqual(
+            assemble(Constant(1.0) * ufl.dx(domain=mover.mesh)), volume
+        )
 
         # If boundaries are fixed then they should have a single DirichletBC associated
         # with them
@@ -460,12 +487,12 @@ class TestMisc(BaseClasses.TestMongeAmpere):
     )
     def test_coordinate_update(self, dim, method):
         mesh = self.mesh(dim=dim, n=2)
-        xyz = list(SpatialCoordinate(mesh))
+        xyz = list(ufl.SpatialCoordinate(mesh))
         xyz[0] += 1
         coords = Function(VectorFunctionSpace(mesh, "CG", 1))
-        coords.interpolate(as_vector(xyz))
+        coords.interpolate(ufl.as_vector(xyz))
         mover = MongeAmpereMover(Mesh(coords), const_monitor, method=method)
-        mover._grad_phi.interpolate(as_vector(np.eye(dim)[0]))
+        mover._grad_phi.interpolate(ufl.as_vector(np.eye(dim)[0]))
         mover._update_physical_coordinates()
         mover.to_physical_coordinates()
         self.assertAlmostEqual(errornorm(mover.grad_phi, mover._grad_phi), 0)
