@@ -30,7 +30,8 @@
 # such that it is the solution of the Monge-Ampère type equation,
 #
 # .. math::
-#     m(\mathbf{x}) \det(\underline{\mathbf{I}}+\nabla_{\boldsymbol{\xi}}\nabla_{\boldsymbol{\xi}}\phi) = \theta,
+#     m(\mathbf{x}) \det(\underline{\mathbf{I}}
+#     +\nabla_{\boldsymbol{\xi}}\nabla_{\boldsymbol{\xi}}\phi) = \theta,
 #
 # where :math:`m(\mathbf{x})` is a so-called *monitor function* and :math:`\theta` is a
 # strictly positive normalisation function. The monitor function is of key importance
@@ -67,7 +68,8 @@ plt.savefig("monge_ampere1-initial_mesh.jpg")
 # the domain, according to the formula,
 #
 # .. math::
-#     m(x,y) = 1 + \frac{\alpha}{\cosh^2\left(\beta\left(\left(x-\frac{1}{2}\right)^2+\left(y-\frac{1}{2}\right)^2-\gamma\right)\right)},
+#     m(x,y) = 1 + \frac{\alpha}{\cosh^2\left(\beta\left(
+#     \left(x-\frac{1}{2}\right)^2+\left(y-\frac{1}{2}\right)^2-\gamma\right)\right)},
 #
 # for some values of the parameters :math:`\alpha`, :math:`\beta`, and :math:`\gamma`.
 # Unity is added at the start to ensure that the monitor function doesn't get too
@@ -88,8 +90,9 @@ def ring_monitor(mesh):
 
 
 # With an initial mesh and a monitor function, we are able to construct a
-# :class:`~movement.monge_ampere.MongeAmpereMover` instance and adapt the mesh. By default, the Monge-Ampère
-# equation is solved to a relative tolerance of :math:`10^{-8}`. ::
+# :class:`~movement.monge_ampere.MongeAmpereMover` instance and adapt the mesh. By
+# default, the Monge-Ampère equation is solved to a relative tolerance of
+# :math:`10^{-8}`. ::
 
 rtol = 1.0e-08
 mover = MongeAmpereMover(mesh, ring_monitor, method="quasi_newton", rtol=rtol)

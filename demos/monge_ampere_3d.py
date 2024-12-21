@@ -26,11 +26,11 @@ def sinatan3(mesh):
 #
 #    m = 1 + \alpha \frac{H(u_h):H(u_h)}{\max_{{\bf x}\in\Omega} H(u_h):H(u_h)}
 #
-# where :math:`:` indicates the inner product, i.e. :math:`\sqrt{H:H}` is the Frobenius norm
-# of :math:`H`. We have normalised such that the minimum of the monitor function is one (where
-# the error is zero), and its maximum is :math:`1 + \alpha` (where the curvature is maximal). This
-# means that we can select the ratio between the largest and smallest cell volume in the
-# moved mesh as :math:`1+\alpha`.
+# where :math:`:` indicates the inner product, i.e. :math:`\sqrt{H:H}` is the Frobenius
+# norm of :math:`H`. We have normalised such that the minimum of the monitor function
+# is one (where the error is zero), and its maximum is :math:`1 + \alpha` (where the
+# curvature is maximal). This means that we can select the ratio between the largest and
+# smallest cell volume in the moved mesh as :math:`1+\alpha`.
 #
 # As in the `previous Monge-Ampère demo <./monge_ampere1.py.html>`__, we use the
 # :class:`~movement.monge_ampere.MongeAmpereMover` to perform the mesh movement based on

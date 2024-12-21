@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from firedrake import *
+from firedrake.utility_meshes import UnitSquareMesh
 
 from movement import LaplacianSmoother
 
