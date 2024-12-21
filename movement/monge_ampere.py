@@ -421,9 +421,9 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
         """
         Setup the pseudo-timestepper for the relaxation method.
 
-        Forward Euler is used for the pseudo-time integration (see :cite:`McRae:2018` for
-        details). The pseudo-timestep may be set through the `pseudo_timestep` keyword
-        argument to the constructor.
+        Forward Euler is used for the pseudo-time integration (see :cite:`McRae:2018`
+        for details). The pseudo-timestep may be set through the `pseudo_timestep`
+        keyword argument to the constructor.
 
         :return: the pseudo-timestepper
         :rtype: :class:`~.LinearVariationalSolver`
