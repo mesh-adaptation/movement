@@ -10,7 +10,13 @@ from firedrake.function import Function
 from firedrake.functionspace import FunctionSpace
 from firedrake.norms import errornorm
 
-from movement.monitor import *
+from movement.monitor import (
+    BallMonitorBuilder,
+    ConstantMonitorBuilder,
+    GradientHessianMonitorBuilder,
+    GradientMonitorBuilder,
+    HessianMonitorBuilder,
+)
 
 
 class BaseClasses:
