@@ -41,6 +41,7 @@
 #
 # We begin the example by importing from the namespaces of Firedrake and Movement. ::
 
+import numpy as np
 from firedrake import *
 
 from movement import *
@@ -79,15 +80,10 @@ plt.savefig("monge_ampere1-initial_mesh.jpg")
 # function, :math:`\beta` as relating to the width of the ring, and :math:`\gamma` as
 # the radius of the ring.
 
-
-def ring_monitor(mesh):
-    alpha = Constant(20.0)
-    beta = Constant(200.0)
-    gamma = Constant(0.15)
-    x, y = SpatialCoordinate(mesh)
-    r = (x - 0.5) ** 2 + (y - 0.5) ** 2
-    return Constant(1.0) + alpha / cosh(beta * (r - gamma)) ** 2
-
+mb = BallMonitorBuilder(
+    dim=2, centre=(0.5, 0.5), radius=np.sqrt(0.15), amplitude=20.0, width=200.0
+)
+ring_monitor = mb.get_monitor()
 
 # With an initial mesh and a monitor function, we are able to construct a
 # :class:`~movement.monge_ampere.MongeAmpereMover` instance and adapt the mesh. By
