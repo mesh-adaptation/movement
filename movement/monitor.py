@@ -15,6 +15,7 @@ from firedrake.functionspace import (
 __all__ = [
     "ConstantMonitorBuilder",
     "BallMonitorBuilder",
+    "RingMonitorBuilder",
     "GradientMonitorBuilder",
     "HessianMonitorBuilder",
     "GradientHessianMonitorBuilder",
@@ -140,6 +141,34 @@ class BallMonitorBuilder(MonitorBuilder):
             Constant(1.0)
             + self.amplitude / ufl.cosh(self.width * (dist - self.radius**2)) ** 2
         )
+
+
+class RingMonitorBuilder(BallMonitorBuilder):
+    r"""
+    Builder class for monitor functions focused around 2D ring shapes:
+
+    .. math::
+        m(\mathbf{x}) = 1 + \frac{\alpha}
+        {\cosh^2\left(\beta\left((x-c_0)^2+(y-c_1)^2\right)
+        -\gamma^2\right)\right)},
+
+    where :math:`(c_0,c_1)` is the centre point, :math:`\alpha` is the amplitude of the
+    monitor function, :math:`\beta` is the width of the transition region, and
+    :math:`\gamma` is the radius of the ball.
+    """
+
+    def __init__(self, centre, radius, amplitude, width):
+        r"""
+        :arg centre: the centre of the ball
+        :type centre: :class:`tuple` of :class:`float`\s
+        :arg radius: the radius of the ball
+        :type radius: :class:`float`
+        :arg amplitude: the amplitude of the monitor function
+        :type amplitude: :class:`float`
+        :arg width: the width of the transition region
+        :type width: :class:`float`
+        """
+        super().__init__(2, centre, radius, amplitude, width)
 
 
 class SolutionBasedMonitorBuilder(MonitorBuilder, metaclass=abc.ABCMeta):

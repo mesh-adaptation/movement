@@ -74,14 +74,15 @@ plt.savefig("monge_ampere1-initial_mesh.jpg")
 #
 # for some values of the parameters :math:`\alpha`, :math:`\beta`, and :math:`\gamma`.
 # Unity is added at the start to ensure that the monitor function doesn't get too
-# close to zero.
+# close to zero. Here we can think of :math:`\alpha` as relating to the amplitude of the
+# monitor function, :math:`\beta` as relating to the width of the ring, and
+# :math:`\gamma` as the radius of the ring.
 #
-# Here we can think of :math:`\alpha` as relating to the amplitude of the monitor
-# function, :math:`\beta` as relating to the width of the ring, and :math:`\gamma` as
-# the radius of the ring.
+# For convenience, Movement provides a builder class for ring monitors, amongst other
+# commonly used monitor functions. ::
 
-mb = BallMonitorBuilder(
-    dim=2, centre=(0.5, 0.5), radius=np.sqrt(0.15), amplitude=20.0, width=200.0
+mb = RingMonitorBuilder(
+    centre=(0.5, 0.5), radius=np.sqrt(0.15), amplitude=20.0, width=200.0
 )
 ring_monitor = mb.get_monitor()
 
