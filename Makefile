@@ -4,7 +4,12 @@ all: install
 
 install:
 	@echo "Installing Movement..."
-	@python3 -m pip install -e .
+	@python3 -m pip install .
+	@echo "Done."
+
+install_dev:
+	@echo "Installing Movement for development..."
+	@python3 -m pip install -e .[dev]
 	@echo "Done."
 	@echo "Setting up pre-commit..."
 	@pre-commit install
