@@ -109,6 +109,10 @@ def MeshTanglingChecker(mesh, **kwargs):
     """
     Factory function for creating mesh tangling checker classes.
 
+    Note that the implementation is based on element orientations, so a reflection in
+    the :math:`x` coordinate (for example) will report mesh tangling, even though the
+    mesh doesn't 'look' tangled.
+
     :arg mesh: the mesh to track if tangled
     :type mesh: :class:`firedrake.mesh.MeshGeometry`
     :kwarg raise_error: if ``True``, an error is raised if any element is tangled,
