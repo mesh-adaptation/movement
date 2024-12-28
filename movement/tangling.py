@@ -9,13 +9,13 @@ __all__ = ["MeshTanglingChecker"]
 
 class MeshTanglingChecker:
     """
-    Class for tracking whether a mesh has tangled, i.e. whether any of its elements
+    A class for tracking whether a mesh has tangled, i.e. whether any of its elements
     have become inverted.
     """
 
     def __init__(self, mesh, raise_error=True):
         """
-        :arg mesh: the mesh to track if tangled
+        :kwarg mesh: the mesh to track if tangled
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
         :arg raise_error: if ``True``, an error is raised if any element is tangled,
             otherwise a warning is raised
@@ -24,16 +24,14 @@ class MeshTanglingChecker:
         self.mesh = mesh
         self.raise_error = raise_error
         P0 = firedrake.FunctionSpace(mesh, "DG", 0)
-        self._sj = firedrake.Function(P0)
+        self._jacobian_sign = firedrake.Function(P0)
         detJ = ufl.JacobianDeterminant(mesh)
         s = firedrake.assemble(interpolate(ufl.sign(detJ), P0))
-        self._sj_expr = ufl.sign(detJ) / s
+        self._jacobian_sign_expr = ufl.sign(detJ) / s
 
     @property
     def scaled_jacobian(self):
-        assert self._sj_expr is not None
-        self._sj.interpolate(self._sj_expr)
-        return self._sj
+        return self._jacobian_sign.interpolate(self._jacobian_sign_expr)
 
     def check(self):
         """
