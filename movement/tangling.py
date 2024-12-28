@@ -24,14 +24,14 @@ class MeshTanglingChecker:
         self.mesh = mesh
         self.raise_error = raise_error
         P0 = firedrake.FunctionSpace(mesh, "DG", 0)
-        self._jacobian_sign = firedrake.Function(P0)
+        self._detJ = firedrake.Function(P0)
         detJ = ufl.JacobianDeterminant(mesh)
-        s = firedrake.assemble(interpolate(ufl.sign(detJ), P0))
-        self._jacobian_sign_expr = ufl.sign(detJ) / s
+        s = firedrake.assemble(interpolate(detJ, P0))
+        self._detJ_expr = detJ / s
 
     @property
     def scaled_jacobian(self):
-        return self._jacobian_sign.interpolate(self._jacobian_sign_expr)
+        return self._detJ.interpolate(self._detJ_expr)
 
     def check(self):
         """
