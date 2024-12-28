@@ -51,6 +51,25 @@ class MeshTanglingChecker_Base(abc.ABC):
         return num_tangled
 
 
+class MeshTanglingChecker_1D(MeshTanglingChecker_Base):
+    """
+    Implementation of mesh tangling check in 1D.
+    """
+
+    def __init__(self, mesh, raise_error=True):
+        """
+        :arg mesh: the mesh to track if tangled
+        :type mesh: :class:`firedrake.mesh.MeshGeometry`
+        :kwarg raise_error: if ``True``, an error is raised if any element is tangled,
+            otherwise a warning is raised
+        :type raise_error: :class:`bool`
+        """
+        super().__init__(mesh, raise_error)
+        detJ = ufl.JacobianDeterminant(mesh)
+        s = firedrake.assemble(interpolate(ufl.sign(detJ), self.P0))
+        self._sj_expr = ufl.sign(detJ) / s
+
+
 class MeshTanglingChecker_2D(MeshTanglingChecker_Base):
     """
     Implementation of mesh tangling check in 2D.
@@ -99,6 +118,7 @@ def MeshTanglingChecker(mesh, **kwargs):
     dim = mesh.topological_dimension()
     try:
         implementations = {
+            1: MeshTanglingChecker_1D,
             2: MeshTanglingChecker_2D,
         }
         return implementations[dim](mesh, **kwargs)
