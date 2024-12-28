@@ -11,9 +11,9 @@ class TestTangling(unittest.TestCase):
     """
 
     def test_dim_notimplementederror(self):
-        with self.assertRaises(NotImplementedError) as cm:
+        with self.assertRaises(ValueError) as cm:
             MeshTanglingChecker(UnitIntervalMesh(1))
-        msg = "Tangling check only currently supported in 2D."
+        msg = "Mesh dimension 1 not supported."
         self.assertEqual(str(cm.exception), msg)
 
     def test_tangling_checker_error1(self):
@@ -29,12 +29,6 @@ class TestTangling(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             checker.check()
         self.assertEqual(str(cm.exception), "Mesh has 3 tangled elements.")
-
-    def test_tangling_checker_dim_error(self):
-        with self.assertRaises(NotImplementedError) as cm:
-            MeshTanglingChecker(UnitIntervalMesh(1))
-        msg = "Tangling check only currently supported in 2D."
-        self.assertEqual(str(cm.exception), msg)
 
     def test_tangling_checker_warning1(self):
         checker = MeshTanglingChecker(UnitSquareMesh(3, 3), raise_error=False)
