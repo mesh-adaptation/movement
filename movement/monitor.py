@@ -44,7 +44,7 @@ class MonitorBuilder(metaclass=abc.ABCMeta):
         :return: monitor function evaluated on given mesh
         :rtype: :class:`firedrake.function.Function`
         """
-        pass
+        pass  # pragma: no cover
 
     def get_monitor(self):
         """
