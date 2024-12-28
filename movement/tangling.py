@@ -84,25 +84,9 @@ class MeshTanglingChecker_2D(MeshTanglingChecker_Base):
         :type raise_error: :class:`bool`
         """
         super().__init__(mesh, raise_error)
-
-        # Store initial signs of Jacobian determinant
         detJ = ufl.JacobianDeterminant(mesh)
         s = firedrake.assemble(interpolate(ufl.sign(detJ), self.P0))
-
-        # Get scaled Jacobian expression
-        P0_ten = firedrake.TensorFunctionSpace(mesh, "DG", 0)
-        J = firedrake.assemble(interpolate(ufl.Jacobian(mesh), P0_ten))
-        edge1 = ufl.as_vector([J[0, 0], J[1, 0]])
-        edge2 = ufl.as_vector([J[0, 1], J[1, 1]])
-        edge3 = edge1 - edge2
-        norm1 = ufl.sqrt(ufl.dot(edge1, edge1))
-        norm2 = ufl.sqrt(ufl.dot(edge2, edge2))
-        norm3 = ufl.sqrt(ufl.dot(edge3, edge3))
-        prod1 = ufl.max_value(norm1 * norm2, norm1 * norm3)
-        prod2 = ufl.max_value(norm2 * norm3, norm2 * norm1)
-        prod3 = ufl.max_value(norm3 * norm1, norm3 * norm2)
-        maxval = ufl.max_value(ufl.max_value(prod1, prod2), prod3)
-        self._sj_expr = detJ / maxval * s
+        self._sj_expr = ufl.sign(detJ) / s
 
 
 def MeshTanglingChecker(mesh, **kwargs):
