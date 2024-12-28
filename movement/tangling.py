@@ -24,22 +24,25 @@ class MeshTanglingChecker:
         self.mesh = mesh
         self.raise_error = raise_error
         P0 = firedrake.FunctionSpace(mesh, "DG", 0)
-        self._detJ = firedrake.Function(P0)
         detJ = ufl.JacobianDeterminant(mesh)
-        s = firedrake.assemble(interpolate(detJ, P0))
-        self._detJ_expr = detJ / s
+        self._detJ_ratio_expr = detJ / firedrake.assemble(interpolate(detJ, P0))
+        self._detJ_ratio = firedrake.Function(P0).interpolate(self._detJ_ratio_expr)
 
     @property
-    def scaled_jacobian(self):
-        return self._detJ.interpolate(self._detJ_expr)
+    def jacobian_determinant_ratio(self):
+        """
+        Compute the ratio of the determinant of the Jacobian for the current mesh with
+        the determinant of the Jacobian of the original mesh.
+        """
+        return self._detJ_ratio.interpolate(self._detJ_ratio_expr)
 
     def check(self):
         """
         Check whether any element orientations have changed since the tangling checker
         was created.
         """
-        sj = self.scaled_jacobian.dat.data_with_halos
-        num_tangled = len(sj[sj < 0])
+        jdr = self.jacobian_determinant_ratio.dat.data_with_halos
+        num_tangled = len(jdr[jdr < 0])
         if num_tangled > 0:
             plural = "s" if num_tangled > 1 else ""
             msg = f"Mesh has {num_tangled} tangled element{plural}."
