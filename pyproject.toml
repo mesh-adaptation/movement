@@ -32,6 +32,7 @@ dev = [
   "cffconvert",
   "parameterized",
   "pre-commit",
+  "pytest",
   "ruff",
 ]
 
