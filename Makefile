@@ -4,7 +4,7 @@ all: install
 
 install:
 	@echo "Installing Movement..."
-	@python3 -m pip install .
+	@python3 -m pip install -e .
 	@echo "Done."
 
 install_dev:
