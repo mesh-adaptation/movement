@@ -190,8 +190,8 @@ plt.savefig("monge_ampere_ring-adapted_mesh_zoom.jpg")
 # the initial mesh. Use it to check for tangling after the mesh movement has been
 # applied.
 #
-# In the `next demo <./monge_ampere_3d.py.html>`__, we will demonstrate
-# that the Monge-Ampère method can also be applied in three dimensions.
+# In the `next demo <./monge_ampere_periodic.py.html>`__, we will demonstrate
+# that the Monge-Ampère method can also be to periodic meshes.
 #
 # This tutorial can be dowloaded as a `Python script <monge_ampere_ring.py>`__.
 #
