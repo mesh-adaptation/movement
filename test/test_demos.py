@@ -22,8 +22,9 @@ all_demos = glob.glob(os.path.join(demo_dir, "*.py"))
 changes_dict = {"rtol = 1.0e-08": "rtol = 1.0e-03", "n = 20": "n = 10"}
 modifications = {
     "monge_ampere_3d.py": changes_dict,
-    "monge_ampere1.py": changes_dict,
     "monge_ampere_helmholtz.py": changes_dict,
+    "monge_ampere_ring.py": changes_dict,
+    "monge_ampere_periodic.py": changes_dict,
 }
 
 
