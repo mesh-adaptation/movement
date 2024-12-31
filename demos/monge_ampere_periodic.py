@@ -13,7 +13,8 @@ from movement import *
 
 # Create a doubly periodic mesh with the same resolution as in the previous demo. ::
 
-mesh = PeriodicUnitSquareMesh(20, 20)
+n = 20
+mesh = PeriodicUnitSquareMesh(n, n)
 
 # Define the same monitor function and an instance of the :class:`~.MongeAmpereMover`
 # class. ::
