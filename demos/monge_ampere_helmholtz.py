@@ -227,6 +227,39 @@ def monitor2(mesh):
 mover = MongeAmpereMover(mesh, monitor2, method="quasi_newton", rtol=rtol)
 mover.move()
 
+# .. code-block:: none
+#
+#       0   Volume ratio  5.04   Variation (σ/μ) 4.90e-01   Residual 4.93e-01
+#       1   Volume ratio  2.60   Variation (σ/μ) 2.27e-01   Residual 2.24e-01
+#       2   Volume ratio  1.63   Variation (σ/μ) 1.09e-01   Residual 1.03e-01
+#       3   Volume ratio  1.31   Variation (σ/μ) 5.30e-02   Residual 4.33e-02
+#       4   Volume ratio  1.20   Variation (σ/μ) 3.31e-02   Residual 1.96e-02
+#       5   Volume ratio  1.16   Variation (σ/μ) 2.65e-02   Residual 8.77e-03
+#       6   Volume ratio  1.14   Variation (σ/μ) 2.46e-02   Residual 3.83e-03
+#       7   Volume ratio  1.14   Variation (σ/μ) 2.40e-02   Residual 1.63e-03
+#       8   Volume ratio  1.14   Variation (σ/μ) 2.38e-02   Residual 6.77e-04
+#       9   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 2.72e-04
+#      10   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 1.06e-04
+#      11   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 3.97e-05
+#      12   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 1.44e-05
+#      13   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 5.30e-06
+#      14   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 2.20e-06
+#      15   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 1.11e-06
+#      16   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 6.13e-07
+#      17   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 3.38e-07
+#      18   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 1.80e-07
+#      19   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 9.21e-08
+#    Solver converged in 19 iterations.
+
+fig, axes = plt.subplots()
+triplot(mover.mesh, axes=axes)
+axes.set_aspect(1)
+plt.savefig("monge_ampere_helmholtz-adapted_mesh2.jpg")
+
+# .. figure:: monge_ampere_helmholtz-adapted_mesh2.jpg
+#    :figwidth: 60%
+#    :align: center
+
 u_h = solve_helmholtz(mover.mesh)
 error = u_h - u_exact(mover.mesh)
 print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
@@ -234,5 +267,126 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 # .. code-block:: none
 #
 #    L2-norm error on moved mesh: 0.00630874419681285
+#
+# As expected, we do not observe significant changes in final adapted meshes between the
+# two approaches. However, the second approach is significantly slower, as it requires
+# solving the PDE in every iteration. In practice it might therefore be sufficient to
+# compute the solution on the initial mesh and interpolate it onto adapted meshes at
+# every iteration. This is demonstrated in the following implementation:
+
+u_h = solve_helmholtz(mesh)
+
+
+def monitor3(mesh):
+    V = FunctionSpace(mesh, "CG", 1)
+    u_h_interp = Function(V).interpolate(u_h)
+    TV = TensorFunctionSpace(mesh, "CG", 1)
+    H = RiemannianMetric(TV)
+    H.compute_hessian(u_h_interp, method="L2")
+
+    Hnorm = Function(V, name="Hnorm")
+    Hnorm.interpolate(sqrt(inner(H, H)))
+    Hnorm_max = Hnorm.dat.data.max()
+    m = 1 + alpha * Hnorm / Hnorm_max
+    return m
+
+
+mover = MongeAmpereMover(mesh, monitor3, method="quasi_newton", rtol=rtol)
+mover.move()
+
+# .. code-block:: none
+#
+#       0   Volume ratio  5.04   Variation (σ/μ) 4.90e-01   Residual 4.93e-01
+#       1   Volume ratio  1.98   Variation (σ/μ) 8.07e-02   Residual 7.72e-02
+#       2   Volume ratio  1.38   Variation (σ/μ) 4.87e-02   Residual 4.72e-02
+#       3   Volume ratio  1.23   Variation (σ/μ) 3.02e-02   Residual 2.78e-02
+#       4   Volume ratio  1.19   Variation (σ/μ) 1.99e-02   Residual 1.31e-02
+#       5   Volume ratio  1.18   Variation (σ/μ) 1.76e-02   Residual 5.84e-03
+#       6   Volume ratio  1.18   Variation (σ/μ) 1.76e-02   Residual 2.66e-03
+#       7   Volume ratio  1.18   Variation (σ/μ) 1.77e-02   Residual 1.26e-03
+#       8   Volume ratio  1.18   Variation (σ/μ) 1.78e-02   Residual 6.20e-04
+#       9   Volume ratio  1.18   Variation (σ/μ) 1.79e-02   Residual 3.16e-04
+#      10   Volume ratio  1.18   Variation (σ/μ) 1.79e-02   Residual 1.67e-04
+#      11   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 9.05e-05
+#      12   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 5.07e-05
+#      13   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 2.93e-05
+#      14   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 1.74e-05
+#      15   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 1.06e-05
+#      16   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 6.56e-06
+#      17   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 4.13e-06
+#      18   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 2.63e-06
+#      19   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 1.68e-06
+#      20   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 1.08e-06
+#      21   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 6.98e-07
+#      22   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 4.51e-07
+#      23   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 2.91e-07
+#      24   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 1.88e-07
+#    Solver converged in 24 iterations.
+
+fig, axes = plt.subplots()
+triplot(mover.mesh, axes=axes)
+axes.set_aspect(1)
+plt.savefig("monge_ampere_helmholtz-adapted_mesh3.jpg")
+
+# .. figure:: monge_ampere_helmholtz-adapted_mesh3.jpg
+#    :figwidth: 60%
+#    :align: center
+
+u_h = solve_helmholtz(mover.mesh)
+error = u_h - u_exact(mover.mesh)
+print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
+
+# .. code-block:: none
+#
+#    L2-norm error on moved mesh: 0.008712487462902048
+#
+# TEMP: Now interpolate the Hessian
+
+u_h = solve_helmholtz(mesh)
+TV = TensorFunctionSpace(mesh, "CG", 1)
+H = RiemannianMetric(TV)
+H.compute_hessian(u_h, method="L2")
+
+
+def monitor4(mesh):
+    V = FunctionSpace(mesh, "CG", 1)
+    TV = TensorFunctionSpace(mesh, "CG", 1)
+    H_interp = RiemannianMetric(TV).interpolate(H)
+
+    Hnorm = Function(V, name="Hnorm")
+    Hnorm.interpolate(sqrt(inner(H_interp, H_interp)))
+    Hnorm_max = Hnorm.dat.data.max()
+    m = 1 + alpha * Hnorm / Hnorm_max
+    return m
+
+
+mover = MongeAmpereMover(mesh, monitor4, method="quasi_newton", rtol=rtol)
+mover.move()
+
+# .. code-block:: none
+#
+#       0   Volume ratio  5.04   Variation (σ/μ) 4.90e-01   Residual 4.93e-01
+#       1   Volume ratio  1.92   Variation (σ/μ) 9.68e-02   Residual 9.18e-02
+#       2   Volume ratio  1.21   Variation (σ/μ) 2.31e-02   Residual 6.69e-03
+#       3   Volume ratio  1.15   Variation (σ/μ) 2.11e-02   Residual 4.14e-05
+#       4   Volume ratio  1.15   Variation (σ/μ) 2.12e-02   Residual 4.80e-08
+#    Solver converged in 4 iterations.
+
+fig, axes = plt.subplots()
+triplot(mover.mesh, axes=axes)
+axes.set_aspect(1)
+plt.savefig("monge_ampere_helmholtz-adapted_mesh4.jpg")
+
+# .. figure:: monge_ampere_helmholtz-adapted_mesh4.jpg
+#    :figwidth: 60%
+#    :align: center
+
+u_h = solve_helmholtz(mover.mesh)
+error = u_h - u_exact(mover.mesh)
+print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
+
+# .. code-block:: none
+#
+#    L2-norm error on moved mesh: 0.008385305585746483
 #
 # This tutorial can be dowloaded as a `Python script <monge_ampere_helmholtz.py>`__.
