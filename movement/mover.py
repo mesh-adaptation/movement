@@ -23,7 +23,7 @@ class PrimeMover(abc.ABC):
         mesh,
         monitor_function=None,
         raise_convergence_errors=True,
-        tangling_check=None,
+        tangling_check=True,
         quadrature_degree=None,
     ):
         r"""
@@ -35,8 +35,8 @@ class PrimeMover(abc.ABC):
             then :class:`~.ConvergenceError`\s are raised, else warnings are raised and
             the program is allowed to continue
         :type raise_convergence_errors: :class:`bool`
-        :kwarg tangling_check: check whether the mesh has tangled elements (by default
-            on in the 2D case and off otherwise)
+        :kwarg tangling_check: check whether the mesh has tangled elements (on by
+            default)
         :type tangling_check: :class:`bool`
         :kwarg quadrature_degree: quadrature degree to be passed to Firedrakes measures
         :type quadrature_degree: :class:`int`
@@ -78,8 +78,6 @@ class PrimeMover(abc.ABC):
         self._all_boundary_segments = self.mesh.exterior_facets.unique_markers
 
         # Utilities
-        if tangling_check is None:
-            tangling_check = self.dim == 2
         if tangling_check:
             self.tangling_checker = MeshTanglingChecker(
                 self.mesh, raise_error=raise_convergence_errors
