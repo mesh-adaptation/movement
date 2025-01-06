@@ -340,7 +340,14 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 #    L2-norm error on moved mesh: 0.008712487462902048
 #
-# TEMP: Now interpolate the Hessian
+# Even though the number of iterations has increased (24 compared to 17 and 19),
+# each iteration is significantly cheaper since the PDE is not solved again every
+# time. However, we observe that this also lead to a significantly larger error.
+#
+# We may further speed up the mesh movement step by also avoiding recomputing
+# the Hessian at every iteration. Similarly to the above example, we compute the
+# solution on the initial (uniform) mesh, but now we also compute its Hessian and
+# interpolate the Hessian onto adapted meshes.
 
 u_h = solve_helmholtz(mesh)
 TV = TensorFunctionSpace(mesh, "CG", 1)
@@ -388,5 +395,19 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 # .. code-block:: none
 #
 #    L2-norm error on moved mesh: 0.008385305585746483
+#
+# The mesh movement step now only took 4 iterations to converge and each of those
+# iterations is over an order of magnitude faster than those in previous examples.
+# The final error is again larger than the examples where the solution is
+# recomputed at every iteration, but is smaller than the example where we
+# interpolated the solution field.
+#
+# In this demo we demonstrated several examples of monitor functions and briefly
+# evaluated their performance. Each approach has inherent advantages and limitations
+# which should be considered for every new problem of interest. PDEs that are highly
+# sensitive to changes in local resolution may require recomputing the solution at
+# every iteration. In other cases we may obtain adequate results by defining a monitor
+# function that computes the solution less frequently, or even only once per iteration.
+# Movement allows and encourages such experimentation with different monitor functions.
 #
 # This tutorial can be dowloaded as a `Python script <monge_ampere_helmholtz.py>`__.
