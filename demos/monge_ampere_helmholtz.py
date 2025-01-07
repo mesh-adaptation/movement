@@ -424,11 +424,10 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #    L2-norm error on moved mesh: 0.008385305585746483
 #
 # The mesh movement step now only took 4 iterations to converge and each of those
-# iterations is over an order of magnitude faster than those in previous examples.
-# The final error is again larger than the examples where the solution is
-# recomputed at every iteration, but is smaller than the example where we
-# interpolated the solution field. The largest gain is in the total runtime, which is
-# up to five times shorter than previous examples.
+# iterations is now significantly faster. This resulted in a total runtime of only 1.23
+# seconds, which is up to five times shorter than previous examples. The final error is
+# again larger than the examples where the solution is recomputed at every iteration,
+# but is smaller than the example where we interpolated the solution field.
 #
 # We can summarise these results in the following table:
 #
