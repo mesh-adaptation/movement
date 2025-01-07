@@ -112,7 +112,7 @@ print("L2-norm error on initial mesh:", sqrt(assemble(dot(error, error) * dx)))
 alpha = Constant(5.0)
 
 
-def monitor(mesh):
+def monitor_exact(mesh):
     V = FunctionSpace(mesh, "CG", 1)
     Hnorm = Function(V, name="Hnorm")
     H = grad(grad(u_exact(mesh)))
@@ -126,7 +126,7 @@ def monitor(mesh):
 
 fig, axes = plt.subplots()
 m = Function(u_h, name="monitor")
-m.interpolate(monitor(mesh))
+m.interpolate(monitor_exact(mesh))
 contours = tripcolor(m, axes=axes)
 fig.colorbar(contours)
 plt.savefig("monge_ampere_helmholtz-monitor.jpg")
@@ -143,7 +143,7 @@ fig, axes = plt.subplots()
 import time
 
 rtol = 1.0e-08
-mover = MongeAmpereMover(mesh, monitor, method="quasi_newton", rtol=rtol)
+mover = MongeAmpereMover(mesh, monitor_exact, method="quasi_newton", rtol=rtol)
 
 t0 = time.time()
 mover.move()
@@ -220,7 +220,7 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 from animate import RiemannianMetric
 
 
-def monitor2(mesh):
+def monitor_solve(mesh):
     u_h = solve_helmholtz(mesh)
     V = FunctionSpace(mesh, "CG", 1)
     TV = TensorFunctionSpace(mesh, "CG", 1)
@@ -234,7 +234,7 @@ def monitor2(mesh):
     return m
 
 
-mover = MongeAmpereMover(mesh, monitor2, method="quasi_newton", rtol=rtol)
+mover = MongeAmpereMover(mesh, monitor_solve, method="quasi_newton", rtol=rtol)
 
 t0 = time.time()
 mover.move()
@@ -292,7 +292,7 @@ t0 = time.time()
 u_h = solve_helmholtz(mesh)
 
 
-def monitor3(mesh):
+def monitor_interp_soln(mesh):
     V = FunctionSpace(mesh, "CG", 1)
     u_h_interp = Function(V).interpolate(u_h)
     TV = TensorFunctionSpace(mesh, "CG", 1)
@@ -306,7 +306,7 @@ def monitor3(mesh):
     return m
 
 
-mover = MongeAmpereMover(mesh, monitor3, method="quasi_newton", rtol=rtol)
+mover = MongeAmpereMover(mesh, monitor_interp_soln, method="quasi_newton", rtol=rtol)
 mover.move()
 print(f"Time taken: {time.time() - t0:.2f} seconds")
 
@@ -380,7 +380,7 @@ H = RiemannianMetric(TV)
 H.compute_hessian(u_h, method="L2")
 
 
-def monitor4(mesh):
+def monitor_interp_Hessian(mesh):
     V = FunctionSpace(mesh, "CG", 1)
     TV = TensorFunctionSpace(mesh, "CG", 1)
     H_interp = RiemannianMetric(TV).interpolate(H)
@@ -392,7 +392,7 @@ def monitor4(mesh):
     return m
 
 
-mover = MongeAmpereMover(mesh, monitor4, method="quasi_newton", rtol=rtol)
+mover = MongeAmpereMover(mesh, monitor_interp_Hessian, method="quasi_newton", rtol=rtol)
 mover.move()
 print(f"Time taken: {time.time() - t0:.2f} seconds")
 
@@ -434,14 +434,14 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 # .. table::
 #
-#    ========== ========= ==============
-#     Monitor    Error     CPU time (s)
-#    ========== ========= ==============
-#     monitor    0.00596   3.16
-#     monitor2   0.00631   5.85
-#     monitor3   0.00871   5.98
-#     monitor4   0.00839   1.23
-#    ========== ========= ==============
+#    ======================== ========= ==============
+#     Monitor function         Error     CPU time (s)
+#    ======================== ========= ==============
+#     monitor_exact            0.00596   3.16
+#     monitor_solve            0.00631   5.85
+#     monitor_interp_soln      0.00871   5.98
+#     monitor_interp_Hessian   0.00839   1.23
+#    ======================== ========= ==============
 #
 # In this demo we demonstrated several examples of monitor functions and briefly
 # evaluated their performance. Each approach has inherent advantages and limitations
