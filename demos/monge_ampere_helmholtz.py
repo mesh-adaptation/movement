@@ -122,7 +122,7 @@ def monitor(mesh):
     return m
 
 
-# Plot the monitor function on the original mesh
+# Plot the monitor function on the original mesh:
 
 fig, axes = plt.subplots()
 m = Function(u_h, name="monitor")
@@ -135,10 +135,19 @@ fig, axes = plt.subplots()
 # .. figure:: monge_ampere_helmholtz-monitor.jpg
 #    :figwidth: 60%
 #    :align: center
+#
+# Now we can construct a :class:`~movement.monge_ampere.MongeAmpereMover` instance to
+# adapt the mesh based on this monitor function. We will also time how long the mesh
+# movement step takes.
+
+import time
 
 rtol = 1.0e-08
 mover = MongeAmpereMover(mesh, monitor, method="quasi_newton", rtol=rtol)
+
+t0 = time.time()
 mover.move()
+print(f"Time taken: {time.time() - t0:.2f} seconds")
 
 # For every iteration the MongeAmpereMover prints the minimum to maximum ratio of
 # the cell areas in the mesh, the residual in the Monge-Ampère equation, and the
@@ -165,6 +174,7 @@ mover.move()
 #      16   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 1.94e-07
 #      17   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 5.86e-08
 #    Solver converged in 17 iterations.
+#    Time taken: 3.16 seconds
 #
 # Plotting the resulting mesh:
 
@@ -225,7 +235,10 @@ def monitor2(mesh):
 
 
 mover = MongeAmpereMover(mesh, monitor2, method="quasi_newton", rtol=rtol)
+
+t0 = time.time()
 mover.move()
+print(f"Time taken: {time.time() - t0:.2f} seconds")
 
 # .. code-block:: none
 #
@@ -250,6 +263,7 @@ mover.move()
 #      18   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 1.80e-07
 #      19   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 9.21e-08
 #    Solver converged in 19 iterations.
+#    Time taken: 5.85 seconds
 
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
@@ -269,11 +283,12 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #    L2-norm error on moved mesh: 0.00630874419681285
 #
 # As expected, we do not observe significant changes in final adapted meshes between the
-# two approaches. However, the second approach is significantly slower, as it requires
+# two approaches. However, the second approach is almost twice longer, as it requires
 # solving the PDE in every iteration. In practice it might therefore be sufficient to
 # compute the solution on the initial mesh and interpolate it onto adapted meshes at
 # every iteration. This is demonstrated in the following implementation:
 
+t0 = time.time()
 u_h = solve_helmholtz(mesh)
 
 
@@ -293,6 +308,7 @@ def monitor3(mesh):
 
 mover = MongeAmpereMover(mesh, monitor3, method="quasi_newton", rtol=rtol)
 mover.move()
+print(f"Time taken: {time.time() - t0:.2f} seconds")
 
 # .. code-block:: none
 #
@@ -322,6 +338,7 @@ mover.move()
 #      23   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 2.91e-07
 #      24   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 1.88e-07
 #    Solver converged in 24 iterations.
+#    Time taken: 5.98 seconds
 
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
@@ -341,14 +358,22 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #    L2-norm error on moved mesh: 0.008712487462902048
 #
 # Even though the number of iterations has increased (24 compared to 17 and 19),
-# each iteration is significantly cheaper since the PDE is not solved again every
-# time. However, we observe that this also lead to a significantly larger error.
+# each iteration is slightly cheaper since the PDE is not solved again every time.
+# Despite that, the increased total number of iterations lead to a slightly longer total
+# runtime. Depending on the PDE in question and the solver used to solve it,
+# interpolating the solution may turn out to be slower than recomputing it.
+# We also observe that interpolating the solution lead to a significantly larger error.
+# In conclusion, in this particular example interpolating the solution field did not
+# lead to neither a lower error nor a faster mesh movement step compared to previous
+# approaches. Let us explore one more approach.
 #
 # We may further speed up the mesh movement step by also avoiding recomputing
-# the Hessian at every iteration. Similarly to the above example, we compute the
+# the Hessian at every iteration, which, in this particular example, is the most
+# expensive part of the monitor function. Similarly to the above example, we compute the
 # solution on the initial (uniform) mesh, but now we also compute its Hessian and
 # interpolate the Hessian onto adapted meshes.
 
+t0 = time.time()
 u_h = solve_helmholtz(mesh)
 TV = TensorFunctionSpace(mesh, "CG", 1)
 H = RiemannianMetric(TV)
@@ -369,6 +394,7 @@ def monitor4(mesh):
 
 mover = MongeAmpereMover(mesh, monitor4, method="quasi_newton", rtol=rtol)
 mover.move()
+print(f"Time taken: {time.time() - t0:.2f} seconds")
 
 # .. code-block:: none
 #
@@ -378,6 +404,7 @@ mover.move()
 #       3   Volume ratio  1.15   Variation (σ/μ) 2.11e-02   Residual 4.14e-05
 #       4   Volume ratio  1.15   Variation (σ/μ) 2.12e-02   Residual 4.80e-08
 #    Solver converged in 4 iterations.
+#    Time taken: 1.23 seconds
 
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
@@ -400,7 +427,21 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 # iterations is over an order of magnitude faster than those in previous examples.
 # The final error is again larger than the examples where the solution is
 # recomputed at every iteration, but is smaller than the example where we
-# interpolated the solution field.
+# interpolated the solution field. The largest gain is in the total runtime, which is
+# up to five times shorter than previous examples.
+#
+# We can summarise these results in the following table:
+#
+# .. table::
+#
+#    ========== ========= ==============
+#     Monitor    Error     CPU time (s)
+#    ========== ========= ==============
+#     monitor1   0.00596   3.16
+#     monitor2   0.00631   5.85
+#     monitor3   0.00871   5.98
+#     monitor4   0.00839   1.23
+#    ========== ========= ==============
 #
 # In this demo we demonstrated several examples of monitor functions and briefly
 # evaluated their performance. Each approach has inherent advantages and limitations
