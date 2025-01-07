@@ -434,14 +434,14 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 # .. table::
 #
-#    ======================== ========= ==============
-#     Monitor function         Error     CPU time (s)
-#    ======================== ========= ==============
-#     monitor_exact            0.00596   3.16
-#     monitor_solve            0.00631   5.85
-#     monitor_interp_soln      0.00871   5.98
-#     monitor_interp_Hessian   0.00839   1.23
-#    ======================== ========= ==============
+#    ============================ ========= ==============
+#     Monitor function             Error     CPU time (s)
+#    ============================ ========= ==============
+#     ``monitor_exact``            0.00596   3.16
+#     ``monitor_solve``            0.00631   5.85
+#     ``monitor_interp_soln``      0.00871   5.98
+#     ``monitor_interp_Hessian``   0.00839   1.23
+#    ============================ ========= ==============
 #
 # In this demo we demonstrated several examples of monitor functions and briefly
 # evaluated their performance. Each approach has inherent advantages and limitations
