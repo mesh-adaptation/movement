@@ -437,7 +437,7 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #    ========== ========= ==============
 #     Monitor    Error     CPU time (s)
 #    ========== ========= ==============
-#     monitor1   0.00596   3.16
+#     monitor    0.00596   3.16
 #     monitor2   0.00631   5.85
 #     monitor3   0.00871   5.98
 #     monitor4   0.00839   1.23
