@@ -32,7 +32,7 @@ def sinatan3(mesh):
 # curvature is maximal). This means that we can select the ratio between the largest and
 # smallest cell volume in the moved mesh as :math:`1+\alpha`.
 #
-# As in the `previous Monge-Ampère demo <./monge_ampere1.py.html>`__, we use the
+# As in the `previous Monge-Ampère demo <./monge_ampere_ring.py.html>`__, we use the
 # :class:`~movement.monge_ampere.MongeAmpereMover` to perform the mesh movement based on
 # this monitor. We need
 # to provide the monitor as a callback function that takes the mesh as its
