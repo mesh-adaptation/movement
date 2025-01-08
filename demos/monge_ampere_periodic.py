@@ -16,7 +16,8 @@ from movement import *
 n = 20
 mesh = PeriodicUnitSquareMesh(n, n)
 
-# Define the same monitor function and an instance of the :class:`~.MongeAmpereMover`
+# Define the same monitor function and an instance of the
+# :class:`~movement.monge_ampere.MongeAmpereMover` class. ::
 # class. ::
 
 
@@ -153,7 +154,7 @@ plt.savefig("monge_ampere_periodic-adapted_mesh.jpg")
 import numpy as np
 
 expected_area = 1.0
-assert np.isclose(assemble(Constant(1.0, domain=mover.mesh) * dx), expected_area)
+assert np.isclose(assemble(Constant(1.0) * dx(domain=mover.mesh)), expected_area)
 
 # .. rubric:: Exercise
 #
