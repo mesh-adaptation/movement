@@ -728,6 +728,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         # Solve equidistribution problem, handling convergence errors according to
         # desired behaviour
         try:
+            self.to_computational_coordinates()
             self.equidistributor.solve()
             self._convergence_message(self.snes.getIterationNumber())
         except fexc.ConvergenceError as conv_err:
