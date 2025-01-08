@@ -138,7 +138,7 @@ fig, axes = plt.subplots()
 #
 # Now we can construct a :class:`~movement.monge_ampere.MongeAmpereMover` instance to
 # adapt the mesh based on this monitor function. We will also time how long the mesh
-# movement step takes.
+# movement step takes to complete [#f1]_.
 
 import time
 
@@ -174,7 +174,7 @@ print(f"Time taken: {time.time() - t0:.2f} seconds")
 #      16   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 1.94e-07
 #      17   Volume ratio  1.15   Variation (σ/μ) 2.57e-02   Residual 5.86e-08
 #    Solver converged in 17 iterations.
-#    Time taken: 3.16 seconds
+#    Time taken: 2.52 seconds
 #
 # Plotting the resulting mesh:
 
@@ -263,7 +263,7 @@ print(f"Time taken: {time.time() - t0:.2f} seconds")
 #      18   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 1.80e-07
 #      19   Volume ratio  1.14   Variation (σ/μ) 2.37e-02   Residual 9.21e-08
 #    Solver converged in 19 iterations.
-#    Time taken: 5.85 seconds
+#    Time taken: 6.17 seconds
 
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
@@ -338,7 +338,7 @@ print(f"Time taken: {time.time() - t0:.2f} seconds")
 #      23   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 2.91e-07
 #      24   Volume ratio  1.18   Variation (σ/μ) 1.80e-02   Residual 1.88e-07
 #    Solver converged in 24 iterations.
-#    Time taken: 5.98 seconds
+#    Time taken: 6.19 seconds
 
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
@@ -404,7 +404,7 @@ print(f"Time taken: {time.time() - t0:.2f} seconds")
 #       3   Volume ratio  1.15   Variation (σ/μ) 2.11e-02   Residual 4.14e-05
 #       4   Volume ratio  1.15   Variation (σ/μ) 2.12e-02   Residual 4.80e-08
 #    Solver converged in 4 iterations.
-#    Time taken: 1.23 seconds
+#    Time taken: 1.09 seconds
 
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
@@ -423,7 +423,7 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 #    L2-norm error on moved mesh: 0.008385305585746483
 #
-# The mesh movement step now only took 4 iterations, with a total runtime of only 1.23
+# The mesh movement step now only took 4 iterations, with a total runtime of only 1.09
 # seconds, which is up to five times shorter than previous examples. The final error is
 # again larger than the example where the solution is recomputed at every iteration,
 # but is smaller than the example where we interpolated the solution field.
@@ -435,10 +435,10 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #    ============================ ========= ==============
 #     Monitor function             Error     CPU time (s)
 #    ============================ ========= ==============
-#     ``monitor_exact``            0.00596   3.16
-#     ``monitor_solve``            0.00631   5.85
-#     ``monitor_interp_soln``      0.00871   5.98
-#     ``monitor_interp_Hessian``   0.00839   1.23
+#     ``monitor_exact``            0.00596   2.52
+#     ``monitor_solve``            0.00631   6.17
+#     ``monitor_interp_soln``      0.00871   6.19
+#     ``monitor_interp_Hessian``   0.00839   1.09
 #    ============================ ========= ==============
 #
 # In this demo we demonstrated several examples of monitor functions and briefly
@@ -450,3 +450,10 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 # Movement allows and encourages such experimentation with different monitor functions.
 #
 # This tutorial can be dowloaded as a `Python script <monge_ampere_helmholtz.py>`__.
+#
+# .. rubric:: Footnotes
+#
+# .. [#f1] Running this script as it is will yield a slightly longer runtime of the
+#    first approach (3.14 seconds on our machine) due to the additional overhead of the
+#    first-time JIT compilation. The reported runtime of 2.52 seconds is obtained by
+#    running the first example twice in a row and taking the second runtime.
