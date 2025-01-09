@@ -725,10 +725,12 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         :return: the iteration count
         :rtype: :class:`int`
         """
+        # Switch to computational coordinates
+        self.to_computational_coordinates()
+
         # Solve equidistribution problem, handling convergence errors according to
         # desired behaviour
         try:
-            self.to_computational_coordinates()
             self.equidistributor.solve()
             self._convergence_message(self.snes.getIterationNumber())
         except fexc.ConvergenceError as conv_err:
