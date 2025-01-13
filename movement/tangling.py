@@ -25,17 +25,18 @@ class MeshTanglingChecker:
         self.raise_error = raise_error
         P0 = firedrake.FunctionSpace(mesh, "DG", 0)
         detJ = ufl.JacobianDeterminant(mesh)
-        self._detJ_ratio_expr = detJ / firedrake.assemble(interpolate(detJ, P0))
-        self._detJ_ratio = firedrake.Function(P0).interpolate(self._detJ_ratio_expr)
+        self._detJ_ratio_expr = detJ / firedrake.Function(P0).interpolate(detJ)
+        self._detJ_ratio = firedrake.Function(P0)
 
     @property
     def jacobian_determinant_ratio(self):
         """
-        Compute the ratio of the determinant of the Jacobian for the current mesh with
+        Compute the ratio of the determinant of the Jacobian of the current mesh to
         the determinant of the Jacobian of the original mesh.
         """
         return self._detJ_ratio.interpolate(self._detJ_ratio_expr)
 
+    @PETSc.Log.EventDecorator()
     def check(self):
         """
         Check whether any element orientations have changed since the tangling checker
