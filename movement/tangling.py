@@ -43,7 +43,7 @@ class MeshTanglingChecker:
         was created.
         """
         jdr = self.jacobian_determinant_ratio.dat.data_with_halos
-        num_tangled = len(jdr[jdr < 0])
+        num_tangled = len(jdr[jdr <= 0])
         if num_tangled > 0:
             plural = "s" if num_tangled > 1 else ""
             msg = f"Mesh has {num_tangled} tangled element{plural}."
