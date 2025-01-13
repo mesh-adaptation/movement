@@ -2,7 +2,7 @@ import warnings
 
 import firedrake
 import ufl
-from firedrake.__future__ import interpolate
+from firedrake.petsc import PETSc
 
 __all__ = ["MeshTanglingChecker"]
 
@@ -15,9 +15,9 @@ class MeshTanglingChecker:
 
     def __init__(self, mesh, raise_error=True):
         """
-        :kwarg mesh: the mesh to track if tangled
+        :arg mesh: the mesh to track if tangled
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
-        :arg raise_error: if ``True``, an error is raised if any element is tangled,
+        :kwarg raise_error: if ``True``, an error is raised if any element is tangled,
             otherwise a warning is raised
         :type raise_error: :class:`bool`
         """
