@@ -78,8 +78,9 @@ plt.savefig("monge_ampere1-initial_mesh.jpg")
 # monitor function, :math:`\beta` as relating to the width of the ring, and
 # :math:`\gamma` as the radius of the ring.
 #
-# For convenience, Movement provides a builder class for ring monitors, amongst other
-# commonly used monitor functions. ::
+# For convenience, Movement provides a builder class for ring monitors,
+# :class:`~movement.monitor.RingMonitorBuilder`, amongst other commonly used
+# monitor functions. ::
 
 mb = RingMonitorBuilder(
     centre=(0.5, 0.5), radius=np.sqrt(0.15), amplitude=20.0, width=200.0

@@ -29,7 +29,7 @@ class MonitorBuilder(metaclass=abc.ABCMeta):
 
     def __init__(self, dim):
         """
-        :arg dim: dimension of the mesh
+        :arg dim: mesh dimension
         :type dim: :class:`int`
         """
         self.dim = dim
@@ -84,7 +84,7 @@ class ConstantMonitorBuilder(MonitorBuilder):
         :arg mesh: the mesh on which the monitor function is to be defined
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
         :return: constant monitor function
-        :rtype: :class:`firedrake.function.Function`
+        :rtype: :class:`firedrake.constant.Constant`
         """
         return Constant(1.0)
 
@@ -132,8 +132,8 @@ class BallMonitorBuilder(MonitorBuilder):
 
         :arg mesh: the mesh on which the monitor function is to be defined
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
-        :return: ball-shaped monitor function
-        :rtype: :class:`firedrake.function.Function`
+        :return: expression of the ball-shaped monitor function
+        :rtype: :class:`ufl.core.expr.Expr`
         """
         diff = SpatialCoordinate(mesh) - self.centre
         dist = ufl.dot(diff, diff)
@@ -148,9 +148,9 @@ class RingMonitorBuilder(BallMonitorBuilder):
     Builder class for monitor functions focused around 2D ring shapes:
 
     .. math::
-        m(\mathbf{x}) = 1 + \frac{\alpha}
+        m(x,y) = 1 + \frac{\alpha}
         {\cosh^2\left(\beta\left((x-c_0)^2+(y-c_1)^2\right)
-        -\gamma^2\right)\right)},
+        -\gamma^2\right)},
 
     where :math:`(c_0,c_1)` is the centre point, :math:`\alpha` is the amplitude of the
     monitor function, :math:`\beta` is the width of the transition region, and
@@ -208,7 +208,7 @@ class GradientMonitorBuilder(SolutionBasedMonitorBuilder):
 
     .. math::
         m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}
-        {\max_{x\in\Omega}\nabla u\cdot\nabla u},
+        {\max_{\mathbf{x}\in\Omega}\nabla u\cdot\nabla u},
 
     where :math:`\alpha` is a scale factor and :math:`u` is the solution field of
     interest.
@@ -220,7 +220,7 @@ class GradientMonitorBuilder(SolutionBasedMonitorBuilder):
         :type dim: :class:`int`
         :arg solution: solution to recover the gradient of
         :type solution: :class:`firedrake.function.Function`
-        :arg scale_factor: scale factor for the gradient part
+        :arg scale_factor: scale factor
         :type scale_factor: :class:`float`
         """
         super().__init__(dim, solution)
@@ -232,7 +232,7 @@ class GradientMonitorBuilder(SolutionBasedMonitorBuilder):
         Recover the gradient of the solution field projected onto the current mesh.
 
         :arg target_space: space to recover gradient in
-        :type target_space: :class:`firedrake.functionspace.FunctionSpace`
+        :type target_space: :class:`firedrake.functionspaceimpl.FunctionSpace`
         :return: the recovered gradient in vector :math:`\mathbb{P}1` space
         :rtype: :class:`firedrake.function.Function`
         """
@@ -245,8 +245,8 @@ class GradientMonitorBuilder(SolutionBasedMonitorBuilder):
 
         :arg mesh: the mesh on which the monitor function is to be defined
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
-        :return: gradient-based monitor function evaluated on given mesh
-        :rtype: :class:`firedrake.function.Function`
+        :return: expression of the gradient-based monitor function on given mesh
+        :rtype: :class:`ufl.core.expr.Expr`
         """
         g = self.recover_gradient(VectorFunctionSpace(mesh, "CG", 1))
         gg = Function(FunctionSpace(mesh, "CG", 1)).interpolate(ufl.dot(g, g))
@@ -261,12 +261,10 @@ class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
     Builder class for monitor functions based on Hessians of solutions.
 
     .. math::
-        m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}
-        {\max_{x\in\Omega}\nabla u\cdot\nabla u} +
-        \beta\frac{\mathbf{H}(u):\mathbf{H}(u)}
-        {\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
+        m(\mathbf{x}) = 1 + \beta\frac{\mathbf{H}(u):\mathbf{H}(u)}
+        {\max_{\mathbf{x}\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
 
-    where :math:`\alpha` is a scale factor, :math:`u` is the solution field of interest,
+    where :math:`\beta` is a scale factor, :math:`u` is the solution field of interest,
     and :math:`\mathbf{H}(u)` is the Hessian
     """
 
@@ -276,7 +274,7 @@ class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
         :type dim: :class:`int`
         :arg solution: solution to recover the Hessian of
         :type solution: :class:`firedrake.function.Function`
-        :arg scale_factor: scale factor for the Hessian part
+        :arg scale_factor: scale factor
         :type scale_factor: :class:`float`
         """
         super().__init__(dim, solution)
@@ -288,7 +286,7 @@ class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
         Recover the Hessian of the solution field.
 
         :arg target_space: space to recover Hessian in
-        :type target_space: :class:`firedrake.functionspace.FunctionSpace`
+        :type target_space: :class:`firedrake.functionspaceimpl.FunctionSpace`
         :return: the recovered Hessian in tensor :math:`\mathbb{P}1` space
         :rtype: :class:`firedrake.function.Function`
         """
@@ -300,12 +298,11 @@ class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
 
         :arg mesh: the mesh on which the monitor function is to be defined
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
-        :return: Hessian-based monitor function evaluated on given mesh
-        :rtype: :class:`firedrake.function.Function`
+        :return: expression of the Hessian-based monitor function on given mesh
+        :rtype: :class:`ufl.core.expr.Expr`
         """
         H = self.recover_hessian(TensorFunctionSpace(mesh, "CG", 1))
-        frob = sum(H[i, j] ** 2 for i in range(self.dim) for j in range(self.dim))
-        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(frob)
+        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(inner(H, H))
         return Constant(1.0) + self.hessian_scale_factor * (
             HH / norm(HH, norm_type="linf")
         )
@@ -318,9 +315,9 @@ class GradientHessianMonitorBuilder(GradientMonitorBuilder, HessianMonitorBuilde
 
     .. math::
         m(\mathbf{x}) = 1 + \alpha\frac{\nabla u\cdot\nabla u}
-        {\max_{x\in\Omega}\nabla u\cdot\nabla u} +
+        {\max_{\mathbf{x}\in\Omega}\nabla u\cdot\nabla u} +
         \beta\frac{\mathbf{H}(u):\mathbf{H}(u)}
-        {\max_{x\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
+        {\max_{\mathbf{x}\in\Omega}\mathbf{H}(u):\mathbf{H}(u)},
 
     where :math:`\alpha` is a scale factor for the gradient part, :math:`\beta` is a
     scale factor for the Hessian part, :math:`u` is the solution field of interest, and
@@ -348,8 +345,9 @@ class GradientHessianMonitorBuilder(GradientMonitorBuilder, HessianMonitorBuilde
 
         :arg mesh: the mesh on which the monitor function is to be defined
         :type mesh: :class:`firedrake.mesh.MeshGeometry`
-        :return: gradient and Hessian-based monitor function evaluated on given mesh
-        :rtype: :class:`firedrake.function.Function`
+        :return: expression of the gradient- and Hessian-based monitor function
+            on given mesh
+        :rtype: :class:`ufl.core.expr.Expr`
         """
         # Recover gradient
         g = self.recover_gradient(VectorFunctionSpace(mesh, "CG", 1))
@@ -357,8 +355,7 @@ class GradientHessianMonitorBuilder(GradientMonitorBuilder, HessianMonitorBuilde
 
         # Recover Hessian
         H = self.recover_hessian(TensorFunctionSpace(mesh, "CG", 1))
-        frob = sum(H[i, j] ** 2 for i in range(self.dim) for j in range(self.dim))
-        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(frob)
+        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(inner(H, H))
 
         # Combine both gradient and Hessian parts
         return (
