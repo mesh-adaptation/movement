@@ -35,7 +35,7 @@ class MonitorBuilder(metaclass=abc.ABCMeta):
         self.dim = dim
 
     @abc.abstractmethod
-    def monitor(self, mesh):
+    def _monitor(self, mesh):
         """
         Abstract method to create a monitor function.
 
@@ -55,7 +55,7 @@ class MonitorBuilder(metaclass=abc.ABCMeta):
         """
 
         def monitor(mesh):
-            m = self.monitor(mesh)
+            m = self._monitor(mesh)
             if not isinstance(m, (Constant, Function)):
                 m = Function(FunctionSpace(mesh, "CG", 1)).interpolate(m)
             return m
@@ -77,7 +77,7 @@ class ConstantMonitorBuilder(MonitorBuilder):
     Builder class for constant monitor functions.
     """
 
-    def monitor(self, mesh):
+    def _monitor(self, mesh):
         """
         Creates a constant monitor function.
 
@@ -126,7 +126,7 @@ class BallMonitorBuilder(MonitorBuilder):
         self.amplitude = Constant(amplitude)
         self.width = Constant(width)
 
-    def monitor(self, mesh):
+    def _monitor(self, mesh):
         """
         Creates a monitor function focused around a ball shape.
 
@@ -239,7 +239,7 @@ class GradientMonitorBuilder(SolutionBasedMonitorBuilder):
         mesh = target_space.mesh()
         return recover_gradient_l2(self.projection(mesh), target_space=target_space)
 
-    def monitor(self, mesh):
+    def _monitor(self, mesh):
         """
         Monitor function based on recovered gradient.
 
@@ -292,7 +292,7 @@ class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
         """
         return recover_hessian_clement(self.projection(target_space.mesh()))[1]
 
-    def monitor(self, mesh):
+    def _monitor(self, mesh):
         """
         Monitor function based on recovered Hessian.
 
@@ -302,7 +302,7 @@ class HessianMonitorBuilder(SolutionBasedMonitorBuilder):
         :rtype: :class:`ufl.core.expr.Expr`
         """
         H = self.recover_hessian(TensorFunctionSpace(mesh, "CG", 1))
-        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(inner(H, H))
+        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(ufl.inner(H, H))
         return Constant(1.0) + self.hessian_scale_factor * (
             HH / norm(HH, norm_type="linf")
         )
@@ -339,7 +339,7 @@ class GradientHessianMonitorBuilder(GradientMonitorBuilder, HessianMonitorBuilde
         self.gradient_scale_factor = Constant(gradient_scale_factor)
         self.hessian_scale_factor = Constant(hessian_scale_factor)
 
-    def monitor(self, mesh):
+    def _monitor(self, mesh):
         """
         Monitor function based on recovered gradient and Hessian.
 
@@ -355,7 +355,7 @@ class GradientHessianMonitorBuilder(GradientMonitorBuilder, HessianMonitorBuilde
 
         # Recover Hessian
         H = self.recover_hessian(TensorFunctionSpace(mesh, "CG", 1))
-        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(inner(H, H))
+        HH = Function(FunctionSpace(mesh, "CG", 1)).interpolate(ufl.inner(H, H))
 
         # Combine both gradient and Hessian parts
         return (
