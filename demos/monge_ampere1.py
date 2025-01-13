@@ -41,7 +41,6 @@
 #
 # We begin the example by importing from the namespaces of Firedrake and Movement. ::
 
-import numpy as np
 from firedrake import *
 
 from movement import *
@@ -82,9 +81,7 @@ plt.savefig("monge_ampere1-initial_mesh.jpg")
 # :class:`~movement.monitor.RingMonitorBuilder`, amongst other commonly used
 # monitor functions. ::
 
-mb = RingMonitorBuilder(
-    centre=(0.5, 0.5), radius=np.sqrt(0.15), amplitude=20.0, width=200.0
-)
+mb = RingMonitorBuilder(centre=(0.5, 0.5), radius=0.4, amplitude=20.0, width=200.0)
 ring_monitor = mb.get_monitor()
 
 # With an initial mesh and a monitor function, we are able to construct a
