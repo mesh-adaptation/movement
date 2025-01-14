@@ -116,11 +116,11 @@ class BallMonitorBuilder(MonitorBuilder):
         :arg width: the width of the transition region
         :type width: :class:`float`
         """
-        super().__init__(dim)
-        assert len(centre) == self.dim
+        assert len(centre) == dim
         assert radius > 0
         assert amplitude > 0
         assert width > 0
+        super().__init__(dim)
         self.centre = ufl.as_vector([Constant(c) for c in centre])
         self.radius = Constant(radius)
         self.amplitude = Constant(amplitude)
