@@ -2,6 +2,7 @@
 ## Mesh Movement in Firedrake
 ![GitHub top language](https://img.shields.io/github/languages/top/mesh-adaptation/movement)
 ![GitHub repo size](https://img.shields.io/github/repo-size/mesh-adaptation/movement)
+[![Slack](https://img.shields.io/badge/Movement_Slack_Channel-4A154B?logo=slack&logoColor=fff)](https://firedrakeproject.slack.com/archives/C07L7S3547M)
 
 Movement is a mesh adaptation toolkit enabling users to spatially redistribute mesh degrees of freedom using a variety of different methods from the literature, as well as tools for detecting mesh tangling.
 
