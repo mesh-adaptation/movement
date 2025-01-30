@@ -68,6 +68,13 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
             MongeAmpereMover(self.dummy_mesh, None)
         self.assertEqual(str(cm.exception), "Please supply a monitor function.")
 
+    def test_1d_quasi_newton_valueerror(self):
+        mesh = self.mesh(dim=1)
+        with self.assertRaises(NotImplementedError) as cm:
+            MongeAmpereMover(mesh, self.dummy_monitor, method="quasi_newton")
+        msg = "1D case not implemented for quasi-Newton method."
+        self.assertEqual(str(cm.exception), msg)
+
     @parameterized.expand([("relaxation"), ("quasi_newton")])
     def test_maxiter_convergenceerror(self, method):
         """
@@ -167,7 +174,6 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
     @parameterized.expand(
         [
             (1, "relaxation"),
-            (1, "quasi_newton"),
             (2, "relaxation"),
             (2, "quasi_newton"),
             (3, "relaxation"),
@@ -281,7 +287,6 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     @parameterized.expand(
         [
             (1, "relaxation"),
-            (1, "quasi_newton"),
             (2, "relaxation"),
             (2, "quasi_newton"),
             (3, "relaxation"),
@@ -317,9 +322,6 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             (1, "relaxation", "on_boundary"),
             (1, "relaxation", [1]),
             (1, "relaxation", []),
-            (1, "quasi_newton", "on_boundary"),
-            (1, "quasi_newton", [1]),
-            (1, "quasi_newton", []),
             (2, "relaxation", "on_boundary"),
             (2, "relaxation", [1]),
             (2, "relaxation", []),
@@ -443,7 +445,6 @@ class TestMisc(BaseClasses.TestMongeAmpere):
     @parameterized.expand(
         [
             (1, "relaxation"),
-            (1, "quasi_newton"),
             (2, "relaxation"),
             (2, "quasi_newton"),
             (3, "relaxation"),
