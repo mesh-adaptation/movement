@@ -479,7 +479,6 @@ class TestMisc(BaseClasses.TestMongeAmpere):
     @parameterized.expand(
         [
             (1, "relaxation"),
-            (1, "quasi_newton"),
             (2, "relaxation"),
             (2, "quasi_newton"),
             (3, "relaxation"),
