@@ -9,6 +9,7 @@ import firedrake
 import firedrake.exceptions as fexc
 import numpy as np
 import ufl
+from animate.utility import function2cofunction
 from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
 
@@ -503,7 +504,7 @@ class MongeAmpereMover_Relaxation(MongeAmpereMover_Base):
             # Update monitor function
             self.to_physical_coordinates()
             self.monitor.interpolate(self.monitor_function(self.mesh))
-            firedrake.assemble(self.L_P0, tensor=self.volume)
+            firedrake.assemble(self.L_P0, tensor=function2cofunction(self.volume))
             self.volume.interpolate(self.volume / self.original_volume)
             self.to_computational_coordinates()
 
@@ -703,7 +704,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
             cursol = snes.getSolution()
             update_monitor(cursol)
             self.to_physical_coordinates()
-            firedrake.assemble(self.L_P0, tensor=self.volume)
+            firedrake.assemble(self.L_P0, tensor=function2cofunction(self.volume))
             self.volume.interpolate(self.volume / self.original_volume)
             self.to_computational_coordinates()
             PETSc.Sys.Print(
