@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
   "sympy",
+  "vtk",
 ]
 
 [project.optional-dependencies]
