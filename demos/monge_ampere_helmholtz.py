@@ -449,6 +449,9 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 # function that computes the solution less frequently, or even only once per iteration.
 # Movement allows and encourages such experimentation with different monitor functions.
 #
+# In the `next demo <./monge_ampere_bubble_shear.py.html>`__, we will demonstrate
+# an application of Monge-Ampère mesh movement to a time-dependent problem.
+#
 # This tutorial can be dowloaded as a `Python script <monge_ampere_helmholtz.py>`__.
 #
 # .. rubric:: Footnotes
