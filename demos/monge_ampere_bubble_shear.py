@@ -228,8 +228,25 @@ while float(t) < t_end + 0.5 * float(dt):
 #       1   Volume ratio  1.98   Variation (σ/μ) 6.35e-02   Residual 1.24e-02
 #    Solver converged in 1 iteration.
 #    ...
-#
-# TODO: Some plots
+
+
+fig, axes = plt.subplots()
+tricontourf(c, axes=axes)
+axes.set_aspect(1)
+plt.savefig("monge_ampere_bubble_shear-final_solution.jpg")
+
+# .. figure:: monge_ampere_bubble_shear-final_solution.jpg
+#    :figwidth: 60%
+#    :align: center
+
+fig, axes = plt.subplots()
+triplot(mesh, axes=axes)
+axes.set_aspect(1)
+plt.savefig("monge_ampere_bubble_shear-final_adapted_mesh.jpg")
+
+# .. figure:: monge_ampere_bubble_shear-final_adapted_mesh.jpg
+#    :figwidth: 60%
+#    :align: center
 #
 # As you might have already realised, the approach documented here is a completely
 # over-the-top way to solve a simple linear advection problem. However, it shows how the
