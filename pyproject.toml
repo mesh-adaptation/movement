@@ -25,11 +25,13 @@ classifiers = [
 ]
 dependencies = [
   "sympy",
+  "vtk",
 ]
 
 [project.optional-dependencies]
 dev = [
   "cffconvert",
+  "coverage",
   "parameterized",
   "pre-commit",
   "pytest",
