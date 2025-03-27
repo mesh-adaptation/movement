@@ -1,0 +1,57 @@
+name: 'Spring-based tests'
+
+on:
+  # Run tests whenever commits modifying relevant files are pushed to an open PR
+  pull_request:
+    paths:
+      - 'movement/math.py'
+      - 'movement/monitor.py'
+      - 'movement/tangling.py'
+      - 'test/test_math.py'
+      - 'test/test_monitor.py'
+      - 'test/test_tangling.py'
+      - '.github/workflows/test_core.yml'
+      - 'pyproject.toml'
+
+# Cancel jobs running if new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test_suite:
+    name: 'Test suite'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mesh-adaptation/${{ inputs.docker-image }}:latest
+      options: --user root
+    env:
+      TESTS: 'test/test_math.py test/test_monitor.py test/test_tangling.py'
+      # Allow executing mpiexec as root
+      OMPI_ALLOW_RUN_AS_ROOT: '1'
+      OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: '1'
+      # Since we are root we need to set PYTHONPATH to find the installed packages
+      PYTHONPATH: /home/firedrake/firedrake:/home/firedrake/movement:/home/firedrake/.local/lib/python3.12/site-packages
+
+    steps:
+      - name: 'Check out the repo'
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: 'Install package'
+        run: pip install --break-system-packages -e .[dev]
+
+      - name: 'Run serial tests'
+        run: |
+          python3 $(which firedrake-clean)
+          python3 -m pytest -v -k "parallel[1] or not parallel" "${TESTS}"
+
+      - name: 'Run parallel tests (nprocs = 2)'
+        run: |
+          if pytest --collect-only -m parallel[2] "${TESTS}" | grep -q 'no tests collected'; then
+            echo "No parallel[2] tests found."
+          else
+            mpiexec -n 2 python3 -m pytest -v -m parallel[2] "${TESTS}"
+          fi
