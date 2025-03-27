@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 from firedrake.utility_meshes import UnitSquareMesh
 
-from movement import LaplacianSmoother
+from movement.laplacian_smoothing import LaplacianSmoother
 
 
 class TestExceptions(unittest.TestCase):
