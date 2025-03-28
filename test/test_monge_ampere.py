@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
+import pytest
 import ufl
 from firedrake.assemble import assemble
 from firedrake.bcs import DirichletBC, EquationBC
@@ -26,7 +27,6 @@ from firedrake.utility_meshes import (
 )
 from monitors import const_monitor, ring_monitor
 from parameterized import parameterized
-import pytest
 
 from movement.monge_ampere import MongeAmpereMover, MongeAmpereMover_Relaxation
 
