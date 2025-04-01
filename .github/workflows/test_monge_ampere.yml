@@ -42,12 +42,16 @@ jobs:
       - name: 'Run serial tests'
         run: |
           python3 $(which firedrake-clean)
-          python3 -m pytest -v -k "parallel[1] or not parallel" "${TESTS}"
+          for TEST in ${TESTS}; do
+            python3 -m pytest -v -k "parallel[1] or not parallel" "${TEST}"
+          done
 
       - name: 'Run parallel tests (nprocs = 2)'
         run: |
-          if pytest --collect-only -m parallel[2] "${TESTS}" | grep -q 'no tests collected'; then
-            echo "No parallel[2] tests found."
-          else
-            mpiexec -n 2 python3 -m pytest -v -m parallel[2] "${TESTS}"
-          fi
+          for TEST in ${TESTS}; do
+            if pytest --collect-only -m parallel[2] "${TEST}" | grep -q 'no tests collected'; then
+              echo "No parallel[2] tests found."
+            else
+              mpiexec -n 2 python3 -m pytest -v -m parallel[2] "${TEST}"
+            fi
+          done
