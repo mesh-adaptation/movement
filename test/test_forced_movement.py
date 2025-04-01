@@ -12,6 +12,7 @@ from movement.laplacian_smoothing import LaplacianSmoother
 from movement.spring import SpringMover
 
 
+# TODO: Hoist test base classes to a separate module
 class BaseClasses:
     """
     Base classes for testing mesh movement under forcings.
