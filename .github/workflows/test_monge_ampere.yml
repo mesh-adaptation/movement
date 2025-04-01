@@ -19,7 +19,7 @@ jobs:
     name: 'Test suite'
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/mesh-adaptation/${{ inputs.docker-image }}:latest
+      image: ghcr.io/mesh-adaptation/firedrake-parmmg:latest
       options: --user root
     env:
       TESTS: 'test/test_monge_ampere.py'

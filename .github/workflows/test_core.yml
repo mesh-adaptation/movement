@@ -1,4 +1,4 @@
-name: 'Spring-based tests'
+name: 'Core tests'
 
 on:
   # Run tests whenever commits modifying relevant files are pushed to an open PR
@@ -23,7 +23,7 @@ jobs:
     name: 'Test suite'
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/mesh-adaptation/${{ inputs.docker-image }}:latest
+      image: ghcr.io/mesh-adaptation/firedrake-parmmg:latest
       options: --user root
     env:
       TESTS: 'test/test_math.py test/test_monitor.py test/test_tangling.py'

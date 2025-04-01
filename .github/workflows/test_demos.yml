@@ -18,7 +18,7 @@ jobs:
     name: 'Test suite'
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/mesh-adaptation/${{ inputs.docker-image }}:latest
+      image: ghcr.io/mesh-adaptation/firedrake-parmmg:latest
       options: --user root
     env:
       # Allow executing mpiexec as root
