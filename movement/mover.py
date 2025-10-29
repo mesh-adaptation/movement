@@ -5,6 +5,7 @@ import firedrake
 import firedrake.exceptions as fexc
 import numpy as np
 import ufl
+from animate.utility import function_data_max, function_data_min, function_data_sum
 from firedrake.cython.dmcommon import create_section
 from firedrake.petsc import PETSc
 
@@ -197,8 +198,7 @@ class PrimeMover(abc.ABC):
         :return: the ratio of the largest and smallest element volumes.
         :rtype: :class:`float`
         """
-        volume_array = self.volume.vector().gather()
-        return volume_array.max() / volume_array.min()
+        return function_data_max(self.volume) / function_data_min(self.volume)
 
     @property
     def coefficient_of_variation(self):
@@ -206,9 +206,11 @@ class PrimeMover(abc.ABC):
         :return: the coefficient of variation (σ/μ) of element volumes.
         :rtype: :class:`float`
         """
-        volume_array = self.volume.vector().gather()
-        mean = volume_array.sum() / volume_array.size
-        return np.sqrt(np.sum((volume_array - mean) ** 2) / volume_array.size) / mean
+        size = self.volume.dat.shape[0]
+        mean = function_data_sum(self.volume) / size
+        coef = firedrake.Function(self.P0)
+        coef.interpolate((self.volume - mean) ** 2)
+        return np.sqrt(function_data_sum(coef) / size) / mean
 
     @abc.abstractmethod
     def move(self):
