@@ -50,8 +50,8 @@ jobs:
 
       - name: Install Animate
         run: |
-          git clone https://github.com/mesh-adaptation/animate.git
-          pip install ./animate
+          git clone https://github.com/mesh-adaptation/animate.git ../animate
+          pip install ../animate
 
       - name: Install package
         run: pip install -e .[dev]
