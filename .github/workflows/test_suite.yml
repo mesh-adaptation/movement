@@ -39,10 +39,7 @@ jobs:
       options: --user root
     env:
       # Name of the repository that triggered the workflow
-      REPO_NAME: ${{ github.event.repository.name }}
       ANIMATE_CHECKPOINT_DIR: ${{ github.workspace }}/.checkpoints
-      # Since we are root we need to set PYTHONPATH to find the installed packages
-      PYTHONPATH: /home/firedrake/firedrake:/home/firedrake/animate:/home/firedrake/goalie:/home/firedrake/movement:/home/firedrake/UM2N:/home/firedrake/.local/lib/python3.12/site-packages
 
     steps:
       - name: Checkout the repo
@@ -54,7 +51,7 @@ jobs:
       - name: Install Animate
         run: |
           git clone https://github.com/mesh-adaptation/animate.git
-          pip install animate[dev]
+          pip install ./animate
 
       - name: Install package
         run: pip install -e .[dev]
