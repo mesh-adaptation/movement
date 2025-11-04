@@ -1,4 +1,4 @@
-name: 'Run Movement test suite'
+name: Test suite
 
 on:
   # Run test suite whenever main is updated
@@ -23,6 +23,49 @@ on:
   schedule:
     - cron: '0 1 * * 0'
 
+# Cancel jobs running if new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
 jobs:
   test_suite:
-    uses: mesh-adaptation/docs/.github/workflows/reusable_test_suite.yml@main
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: firedrakeproject/firedrake-vanilla-default:latest
+      options: --user root
+    env:
+      # Name of the repository that triggered the workflow
+      REPO_NAME: ${{ github.event.repository.name }}
+      ANIMATE_CHECKPOINT_DIR: ${{ github.workspace }}/.checkpoints
+      # Since we are root we need to set PYTHONPATH to find the installed packages
+      PYTHONPATH: /home/firedrake/firedrake:/home/firedrake/animate:/home/firedrake/goalie:/home/firedrake/movement:/home/firedrake/UM2N:/home/firedrake/.local/lib/python3.12/site-packages
+
+    steps:
+      - name: Checkout the repo
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Animate
+        run: |
+          git clone https://github.com/mesh-adaptation/animate.git
+          pip install animate[dev]
+
+      - name: Install package
+        run: pip install -e .[dev]
+
+      - name: Lint
+        run: make lint
+
+      - name: Run serial tests
+        run: |
+          python3 $(which firedrake-clean)
+          python3 -m coverage erase
+          python3 -m coverage run --source=movement -m pytest -v test
+          python3 -m coverage combine
+          python3 -m coverage report -m
