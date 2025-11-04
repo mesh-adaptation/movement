@@ -64,5 +64,4 @@ jobs:
           python3 $(which firedrake-clean)
           python3 -m coverage erase
           python3 -m coverage run --source=movement -m pytest -v test
-          python3 -m coverage combine
           python3 -m coverage report -m
