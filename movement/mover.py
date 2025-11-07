@@ -51,7 +51,7 @@ class PrimeMover(abc.ABC):
                 stacklevel=1,
             )
         self.raise_convergence_errors = raise_convergence_errors
-        self.dim = self.mesh.topological_dimension()
+        self.dim = self.mesh.topological_dimension
         self.gdim = self.mesh.geometric_dimension()
 
         # DMPlex setup

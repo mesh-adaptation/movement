@@ -41,11 +41,11 @@ class TestConstant(BaseClasses.TestMonitorBuilder):
     """
 
     def test_value_get_monitor(self):
-        mb = ConstantMonitorBuilder(self.mesh.topological_dimension())
+        mb = ConstantMonitorBuilder(self.mesh.topological_dimension)
         self.assertTrue(np.allclose(mb.get_monitor()(self.mesh).dat.data, 1))
 
     def test_value_call(self):
-        mb = ConstantMonitorBuilder(self.mesh.topological_dimension())
+        mb = ConstantMonitorBuilder(self.mesh.topological_dimension)
         self.assertTrue(np.allclose(mb()(self.mesh).dat.data, 1))
 
 

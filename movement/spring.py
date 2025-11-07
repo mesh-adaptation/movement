@@ -53,7 +53,7 @@ class SpringMover_Base(PrimeMover):
         assert timestep > 0.0
         self.dt = timestep
         num_vertices = mesh.num_vertices()
-        self._forcing = np.zeros((num_vertices, mesh.topological_dimension()))
+        self._forcing = np.zeros((num_vertices, mesh.topological_dimension))
         self.displacement = np.zeros(num_vertices)
 
     def _create_function_spaces(self):
