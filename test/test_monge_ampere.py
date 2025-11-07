@@ -236,7 +236,7 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
         happen during timestepping.
         """
         mesh = self.mesh(dim=dim)
-        gdim = mesh.geometric_dimension()
+        gdim = mesh.geometric_dimension
         coords = mesh.coordinates.dat.data.copy()
         atol = 1.0e-03
         rtol = 1.0e02 * atol**gdim
