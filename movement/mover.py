@@ -206,7 +206,7 @@ class PrimeMover(abc.ABC):
         :return: the coefficient of variation (σ/μ) of element volumes.
         :rtype: :class:`float`
         """
-        size = self.volume.dat.dataset.layout_vec.getSizes()
+        size = self.volume.dat.dataset.layout_vec.getSizes()[0]
         mean = function_data_sum(self.volume) / size
         coef = firedrake.Function(self.P0)
         coef.interpolate((self.volume - mean) ** 2)
