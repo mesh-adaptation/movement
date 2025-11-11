@@ -44,7 +44,7 @@ class LaplacianSmoother(PrimeMover):
         super().__init__(mesh, **kwargs)
         assert timestep > 0.0
         self.dt = timestep
-        dim = self.mesh.topological_dimension()
+        dim = self.mesh.topological_dimension
         self.displacement = np.zeros((self.mesh.num_vertices(), dim))
 
     def _create_functions(self):

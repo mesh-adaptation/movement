@@ -579,7 +579,7 @@ class MongeAmpereMover_QuasiNewton(MongeAmpereMover_Base):
         :kwarg dtol: divergence tolerance for the residual
         :type dtol: :class:`float`
         """
-        if mesh.topological_dimension() == 1:
+        if mesh.topological_dimension == 1:
             raise NotImplementedError(
                 "1D case not implemented for quasi-Newton method."
             )
