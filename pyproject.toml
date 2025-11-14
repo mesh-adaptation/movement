@@ -13,7 +13,6 @@ authors = [
 maintainers = [
   {name = "Joseph G. Wallwork", email = "joe.wallwork@outlook.com"},
   {name = "Stephan C. Kramer"},
-  {name = "Mingrui Zhang"},
 ]
 description = "Mesh movement methods for finite element problems solved using Firedrake"
 readme = "README.md"
