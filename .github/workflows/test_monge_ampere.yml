@@ -1,0 +1,57 @@
+name: 'Monge-Ampere tests'
+
+on:
+  # Run tests whenever commits modifying relevant files are pushed to an open PR
+  pull_request:
+    paths:
+      - 'movement/monge_ampere.py'
+      - 'test/test_monge_ampere.py'
+      - '.github/workflows/test_monge_ampere.yml'
+      - 'pyproject.toml'
+
+# Cancel jobs running if new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test_suite:
+    name: 'Test suite'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mesh-adaptation/firedrake-parmmg:latest
+      options: --user root
+    env:
+      TESTS: 'test/test_monge_ampere.py'
+      # Allow executing mpiexec as root
+      OMPI_ALLOW_RUN_AS_ROOT: '1'
+      OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: '1'
+      # Since we are root we need to set PYTHONPATH to find the installed packages
+      PYTHONPATH: /home/firedrake/firedrake:/home/firedrake/movement:/home/firedrake/.local/lib/python3.12/site-packages
+
+    steps:
+      - name: 'Check out the repo'
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: 'Install package'
+        run: pip install --break-system-packages -e .[dev]
+
+      - name: 'Run serial tests'
+        run: |
+          python3 $(which firedrake-clean)
+          for TEST in ${TESTS}; do
+            python3 -m pytest -v -k "parallel[1] or not parallel" "${TEST}"
+          done
+
+      - name: 'Run parallel tests (nprocs = 2)'
+        run: |
+          for TEST in ${TESTS}; do
+            if pytest --collect-only -m parallel[2] "${TEST}" | grep -q 'no tests collected'; then
+              echo "No parallel[2] tests found."
+            else
+              mpiexec -n 2 python3 -m pytest -v -m parallel[2] "${TEST}"
+            fi
+          done
