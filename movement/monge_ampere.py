@@ -9,11 +9,11 @@ import firedrake
 import firedrake.exceptions as fexc
 import numpy as np
 import ufl
-from animate.utility import cofunction2function, function2cofunction
 from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
 
 import movement.solver_parameters as solver_parameters
+from adapt_common.utility import cofunction2function, function2cofunction
 from movement.math import equation_of_hyperplane
 from movement.mover import PrimeMover
 

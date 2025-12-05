@@ -5,10 +5,14 @@ import firedrake
 import firedrake.exceptions as fexc
 import numpy as np
 import ufl
-from animate.utility import function_data_max, function_data_min, function_data_sum
 from firedrake.cython.dmcommon import create_section
 from firedrake.petsc import PETSc
 
+from adapt_common.reduction import (
+    function_data_max,
+    function_data_min,
+    function_data_sum,
+)
 from movement.tangling import MeshTanglingChecker
 
 __all__ = ["PrimeMover"]
