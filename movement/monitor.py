@@ -1,6 +1,7 @@
 import abc
 
 import ufl
+from adapt_common.norms import norm
 from animate.recovery import recover_gradient_l2, recover_hessian_clement
 from firedrake import SpatialCoordinate
 from firedrake.constant import Constant
@@ -10,8 +11,6 @@ from firedrake.functionspace import (
     TensorFunctionSpace,
     VectorFunctionSpace,
 )
-
-from adapt_common.norms import norm
 
 __all__ = [
     "ConstantMonitorBuilder",
