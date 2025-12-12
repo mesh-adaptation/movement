@@ -43,7 +43,10 @@ Documentation = "https://mesh-adaptation.github.io/movement/index.html"
 Repository = "https://github.com/mesh-adaptation/movement"
 
 [tool.setuptools]
-packages = ["movement"]
+packages = ["movement", "adapt_common"]
+
+[tool.setuptools.package-dir]
+adapt_common = "adapt_common/adapt_common"
 
 [tool.ruff]
 line-length = 88
