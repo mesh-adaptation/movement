@@ -290,7 +290,7 @@ u_h = solve_helmholtz(mesh)
 def monitor_interp_soln(mesh):
     V = FunctionSpace(mesh, "CG", 1)
     u_h_interp = Function(V).interpolate(u_h)
-    _, H = recover_hessian_clement(u_h)
+    _, H = recover_hessian_clement(u_h_interp)
 
     Hnorm = Function(V, name="Hnorm")
     Hnorm.interpolate(sqrt(inner(H, H)))
@@ -306,18 +306,26 @@ print(f"Time taken: {time.time() - t0:.2f} seconds")
 # .. code-block:: none
 #
 #       0   Volume ratio  5.21   Variation (σ/μ) 5.11e-01   Residual 5.15e-01
-#       1   Volume ratio  1.91   Variation (σ/μ) 1.00e-01   Residual 9.61e-02
-#       2   Volume ratio  1.28   Variation (σ/μ) 3.32e-02   Residual 2.36e-02
-#       3   Volume ratio  1.14   Variation (σ/μ) 2.13e-02   Residual 5.06e-03
-#       4   Volume ratio  1.11   Variation (σ/μ) 2.00e-02   Residual 1.03e-03
-#       5   Volume ratio  1.11   Variation (σ/μ) 1.98e-02   Residual 2.07e-04
-#       6   Volume ratio  1.11   Variation (σ/μ) 1.98e-02   Residual 4.14e-05
-#       7   Volume ratio  1.11   Variation (σ/μ) 1.98e-02   Residual 8.29e-06
-#       8   Volume ratio  1.11   Variation (σ/μ) 1.98e-02   Residual 1.66e-06
-#       9   Volume ratio  1.11   Variation (σ/μ) 1.98e-02   Residual 3.32e-07
-#      10   Volume ratio  1.11   Variation (σ/μ) 1.98e-02   Residual 6.65e-08
-#    Solver converged in 10 iterations.
-#    Time taken: 1.59 seconds
+#       1   Volume ratio  2.22   Variation (σ/μ) 1.15e-01   Residual 1.11e-01
+#       2   Volume ratio  1.46   Variation (σ/μ) 4.97e-02   Residual 4.65e-02
+#       3   Volume ratio  1.23   Variation (σ/μ) 3.36e-02   Residual 3.14e-02
+#       4   Volume ratio  1.17   Variation (σ/μ) 2.10e-02   Residual 1.54e-02
+#       5   Volume ratio  1.15   Variation (σ/μ) 1.73e-02   Residual 6.44e-03
+#       6   Volume ratio  1.15   Variation (σ/μ) 1.71e-02   Residual 2.61e-03
+#       7   Volume ratio  1.15   Variation (σ/μ) 1.72e-02   Residual 1.07e-03
+#       8   Volume ratio  1.15   Variation (σ/μ) 1.73e-02   Residual 4.53e-04
+#       9   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 1.96e-04
+#      10   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 8.61e-05
+#      11   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 3.83e-05
+#      12   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 1.71e-05
+#      13   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 7.68e-06
+#      14   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 3.45e-06
+#      15   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 1.55e-06
+#      16   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 7.00e-07
+#      17   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 3.15e-07
+#      18   Volume ratio  1.15   Variation (σ/μ) 1.74e-02   Residual 1.42e-07
+#    Solver converged in 18 iterations.
+#    Time taken: 3.83 seconds
 
 fig, axes = plt.subplots()
 triplot(mover.mesh, axes=axes)
@@ -334,14 +342,14 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 
 # .. code-block:: none
 #
-#    L2-norm error on moved mesh: 0.007572688468476774
+#    L2-norm error on moved mesh: 0.00822797095135295
 #
-# Here the number of iterations is reduced (10 compared to 17 and 16), allowing the
-# overall runtime to be reduced compared with both cases (1.59 seconds compared to
-# 2.27 and 4.27). Depending on the PDE in question and the solver used to solve it,
-# interpolating the solution may turn out to be slower than recomputing it.
-# However, this comes at the cost of increasing the error (0.00757 compared to
-# 0.00596 and 0.00622). Let us explore one more approach.
+# Here the number of iterations is about the same (18 compared to 17 and 16), although
+# each iteration is slightly faster, allowing the overall runtime to be reduced compared
+# with the previous case (3.83 seconds compared to 4.27). Depending on the PDE in
+# question and the solver used to solve it, interpolating the solution may turn out to
+# be slower than recomputing it. However, this comes at the cost of increasing the error
+# (0.00823 compared to 0.00622). Let us explore one more approach.
 #
 # We may further speed up the mesh movement step by also avoiding recomputing
 # the Hessian at every iteration, which, in this particular example, is the most
@@ -403,11 +411,10 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #
 #    L2-norm error on moved mesh: 0.007572688468476774
 #
-# The mesh movement step took the same number of iterations, but the runtime is halved,
-# with a total runtime of only 0.66 seconds, which is more than six times shorter than
-# the slowest approach. The final error is again larger than the example where the
-# solution is recomputed at every iteration, but is almost the same as the example where
-# we interpolated the solution field.
+# The mesh movement step now only took 10 iterations, with a total runtime of only 0.66
+# seconds, which is more than six times shorter than the slowest approach. The final
+# error is again larger than the example where the solution is recomputed at every
+# iteration, but is smaller than the example where we interpolated the solution field.
 #
 # We can summarise these results in the following table:
 #
@@ -418,7 +425,7 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 #    ============================ ========= ==============
 #     ``monitor_exact``            0.00596   2.27
 #     ``monitor_solve``            0.00622   4.27
-#     ``monitor_interp_soln``      0.00757   1.59
+#     ``monitor_interp_soln``      0.00823   3.83
 #     ``monitor_interp_Hessian``   0.00757   0.66
 #    ============================ ========= ==============
 #
