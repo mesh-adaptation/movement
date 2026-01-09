@@ -9,7 +9,7 @@ import firedrake
 import firedrake.exceptions as fexc
 import numpy as np
 import ufl
-from animate.utility import cofunction2function, function2cofunction
+from adapt_common.utility import cofunction2function, function2cofunction
 from firedrake.petsc import PETSc
 from pyadjoint import no_annotations
 
