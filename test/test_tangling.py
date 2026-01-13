@@ -73,7 +73,7 @@ class TestTangling(unittest.TestCase):
     def test_6_tangled_elements_3d(self):
         checker = MeshTanglingChecker(UnitCubeMesh(3, 3, 3), raise_error=False)
         self.assertEqual(checker.check(), 0)
-        checker.mesh.coordinates.dat.data[33][0] += (0.4,)  # Vertex 33: (1/3, 1/3, 1/3)
+        checker.mesh.coordinates.dat.data[33][0] += 0.4  # Vertex 33: (1/3, 1/3, 1/3)
         self.assertEqual(checker.check(), 6)
 
     def test_flip_3d(self):
