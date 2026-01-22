@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
+import pytest
 import ufl
 from firedrake.assemble import assemble
 from firedrake.bcs import DirichletBC, EquationBC
@@ -58,16 +59,19 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
     Unit tests for exceptions raised by Monge-Ampère movers.
     """
 
+    @pytest.mark.parallel_dynamic
     def test_method_valueerror(self):
         with self.assertRaises(ValueError) as cm:
             MongeAmpereMover(self.dummy_mesh, self.dummy_monitor, method="method")
         self.assertEqual(str(cm.exception), "Method 'method' not recognised.")
 
+    @pytest.mark.parallel_dynamic
     def test_no_monitor_valueerror(self):
         with self.assertRaises(ValueError) as cm:
             MongeAmpereMover(self.dummy_mesh, None)
         self.assertEqual(str(cm.exception), "Please supply a monitor function.")
 
+    @pytest.mark.parallel_dynamic
     def test_1d_quasi_newton_valueerror(self):
         mesh = self.mesh(dim=1)
         with self.assertRaises(NotImplementedError) as cm:
@@ -88,6 +92,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         self.assertEqual(str(cm.exception), "Solver failed to converge in 1 iteration.")
 
     @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parallel_dynamic
     def test_divergence_convergenceerror(self, raise_errors):
         """
         Test that divergence of the mesh mover raises a :class:`~.ConvergenceError` if
@@ -102,6 +107,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         self.assertEqual(str(cm.exception), "Solver diverged after 1 iteration.")
 
     @parameterized.expand([("phi",), ("H",)])
+    @pytest.mark.parallel_dynamic
     def test_initial_guess_valueerror(self, var):
         mesh = self.mesh(n=2)
         fs_constructor = {"phi": FunctionSpace, "H": TensorFunctionSpace}[var]
@@ -110,6 +116,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
             MongeAmpereMover(mesh, ring_monitor, **kwargs)
         self.assertEqual(str(cm.exception), "Need to initialise both phi *and* H.")
 
+    # @pytest.mark.parallel_dynamic
     def test_non_straight_boundary_valueerror(self):
         mesh = self.mesh(dim=2, n=3)
         mesh.coordinates.dat.data_with_halos[1][0] -= 0.25
@@ -119,6 +126,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Boundary segment '1' is not linear."
         self.assertEqual(str(cm.exception), msg)
 
+    # @pytest.mark.parallel_dynamic
     def test_non_flat_plane_valueerror(self):
         mesh = self.mesh(dim=3, n=3)
         mesh.coordinates.dat.data_with_halos[1][0] -= 0.25
@@ -128,6 +136,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Boundary segment '1' is not planar."
         self.assertEqual(str(cm.exception), msg)
 
+    @pytest.mark.parallel_dynamic
     def test_invalid_plane_valuerror(self):
         mesh = self.mesh(dim=3, n=1)
         mesh.coordinates.dat.data_with_halos[:][:] = 0.0
@@ -137,6 +146,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Could not determine a plane for the provided points."
         self.assertEqual(str(cm.exception), msg)
 
+    # @pytest.mark.parallel_dynamic
     def test_curved_notimplementederror(self):
         coords = Function(VectorFunctionSpace(UnitTriangleMesh(), "CG", 2))
         coords.interpolate(coords.function_space().mesh().coordinates)
@@ -145,6 +155,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "MongeAmpereMover_Relaxation not implemented on curved meshes."
         self.assertEqual(str(cm.exception), msg)
 
+    # @pytest.mark.parallel_dynamic
     def test_tangling_valueerror(self):
         mover = MongeAmpereMover(self.mesh(2, n=3), ring_monitor)
         mover.xi.dat.data[3] += 0.2
@@ -152,6 +163,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
             mover.move()
         self.assertEqual(str(cm.exception), "Mesh has 1 tangled element.")
 
+    @pytest.mark.parallel_dynamic
     def test_periodic_plex_valueerror(self):
         mover = MongeAmpereMover(self.mesh(1, n=3, periodic=True), const_monitor)
         with self.assertRaises(ValueError) as cm:
@@ -159,6 +171,7 @@ class TestExceptions(BaseClasses.TestMongeAmpere):
         msg = "Cannot update DMPlex coordinates for periodic meshes."
         self.assertEqual(str(cm.exception), msg)
 
+    @pytest.mark.parallel_dynamic
     def test_fix_invalid_segment_valueerror(self):
         with self.assertRaises(ValueError) as cm:
             MongeAmpereMover(self.mesh(1), const_monitor, fixed_boundary_segments=[-1])
@@ -180,6 +193,7 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton"),
         ]
     )
+    @pytest.mark.parallel_dynamic
     def test_uniform_monitor(self, dim, method):
         """
         Test that the mesh mover converges in one iteration for a constant monitor
@@ -204,6 +218,7 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
     @parameterized.expand(
         [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
     )
+    @pytest.mark.parallel_dynamic
     def test_continue(self, dim, method):
         """
         Test that providing a good initial guess benefits the solver.
@@ -230,6 +245,7 @@ class TestMonitor(BaseClasses.TestMongeAmpere):
     @parameterized.expand(
         [(2, "relaxation"), (2, "quasi_newton"), (3, "relaxation"), (3, "quasi_newton")]
     )
+    # @pytest.mark.parallel_dynamic
     def test_change_monitor(self, dim, method):
         """
         Test that the mover can handle changes to the monitor function, such as would
@@ -259,6 +275,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
     Unit tests for boundary conditions of Monge-Ampère movers.
     """
 
+    @pytest.mark.parallel_dynamic
     def _test_boundary_preservation(self, mesh, method, fixed_boundaries):
         bnd = assemble(Constant(1.0) * ufl.ds(domain=mesh))
         coord_space = mesh.coordinates.function_space()
@@ -293,6 +310,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton"),
         ]
     )
+    @pytest.mark.parallel_dynamic
     def test_periodic(self, dim, method):
         """
         Test that periodic unit domains are not given boundary conditions by the
@@ -310,6 +328,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
         # Check that the variational problem does not have boundary conditions
         self.assertTrue(len(mover._l2_projector._problem.bcs) == 0)
 
+    @pytest.mark.parallel_dynamic
     def test_initial_guess_valueerror(self):
         mesh = self.mesh(2, n=2)
         phi_init = Function(FunctionSpace(mesh, "CG", 1))
@@ -336,6 +355,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton", []),
         ]
     )
+    # @pytest.mark.parallel_dynamic
     def test_boundary_preservation_axis_aligned(self, dim, method, fixed_boundaries):
         """
         Test that boundaries of unit domains are preserved by the Monge-Ampère movers.
@@ -370,6 +390,7 @@ class TestBCs(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton", []),
         ]
     )
+    # @pytest.mark.parallel_dynamic
     def test_boundary_preservation_non_axis_aligned(
         self, dim, method, fixed_boundaries
     ):
@@ -451,6 +472,7 @@ class TestMisc(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton"),
         ]
     )
+    @pytest.mark.parallel_dynamic
     def test_continue(self, dim, method):
         """
         Test that providing a good initial guess benefits the solver.
@@ -485,6 +507,7 @@ class TestMisc(BaseClasses.TestMongeAmpere):
             (3, "quasi_newton"),
         ]
     )
+    @pytest.mark.parallel_dynamic
     def test_coordinate_update(self, dim, method):
         mesh = self.mesh(dim=dim, n=2)
         xyz = list(ufl.SpatialCoordinate(mesh))
