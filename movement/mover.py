@@ -80,7 +80,12 @@ class PrimeMover(abc.ABC):
 
         self._create_function_spaces()
         self._create_functions()
-        self._all_boundary_segments = self.mesh.exterior_facets.unique_markers
+
+        # filter out empty boundary segments that occur in periodic meshes
+        bnd = self.mesh.exterior_facets
+        self._all_boundary_segments = [
+            bm for bm in bnd.unique_markers if bnd.subset(bm).size > 0
+        ]
 
         # Utilities
         if tangling_check:
