@@ -7,7 +7,7 @@ from firedrake.exceptions import ConvergenceError
 from firedrake.functionspace import VectorFunctionSpace
 from firedrake.utility_meshes import UnitSquareMesh, UnitTriangleMesh
 
-from movement import SpringMover
+from movement.spring import SpringMover
 
 
 class TestExceptions(unittest.TestCase):
