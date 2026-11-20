@@ -211,13 +211,13 @@ print("L2-norm error on moved mesh:", sqrt(assemble(dot(error, error) * dx)))
 # to "recover" the Hessian, for which there are a number of different methods.
 #
 # As Hessians are often used in metric-based h-adaptivity, some of these
-# methods have been implemented in the :py:mod:`animate` package.
+# methods have been implemented in the :py:mod:`adapt_common` package.
 # An implementation of a monitor based on the Hessian of the numerical
 # solution is given below. Note that this requires solving the Helmholtz
 # PDE in every mesh movement iteration, and thus may become significantly
 # slower for large problems.
 
-from animate import recover_hessian_clement
+from adapt_common import recover_hessian_clement
 
 
 def monitor_solve(mesh):
