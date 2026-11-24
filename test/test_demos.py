@@ -25,6 +25,7 @@ modifications = {
     "monge_ampere_helmholtz.py": changes_dict,
     "monge_ampere_ring.py": changes_dict,
     "monge_ampere_periodic.py": changes_dict,
+    "monge_ampere_bubble_shear.py": {"n = 20": "n = 10", "t_end = 1.5": "t_end = 0.15"},
 }
 
 
