@@ -8,9 +8,11 @@ from firedrake.function import Function
 from firedrake.mesh import Mesh
 from firedrake.utility_meshes import RectangleMesh, UnitSquareMesh, UnitTriangleMesh
 
-from movement import LaplacianSmoother, SpringMover
+from movement.laplacian_smoothing import LaplacianSmoother
+from movement.spring import SpringMover
 
 
+# TODO: Hoist test base classes to a separate module
 class BaseClasses:
     """
     Base classes for testing mesh movement under forcings.
